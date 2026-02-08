@@ -1,0 +1,2011 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Calculadora de Dosis de Toxina Botulínica</title>
+  <style>
+    /* ========================================
+       ESTILOS GENERALES PARA PANTALLA
+       ======================================== */
+    
+    /* Reglas generales */
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+      background-color: #f0f0f0;
+      color: #333;
+    }
+    .form-container {
+      max-width: 600px;
+      margin: 30px auto;
+      padding: 20px;
+      background-color: #fff;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      border-radius: 10px;
+    }
+    h1 {
+      margin-top: 0;
+      text-align: center;
+      color: #00796b;
+      border-bottom: 2px solid #00796b;
+      padding-bottom: 10px;
+      font-weight: normal;
+    }
+    form .form-section {
+      margin-bottom: 20px;
+    }
+    form .form-section label {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: bold;
+    }
+    form input[type="text"],
+    form input[type="number"],
+    form select {
+      width: 100%;
+      padding: 10px;
+      font-size: 14px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    .w3-button-big {
+      font-size: 16px;
+      padding: 12px 20px;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-right: 10px;
+      margin-top: 10px;
+    }
+    #calcularBtn {
+      background-color: #4CAF50;
+    }
+    #calcularBtn:hover {
+      background-color: #43a047;
+    }
+    #reiniciarBtn {
+      background-color: #9e9e9e;
+    }
+    #reiniciarBtn:hover {
+      background-color: #757575;
+    }
+    #imprimirBtn {
+      background-color: #2196F3;
+    }
+    #imprimirBtn:hover {
+      background-color: #1976D2;
+    }
+    #agregarMusculoBtn {
+      display: inline-block;
+      padding: 10px 20px;
+      background-color: #00796b;
+      color: #fff;
+      font-size: 14px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-top: 8px;
+    }
+    #agregarMusculoBtn:hover {
+      background-color: #00695c;
+    }
+    .musculo-item {
+      margin-bottom: 20px;
+      background: #e0f2f1;
+      padding: 10px;
+      border-radius: 5px;
+      position: relative;
+    }
+    .opciones-dosis {
+      margin-top: 10px;
+    }
+    .opciones-dosis label {
+      margin-right: 15px;
+      font-weight: normal;
+    }
+    .dosis-musculo {
+      font-weight: bold;
+      display: block;
+      margin-top: 10px;
+    }
+    .error, .advertencia {
+      color: red;
+      font-weight: bold;
+      margin: 10px 0;
+    }
+    #calcularBtn:disabled,
+    #imprimirBtn:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
+    .remove-musculo {
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      background: #f44336;
+      color: #fff;
+      border: none;
+      border-radius: 50%;
+      width: 25px;
+      height: 25px;
+      cursor: pointer;
+    }
+
+    /* ========================================
+       CSS PARA REPORTE DE IMPRESIÓN PROFESIONAL
+       ======================================== */
+
+    /* Configuración básica para medios de impresión */
+    @media print {
+      * {
+        -webkit-print-color-adjust: exact !important;
+        color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      
+      @page {
+        size: A4;
+        margin: 2cm 1.5cm;
+        background: white;
+      }
+      
+      /* Ocultar elementos que no deben aparecer en impresión */
+      .no-print,
+      .form-container form,
+      button,
+      input[type="button"],
+      .w3-button-big,
+      #agregarMusculoBtn,
+      .remove-musculo,
+      .opciones-dosis,
+      #errorContainer,
+      #advertenciaContainer {
+        display: none !important;
+      }
+      
+      /* Mostrar solo el reporte en impresión */
+      .print-only {
+        display: block !important;
+      }
+      
+      body {
+        background: white !important;
+        color: #000 !important;
+        font-family: 'Times New Roman', serif;
+        font-size: 12pt;
+        line-height: 1.4;
+        margin: 0;
+        padding: 0;
+      }
+    }
+
+    @media screen {
+      .print-only {
+        display: none;
+      }
+    }
+
+    /* Estructura del reporte de impresión */
+    .reporte-impresion {
+      width: 100%;
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      color: #000;
+      font-family: 'Times New Roman', serif;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+    /* Header del reporte */
+    .reporte-header {
+      text-align: center;
+      border-bottom: 3px solid #00796b;
+      padding-bottom: 15px;
+      margin-bottom: 25px;
+    }
+
+    .clinica-logo {
+      font-size: 24pt;
+      font-weight: bold;
+      color: #00796b;
+      margin-bottom: 5px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .reporte-titulo {
+      font-size: 18pt;
+      font-weight: bold;
+      color: #333;
+      margin-bottom: 10px;
+    }
+
+    .fecha-reporte {
+      font-size: 11pt;
+      color: #666;
+      font-style: italic;
+    }
+
+    /* Información del paciente */
+    .seccion-paciente {
+      background-color: #f8f9fa;
+      border: 2px solid #00796b;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 20px;
+    }
+
+    .seccion-titulo {
+      font-size: 14pt;
+      font-weight: bold;
+      color: #00796b;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .paciente-info {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .info-campo {
+      display: flex;
+      align-items: center;
+      font-size: 11pt;
+    }
+
+    .info-campo .etiqueta {
+      font-weight: bold;
+      color: #333;
+      min-width: 80px;
+      margin-right: 10px;
+    }
+
+    .info-campo .valor {
+      color: #000;
+      border-bottom: 1px dotted #999;
+      min-width: 120px;
+      padding-bottom: 2px;
+    }
+
+    .factor-ajuste {
+      font-size: 10pt;
+      color: #666;
+      font-style: italic;
+      margin-top: 8px;
+      padding: 5px;
+      background-color: #e8f5e8;
+      border-radius: 4px;
+    }
+
+    /* Información del tratamiento */
+    .seccion-tratamiento {
+      margin-bottom: 20px;
+    }
+
+    .toxina-info {
+      background-color: #fff3e0;
+      border-left: 4px solid #ff9800;
+      padding: 12px;
+      margin-bottom: 15px;
+      font-size: 11pt;
+    }
+
+    .toxina-nombre {
+      font-weight: bold;
+      font-size: 12pt;
+      color: #e65100;
+    }
+
+    /* Tabla de músculos y dosis */
+    .tabla-musculos {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+      font-size: 10pt;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+
+    .tabla-musculos thead {
+      background-color: #00796b;
+      color: white;
+    }
+
+    .tabla-musculos th {
+      padding: 12px 8px;
+      text-align: left;
+      font-weight: bold;
+      font-size: 10pt;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border: 1px solid #004d40;
+    }
+
+    .tabla-musculos td {
+      padding: 10px 8px;
+      border: 1px solid #ddd;
+      vertical-align: middle;
+    }
+
+    .tabla-musculos tbody tr:nth-child(even) {
+      background-color: #f8f9fa;
+    }
+
+    .tabla-musculos tbody tr:nth-child(odd) {
+      background-color: white;
+    }
+
+    .tabla-musculos .musculo-nombre {
+      font-weight: bold;
+      color: #333;
+      min-width: 200px;
+    }
+
+    .tabla-musculos .dosis-base,
+    .tabla-musculos .dosis-ajustada {
+      text-align: center;
+      font-weight: bold;
+      min-width: 80px;
+    }
+
+    .tabla-musculos .dosis-base {
+      color: #1976d2;
+    }
+
+    .tabla-musculos .dosis-ajustada {
+      color: #388e3c;
+    }
+
+    .tabla-musculos .fila-total {
+      background-color: #00796b !important;
+      color: white !important;
+      font-weight: bold;
+      font-size: 11pt;
+    }
+
+    .tabla-musculos .fila-total td {
+      border-color: #004d40;
+      padding: 12px 8px;
+    }
+
+    /* Resumen y totales */
+    .seccion-resumen {
+      background-color: #e8f5e8;
+      border: 2px solid #4caf50;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 20px;
+    }
+
+    .totales-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+      margin-bottom: 10px;
+    }
+
+    .total-item {
+      text-align: center;
+      padding: 10px;
+      background-color: white;
+      border-radius: 6px;
+      border: 1px solid #c8e6c9;
+    }
+
+    .total-label {
+      font-size: 10pt;
+      color: #666;
+      margin-bottom: 5px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .total-valor {
+      font-size: 16pt;
+      font-weight: bold;
+      color: #2e7d32;
+    }
+
+    .advertencia-limites {
+      background-color: #fff3e0;
+      border-left: 4px solid #ff9800;
+      padding: 10px;
+      margin-top: 10px;
+      font-size: 10pt;
+      color: #e65100;
+      font-weight: bold;
+    }
+
+    /* Pie del reporte */
+    .reporte-pie {
+      border-top: 2px solid #00796b;
+      padding-top: 15px;
+      margin-top: 25px;
+    }
+
+    .firma-area {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 30px;
+      margin-bottom: 20px;
+    }
+
+    .firma-box {
+      text-align: center;
+    }
+
+    .firma-linea {
+      border-bottom: 1px solid #333;
+      height: 40px;
+      margin-bottom: 5px;
+    }
+
+    .firma-label {
+      font-size: 10pt;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .disclaimer {
+      font-size: 9pt;
+      color: #666;
+      line-height: 1.3;
+      text-align: justify;
+      border: 1px solid #ddd;
+      padding: 10px;
+      background-color: #fafafa;
+      border-radius: 4px;
+    }
+
+    .info-medico {
+      text-align: center;
+      font-size: 10pt;
+      color: #333;
+      margin-bottom: 10px;
+    }
+
+    /* Responsive */
+    @media (max-width: 600px) {
+      .form-container {
+        margin: 8px auto;
+        padding: 8px;
+      }
+      h1, .seccion-titulo {
+        font-size: 20px;
+      }
+      .w3-button-big, #agregarMusculoBtn {
+        width: 100%;
+        min-height: 44px;
+        font-size: 18px;
+        margin-top: 10px;
+        margin-bottom: 10px;
+      }
+      .form-section {
+        padding: 0 2px;
+        margin-bottom: 18px;
+      }
+      input[type="text"], input[type="number"], select {
+        font-size: 18px;
+        padding: 14px;
+        width: 100%;
+      }
+      .paciente-info {
+        grid-template-columns: 1fr;
+      }
+      .totales-grid {
+        grid-template-columns: 1fr;
+      }
+      .firma-area {
+        grid-template-columns: 1fr;
+        gap: 15px;
+      }
+      .tabla-musculos {
+        font-size: 12px;
+        display: block;
+        overflow-x: auto;
+        width: 100%;
+      }
+      input[type="radio"], input[type="checkbox"] {
+        width: 24px;
+        height: 24px;
+      }
+      .opciones-dosis label {
+        font-size: 16px;
+      }
+      label, .info-campo, .total-label {
+        font-size: 16px;
+      }
+      .error, .advertencia {
+        font-size: 16px;
+        padding: 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- FORMULARIO PRINCIPAL (visible en pantalla) -->
+  <div class="form-container no-print">
+    <h1>Calculadora de Dosis de Toxina Botulínica</h1>
+    <form id="dosisForm" onsubmit="return false;">
+      <!-- Selección de Marca -->
+      <div class="form-section">
+        <label for="marcaSelect">Marca:</label>
+        <select id="marcaSelect">
+          <option value="">Seleccione una marca</option>
+          <option value="Dysport">Dysport (Abobotulinumtoxina A)</option>
+          <option value="Botox">Botox (Onabotulinumtoxina A)</option>
+          <option value="Xeomin">Xeomin (Incobotulinumtoxina A)</option>
+        </select>
+      </div>
+
+      <!-- Nombre del Médico -->
+      <div class="form-section">
+        <label for="medicoInput">Nombre del médico <span style="color:red">*</span>:</label>
+        <input type="text" id="medicoInput" placeholder="Nombre del médico" required />
+      </div>
+
+      <!-- Datos del Paciente (Opcional) -->
+      <fieldset class="form-section">
+        <legend>Datos del Paciente (Opcional):</legend>
+        <input type="text" id="nombreInput" placeholder="Nombre del paciente (opcional)">
+        <input type="number" id="pesoInput" placeholder="Peso (kg)" min="0" step="0.1">
+        <input type="number" id="edadInput" placeholder="Edad (años)" min="0">
+      </fieldset>
+
+      <!-- Selección de Músculo -->
+      <div class="form-section">
+        <label for="musculoSelect">Músculo:</label>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <select id="musculoSelect">
+            <option value="">Seleccione una marca primero</option>
+          </select>
+          <select id="lateralidadSelect">
+            <option value="">Lado</option>
+            <option value="Izquierdo">Izquierdo</option>
+            <option value="Derecho">Derecho</option>
+            <option value="Ambos">Ambos</option>
+          </select>
+          <button type="button" id="agregarMusculoBtn">Agregar Músculo</button>
+        </div>
+      </div>
+
+      <!-- Lista de Músculos seleccionados -->
+      <div class="form-section" id="listaMusculos">
+        <!-- Los músculos se agregarán dinámicamente -->
+      </div>
+
+      <!-- Dilución del frasco -->
+      <div class="form-section">
+        <label for="dilucionInput">¿A cuántos ml se va a diluir el frasco? <span style="color:red">*</span>:</label>
+        <input type="number" id="dilucionInput" placeholder="Ejemplo: 2.5" min="0.1" step="0.1" required />
+      </div>
+
+      <!-- Botones de Calcular, Reiniciar e Imprimir -->
+      <div class="form-section">
+        <button type="button" id="calcularBtn" class="w3-button-big" disabled>Calcular</button>
+        <button type="button" id="reiniciarBtn" class="w3-button-big">Reiniciar</button>
+        <button type="button" id="imprimirBtn" class="w3-button-big" disabled>Imprimir</button>
+      </div>
+
+      <!-- Resultado -->
+      <div class="form-section">
+        <label for="resultadoInput">Dosis Total Recomendada:</label>
+        <input type="text" id="resultadoInput" readonly />
+      </div>
+
+      <!-- Contenedores para mensajes de error o advertencia -->
+      <div id="errorContainer"></div>
+      <div id="advertenciaContainer"></div>
+
+      <!-- Nota de descargo -->
+      <p style="font-size: 12px; color: #777;">
+        Nota: Esta herramienta es de apoyo y no sustituye la evaluación clínica ni la revisión de la Drug Label Information de cada producto.
+        Creada por el Dr. Marcos Yocupicio para DeepLuxMed.mx
+      </p>
+    </form>
+  </div>
+
+  <!-- REPORTE DE IMPRESIÓN (solo visible al imprimir) -->
+  <div class="print-only">
+    <div class="reporte-impresion">
+      <!-- Header del reporte -->
+      <div class="reporte-header">
+        <div class="clinica-logo">Calculadora de Dosis de</div>
+        <div class="reporte-titulo">Toxina Botulínica</div>
+        <div class="fecha-reporte" id="fechaReporte">
+          <!-- Se llenará automáticamente con JavaScript -->
+        </div>
+      </div>
+
+      <!-- Información del paciente -->
+      <div class="seccion-paciente">
+        <div class="seccion-titulo">Información del Paciente</div>
+        <div class="paciente-info">
+          <div class="info-campo">
+            <span class="etiqueta">Nombre:</span>
+            <span class="valor" id="reporteNombre">No especificado</span>
+          </div>
+          <div class="info-campo">
+            <span class="etiqueta">Edad:</span>
+            <span class="valor" id="reporteEdad">No especificada</span>
+          </div>
+          <div class="info-campo">
+            <span class="etiqueta">Peso:</span>
+            <span class="valor" id="reportePeso">No especificado</span>
+          </div>
+          <div class="info-campo">
+            <span class="etiqueta">Fecha:</span>
+            <span class="valor" id="reporteFecha"></span>
+          </div>
+        </div>
+        <div class="factor-ajuste" id="reporteFactorAjuste" style="display: none;">
+          <!-- Se mostrará solo si hay factor de ajuste pediátrico -->
+        </div>
+      </div>
+
+      <!-- Información del tratamiento -->
+      <div class="seccion-tratamiento">
+        <div class="seccion-titulo">Toxina Botulínica Seleccionada</div>
+        <div class="toxina-info">
+          <div class="toxina-nombre" id="reporteToxina">
+            <!-- Se llenará con la toxina seleccionada -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabla de músculos y dosis -->
+      <div class="seccion-titulo">Músculos Tratados</div>
+      <table class="tabla-musculos">
+        <thead>
+          <tr>
+            <th>Lado</th>
+            <th>Músculo</th>
+            <th>Dosis Base (U)</th>
+            <th>Dosis Ajustada (U)</th>
+            <th>ml a aplicar</th>
+          </tr>
+        </thead>
+        <tbody id="tablaMusculos">
+          <!-- Se llenará dinámicamente -->
+        </tbody>
+      </table>
+
+      <!-- Resumen de totales -->
+      <div class="seccion-resumen">
+        <div class="seccion-titulo">Resumen del Tratamiento</div>
+        <div class="totales-grid">
+          <div class="total-item">
+            <div class="total-label">Dosis Total Base</div>
+            <div class="total-valor" id="totalBase">0 U</div>
+          </div>
+          <div class="total-item">
+            <div class="total-label">Dosis Total Ajustada</div>
+            <div class="total-valor" id="totalAjustado">0 U</div>
+          </div>
+        </div>
+        <div id="advertenciaLimitesReporte" class="advertencia-limites" style="display: none;">
+          <!-- Se mostrará si se exceden los límites -->
+        </div>
+      </div>
+
+      <!-- Pie del reporte -->
+      <div class="reporte-pie">
+        <div class="firma-area">
+          <div class="firma-box">
+            <div class="firma-linea"></div>
+            <div class="firma-label">Firma del Médico</div>
+            <div id="firmaMedicoReporte" style="font-size:12px;margin-top:4px;"></div>
+          </div>
+          <div class="firma-box">
+            <div class="firma-linea"></div>
+            <div class="firma-label">Fecha y Sello</div>
+          </div>
+        </div>
+        
+        <div class="info-medico" id="infoMedicoReporte"></div>
+        
+        <div class="disclaimer">
+          <strong>Disclaimer:</strong> Este reporte es generado por una herramienta de apoyo clínico y no sustituye 
+          la evaluación médica profesional ni la revisión de la información oficial del producto (Drug Label Information). 
+          La dosificación final debe ser determinada por el médico tratante considerando las características individuales 
+          del paciente y las contraindicaciones específicas. El médico es responsable de verificar las dosis y 
+          la idoneidad del tratamiento para cada paciente.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+   // ========================================
+// CALCULADORA DE DOSIS DE TOXINA BOTULÍNICA
+// Dr. Marcos Yocupicio - DeepLuxMed.mx
+// Versión 2.0.0 - Script Completo
+// ========================================
+
+// ========================================
+// CORRECCIONES DE DOSIFICACIÓN - TOXINA BOTULÍNICA
+// Basado en Drug Label Information y ratios estándar
+// ========================================
+
+// REEMPLAZAR la sección "const dosisData = {" con estas correcciones:
+
+const dosisData = {
+  Dysport: {
+    "Abductor hallucis": { min: 40, max: 80 },
+    "Adductor longus": { min: 125, max: 250 }, // Corregido: era 200-400
+    "Adductor magnus": { min: 250, max: 500 }, // Corregido: era 400-750
+    "Adductor pollicis longus": { min: 60, max: 100 }, // Corregido: era 80-120
+    "Biceps brachii": { min: 200, max: 300 }, // CORREGIDO: era 100-300
+    "Biceps femoris": { min: 250, max: 375 }, // Corregido: era 400-500
+    "Brachialis": { min: 125, max: 200 }, // Corregido: era 200-400
+    "Brachioradialis": { min: 125, max: 180 }, // Corregido: era 200-240
+    "Coracobrachialis": { min: 75, max: 125 }, // Corregido: era 120-200
+    "Cuadrado lumbar": { min: 250, max: 300 }, // Corregido: era 400
+    "Deltoides": { min: 125, max: 225 }, // Corregido: era 200-300
+    "Dorsal ancho": { min: 150, max: 240 }, // Corregido: era 240-320
+    "Extensor carpi radialis brevis": { min: 50, max: 90 }, // Corregido: era 75-120
+    "Extensor carpi radialis longus": { min: 75, max: 120 },
+    "Extensor carpi ulnaris": { min: 75, max: 120 },
+    "Extensor digiti minimi": { min: 75, max: 120 },
+    "Extensor digitorum communis": { min: 75, max: 120 },
+    "Extensor digitorum longus": { min: 125, max: 225 }, // Corregido: era 200-300
+    "Extensor hallucis longus": { min: 125, max: 180 }, // Corregido: era 200-250
+    "Extensor indicis": { min: 50, max: 90 }, // Corregido: era 75-120
+    "Extensor pollicis brevis": { min: 50, max: 75 },
+    "Extensor pollicis longus": { min: 50, max: 90 }, // Corregido: era 75-120
+    "Flexor carpi radialis": { min: 75, max: 120 },
+    "Flexor carpi ulnaris": { min: 75, max: 120 },
+    "Flexor digitorum brevis": { min: 25, max: 60 }, // Corregido: era 40-80
+    "Flexor digitorum longus": { min: 100, max: 180 }, // Corregido: era 160-240
+    "Flexor digitorum profundus": { min: 75, max: 120 },
+    "Flexor digitorum superficialis": { min: 75, max: 90 }, // Corregido: era 100-120
+    "Flexor hallucis brevis": { min: 25, max: 60 }, // Corregido: era 40-80
+    "Flexor hallucis longus": { min: 100, max: 180 }, // Corregido: era 160-240
+    "Flexor pollicis longus": { min: 50, max: 90 }, // Corregido: era 75-120
+    "Gastrocnemio (cabeza lateral)": { min: 125, max: 300 }, // CORREGIDO: era 200-400
+    "Gastrocnemio (cabeza medial)": { min: 125, max: 300 }, // CORREGIDO: era 200-400
+    "Glúteo medio": { min: 150, max: 225 }, // Corregido: era 240-300
+    "Gracilis": { min: 200, max: 300 }, // Corregido: era 300-400
+    "Ilíaco": { min: 125, max: 300 }, // Corregido: era 200-400
+    "Infraespinoso": { min: 125, max: 180 }, // Corregido: era 200-240
+    "Pectineus": { min: 125, max: 250 }, // Corregido: era 200-400
+    "Pectoral mayor": { min: 200, max: 300 },
+    "Pectoralis minor": { min: 100, max: 120 }, // Corregido: era 160
+    "Peroneus brevis": { min: 75, max: 120 },
+    "Peroneus longus": { min: 125, max: 240 }, // Corregido: era 200-320
+    "Peroneus tertius": { min: 75, max: 113 }, // Corregido: era 120-150
+    "Popliteus": { min: 63, max: 90 }, // Corregido: era 100-120
+    "Pronator quadratus": { min: 50, max: 90 }, // Corregido: era 75-120
+    "Pronator teres": { min: 75, max: 120 },
+    "Psoas mayor": { min: 300, max: 500 }, // CORREGIDO: era 600-800
+    "Rectus femoris (cuádriceps anterior)": { min: 250, max: 375 }, // Corregido: era 400-500
+    "Redondo mayor": { min: 75, max: 150 }, // Corregido: era 120-200
+    "Redondo menor": { min: 75, max: 150 }, // Corregido: era 120-200
+    "Romboides": { min: 125, max: 180 }, // Corregido: era 200-240
+    "Semimembranosus": { min: 250, max: 375 }, // Corregido: era 400-500
+    "Semitendinosus": { min: 250, max: 375 }, // Corregido: era 400-500
+    "Serrato anterior": { min: 150, max: 210 }, // Corregido: era 250-275
+    "Sóleo": { min: 200, max: 300 }, // Corregido: era 300-400
+    "Subscapularis": { min: 125, max: 240 }, // Corregido: era 200-320
+    "Superficial flexor muscles": { min: 75, max: 120 },
+    "Supinador": { min: 75, max: 120 },
+    "Supraespinoso": { min: 125, max: 150 }, // Corregido: era 160-200
+    "Tibialis anterior": { min: 200, max: 300 }, // Corregido: era 300-400
+    "Tibialis posterior": { min: 125, max: 240 }, // Corregido: era 200-320
+    "Trapecio": { min: 125, max: 225 }, // Corregido: era 200-300
+    "Triceps brachii": { min: 200, max: 300 }, // Corregido: era 300-400
+    "Vastus lateralis, intermedius y medialis": { min: 250, max: 375 } // Corregido: era 400-500
+  },
+  Botox: {
+    "Abductor hallucis": { min: 10, max: 20 },
+    "Adductor longus": { min: 50, max: 100 },
+    "Adductor magnus": { min: 100, max: 200 },
+    "Adductor pollicis longus": { min: 20, max: 40 },
+    "Biceps brachii": { min: 75, max: 100 },
+    "Biceps femoris": { min: 100, max: 150 },
+    "Brachialis": { min: 50, max: 75 },
+    "Brachioradialis": { min: 50, max: 60 },
+    "Coracobrachialis": { min: 30, max: 50 },
+    "Cuadrado lumbar": { min: 100, max: 120 }, // Corregido: era 100
+    "Deltoides": { min: 50, max: 75 },
+    "Dorsal ancho": { min: 60, max: 80 },
+    "Extensor carpi radialis brevis": { min: 20, max: 30 },
+    "Extensor carpi radialis longus": { min: 30, max: 40 },
+    "Extensor carpi ulnaris": { min: 30, max: 40 },
+    "Extensor digiti minimi": { min: 30, max: 40 },
+    "Extensor digitorum communis": { min: 30, max: 40 },
+    "Extensor digitorum longus": { min: 50, max: 75 },
+    "Extensor hallucis longus": { min: 50, max: 60 },
+    "Extensor indicis": { min: 20, max: 30 },
+    "Extensor pollicis brevis": { min: 20, max: 25 },
+    "Extensor pollicis longus": { min: 20, max: 30 },
+    "Flexor carpi radialis": { min: 30, max: 40 },
+    "Flexor carpi ulnaris": { min: 30, max: 40 },
+    "Flexor digitorum brevis": { min: 10, max: 20 },
+    "Flexor digitorum longus": { min: 40, max: 60 },
+    "Flexor digitorum profundus": { min: 30, max: 40 },
+    "Flexor digitorum superficialis": { min: 25, max: 30 },
+    "Flexor hallucis brevis": { min: 10, max: 20 },
+    "Flexor hallucis longus": { min: 40, max: 60 },
+    "Flexor pollicis longus": { min: 20, max: 30 },
+    "Gastrocnemio (cabeza lateral)": { min: 50, max: 100 },
+    "Gastrocnemio (cabeza medial)": { min: 50, max: 100 },
+    "Glúteo medio": { min: 60, max: 75 },
+    "Gracilis": { min: 80, max: 120 },
+    "Ilíaco": { min: 50, max: 120 }, // Corregido: era 75-150
+    "Infraespinoso": { min: 50, max: 60 },
+    "Pectineus": { min: 50, max: 100 },
+    "Pectoral mayor": { min: 75, max: 100 },
+    "Pectoralis minor": { min: 40, max: 40 },
+    "Peroneus brevis": { min: 30, max: 40 },
+    "Peroneus longus": { min: 50, max: 80 },
+    "Peroneus tertius": { min: 30, max: 38 }, // Corregido: era 30-40
+    "Popliteus": { min: 25, max: 30 },
+    "Pronator quadratus": { min: 20, max: 30 },
+    "Pronator teres": { min: 30, max: 40 },
+    "Psoas mayor": { min: 120, max: 200 }, // CORREGIDO: era 100-200
+    "Rectus femoris (cuádriceps anterior)": { min: 100, max: 150 },
+    "Redondo mayor": { min: 30, max: 50 },
+    "Redondo menor": { min: 30, max: 50 },
+    "Romboides": { min: 50, max: 60 },
+    "Semimembranosus": { min: 100, max: 150 },
+    "Semitendinosus": { min: 100, max: 150 },
+    "Serrato anterior": { min: 60, max: 70 },
+    "Sóleo": { min: 75, max: 100 },
+    "Subscapularis": { min: 50, max: 80 },
+    "Superficial flexor muscles": { min: 30, max: 40 },
+    "Supinador": { min: 30, max: 40 },
+    "Supraespinoso": { min: 50, max: 60 },
+    "Tibialis anterior": { min: 75, max: 120 },
+    "Tibialis posterior": { min: 50, max: 80 }, // Corregido: era 50-100
+    "Trapecio": { min: 50, max: 75 },
+    "Triceps brachii": { min: 75, max: 100 },
+    "Vastus lateralis, intermedius y medialis": { min: 100, max: 150 }
+  },
+  Xeomin: {
+    "Abductor hallucis": { min: 10, max: 20 },
+    "Adductor longus": { min: 50, max: 100 },
+    "Adductor magnus": { min: 100, max: 200 },
+    "Adductor pollicis longus": { min: 20, max: 40 },
+    "Biceps brachii": { min: 75, max: 100 },
+    "Biceps femoris": { min: 100, max: 150 },
+    "Brachialis": { min: 50, max: 75 },
+    "Brachioradialis": { min: 50, max: 60 },
+    "Coracobrachialis": { min: 30, max: 50 },
+    "Cuadrado lumbar": { min: 100, max: 120 }, // Corregido: era 100
+    "Deltoides": { min: 50, max: 75 }, // CORREGIDO: era 20-150
+    "Dorsal ancho": { min: 60, max: 80 }, // CORREGIDO: era 25-150
+    "Extensor carpi radialis brevis": { min: 20, max: 30 },
+    "Extensor carpi radialis longus": { min: 30, max: 40 },
+    "Extensor carpi ulnaris": { min: 30, max: 40 },
+    "Extensor digiti minimi": { min: 30, max: 40 },
+    "Extensor digitorum communis": { min: 30, max: 40 },
+    "Extensor digitorum longus": { min: 50, max: 80 },
+    "Extensor hallucis longus": { min: 50, max: 60 },
+    "Extensor indicis": { min: 20, max: 30 },
+    "Extensor pollicis brevis": { min: 20, max: 25 },
+    "Extensor pollicis longus": { min: 20, max: 30 },
+    "Flexor carpi radialis": { min: 30, max: 40 },
+    "Flexor carpi ulnaris": { min: 30, max: 40 },
+    "Flexor digitorum brevis": { min: 10, max: 20 },
+    "Flexor digitorum longus": { min: 40, max: 60 },
+    "Flexor digitorum profundus": { min: 30, max: 40 },
+    "Flexor digitorum superficialis": { min: 25, max: 30 },
+    "Flexor hallucis brevis": { min: 10, max: 20 },
+    "Flexor hallucis longus": { min: 40, max: 60 },
+    "Flexor pollicis longus": { min: 20, max: 30 },
+    "Gastrocnemio (cabeza lateral)": { min: 50, max: 100 },
+    "Gastrocnemio (cabeza medial)": { min: 50, max: 100 },
+    "Glúteo medio": { min: 60, max: 75 },
+    "Gracilis": { min: 80, max: 120 },
+    "Ilíaco": { min: 50, max: 120 }, // Corregido: era 75-150
+    "Infraespinoso": { min: 50, max: 60 },
+    "Pectineus": { min: 50, max: 100 },
+    "Pectoral mayor": { min: 75, max: 100 }, // CORREGIDO: era 20-200
+    "Pectoralis minor": { min: 40, max: 40 },
+    "Peroneus brevis": { min: 30, max: 40 },
+    "Peroneus longus": { min: 50, max: 80 },
+    "Peroneus tertius": { min: 30, max: 40 },
+    "Popliteus": { min: 25, max: 30 },
+    "Pronator quadratus": { min: 20, max: 30 },
+    "Pronator teres": { min: 30, max: 40 },
+    "Psoas mayor": { min: 120, max: 200 }, // CORREGIDO: era 100-200
+    "Rectus femoris (cuádriceps anterior)": { min: 100, max: 150 },
+    "Redondo mayor": { min: 30, max: 50 }, // CORREGIDO: era 20-100
+    "Redondo menor": { min: 30, max: 50 }, // CORREGIDO: era 20-100
+    "Romboides": { min: 50, max: 60 },
+    "Semimembranosus": { min: 100, max: 150 },
+    "Semitendinosus": { min: 100, max: 150 },
+    "Serrato anterior": { min: 60, max: 70 }, // CORREGIDO: era 50-100
+    "Sóleo": { min: 75, max: 100 }, // CORREGIDO: era 75-200
+    "Subscapularis": { min: 50, max: 80 }, // CORREGIDO: era 15-100
+    "Superficial flexor muscles": { min: 30, max: 40 },
+    "Supinador": { min: 30, max: 40 },
+    "Supraespinoso": { min: 50, max: 60 },
+    "Tibialis anterior": { min: 75, max: 120 },
+    "Tibialis posterior": { min: 50, max: 80 }, // Corregido: era 50-100
+    "Trapecio": { min: 50, max: 75 },
+    "Triceps brachii": { min: 75, max: 100 },
+    "Vastus lateralis, intermedius y medialis": { min: 100, max: 150 }
+  }
+};
+
+// Después de dosisData, agregar:
+const puntosMotoresData = {
+  "Abductor hallucis": "Se localiza en la región medial plantar del pie, justo distal al tubérculo del calcáneo. Para ubicarlo, palpa con el paciente en decúbito supino o sentado y solicita que realice una ligera flexión plantar y abducción del primer dedo; el punto de mínima resistencia a la estimulación eléctrica se encuentra aproximadamente en el punto medio entre el tubérculo calcáneo medial y la base de la primera falange proximal del hallux.",
+  "Adductor longus": "Se ubica en la cara medial del muslo. Con el paciente en decúbito supino, cadera en ligera abducción y rotación externa, palpa a aproximadamente 3 cm inferior a la sínfisis púbica y 2–3 cm medial a la línea media del muslo. La contracción se confirma solicitando aducción activa del muslo contra resistencia; el punto motor suele hallarse a nivel del tercio proximal del músculo, donde el nervio obturador ingresa al vientre muscular.",
+  "Adductor magnus": "Con el paciente en decúbito supino y la pierna ligeramente abducida, localiza la tuberosidad isquiática. El punto motor se encuentra unos 4–5 cm distal e inferior a esa tuberosidad, en la región medial del muslo, desde donde se observa una contracción con mínima estimulación al solicitar aducción de cadera contra resistencia.",
+  "Adductor pollicis longus": "Nota: en la práctica clínica suele confundirse con 'adductor pollicis' (músculo de la mano). El verdadero 'adductor pollicis' (cabeza transversa y oblicua) se localiza en la parte carnosa de la eminencia tenar, entre la base del primer metacarpiano y la cabeza del segundo metacarpiano. Para encontrar el punto motor, coloca el pulgar en ligera oposición contra el índice; la mínima estimulación para obtener aducción del pulgar corresponde al punto motor, aproximadamente en el centro de la eminencia tenar profundizando ligeramente.",
+  "Biceps brachii": "Se localiza en la mitad del brazo, sobre la línea que une el acromion con el pliegue del codo. Con el paciente sentado o en decúbito supino, palpa a aproximadamente 6–8 cm distal al acromion, en la cara anterior del brazo, unos 2–3 cm medial al surco bicipital. La contracción se confirma solicitando flexión de codo con supinación contra resistencia; el punto motor está donde se genere mayor contracción con la menor corriente.",
+  "Biceps femoris": "Con el paciente en decúbito prono y la rodilla en ligera flexión (20–30°), localiza la tuberosidad isquiática y desciende unos 6–8 cm distal a lo largo del borde lateral del muslo. El punto motor del bíceps femoral (cabeza larga) se halla en la cara posterior-lateral del muslo, aproximadamente al nivel del tercio medio; la contracción se confirma solicitando flexión de rodilla contra resistencia.",
+  "Brachialis": "Con el codo en ligera flexión (30°) y el antebrazo en pronación, palpa justo medial (profundo) al bíceps braquial, a nivel del tercio medio del brazo. El punto motor se sitúa aproximadamente 5–6 cm distal al acromion sobre la cara anterior del húmero, ligeramente medial al surco bicipital. La contracción se confirma solicitando flexión de codo con el antebrazo en pronación.",
+  "Brachioradialis": "Con el codo en ligera flexión (90°) y antebrazo en posición neutra, palpa el músculo sobre la región anterolateral del antebrazo. El punto motor se halla a aproximadamente 5–7 cm distal al epicóndilo lateral, justo lateral al borde radial; la contracción se observa al solicitar flexión de codo contra resistencia.",
+  "Coracobrachialis": "El paciente en decúbito supino con la cadera y rodilla en posición cómoda. Para localizarlo, palpa en la cara anteromedial del brazo, unos 6–8 cm distal al acromion y ligeramente medial al surco bicipital. Solicita flexión y aducción de cadera para confirmar contracción; el punto motor se halla donde el nervio musculocutáneo penetra el vientre muscular, aproximadamente a nivel del tercio proximal del brazo.",
+  "Cuadrado lumbar": "Con el paciente en decúbito lateral sobre el lado contralateral, flexiona ligeramente la rodilla para relajar la región lumbar. El punto motor se localiza en la región lumbar posterior, entre la cresta ilíaca y el ángulo inferior de la décima costilla, aproximadamente a 3–4 cm lateral a la apófisis espinosa de la cuarta vértebra lumbar (L4). La contracción se confirma solicitando elevación lateral de la pelvis contra resistencia.",
+  "Deltoides": "Con el paciente sentado o de pie, brazo en aducción pasiva. El punto motor para el deltoides se encuentra en el tercio medio del músculo, justo por debajo del acromion, sobre el punto más ancho del hombro (aprox. 2 cm distal al borde inferior del acromion). Solicita abducción del hombro contra resistencia para confirmar contracción durante la estimulación.",
+  "Dorsal ancho": "Con el paciente sentado o de pie, y brazo en aducción y leve rotación interna, palpa en la región posterolateral del tórax, aproximadamente a nivel de la novena costilla, a unos 6–8 cm lateral a la línea media posterior (línea que une las apófisis espinosas). El punto motor se confirma al solicitar aducción y extensión de hombro contra resistencia; la estimulación mínima se logra aquí.",
+  "Extensor carpi radialis brevis": "Paciente sentado con antebrazo apoyado en una mesa, muñeca en posición neutra. Palpa la cara dorsal-radial del antebrazo, a unos 5–6 cm distal al epicóndilo lateral, en la zona muscular próxima a la línea tendinosa del compartimento posterior. Solicita extensión y abducción de muñeca contra resistencia para confirmar contracción; el punto motor está donde se observe la contracción con el menor voltaje.",
+  "Extensor carpi radialis longus": "Paciente sentado con antebrazo en pronación sobre la mesa. Palpa sobre la región dorsal-anterolateral del antebrazo, aproximadamente 4–5 cm distal al epicóndilo lateral, justo por delante del ECR brevis. Solicita extensión de muñeca con ligera abducción contra resistencia; el punto motor es ahí.",
+  "Extensor carpi ulnaris": "Con el antebrazo en pronación y muñeca relajada, palpa en la cara dorsal-ulnar del antebrazo, a aproximadamente 6–8 cm distal al epicóndilo lateral, a la altura del borde medial del compartimento posterior. Solicita extensión y aducción de muñeca contra resistencia; el punto motor se localizará donde la contracción sea más evidente con mínima corriente.",
+  "Extensor digiti minimi": "Con el antebrazo apoyado en la mesa y muñeca en ligera flexión, palpa en el compartimento posterior, cerca de la inserción del extensor de dedo meñique. Se encuentra aproximadamente 6–7 cm distal al epicóndilo lateral, sobre la línea que lleva al dedo meñique. Solicita extensión del quinto dedo contra resistencia; el punto motor es donde aparezca con menor estimulación.",
+  "Extensor digitorum communis": "Paciente sentado con antebrazo en pronación, apóyalo en la mesa. Palpa el dorso del antebrazo, a nivel del punto medio entre el epicóndilo lateral y la muñeca, en la línea central del compartimento posterior. Solicita extensión de los dedos índice a meñique contra resistencia; el punto motor se ubica donde la contracción sea más fuerte con menor corriente.",
+  "Extensor digitorum longus": "Con el paciente en decúbito supino y tobillo colgando fuera de la camilla (flexión plantar neutra), palpa la región anterolateral de la pierna, aproximadamente 8–10 cm proximal al maléolo lateral, justo lateral al peroné. Solicita dorsiflexión y extensión de dedos de los pies contra resistencia; el punto motor se encuentra donde la contracción sea máxima con mínima estimulación.",
+  "Extensor hallucis longus": "Con el tobillo en ligera eversión y flexión plantar neutra, palpa entre el músculo tibial anterior y el músculo extensor digitorum longus, a unos 6–8 cm proximal al maléolo medial. Solicita dorsiflexión del dedo gordo contra resistencia; el punto motor se hallará donde se observe claramente la contracción con menor corriente.",
+  "Extensor indicis": "Paciente en decúbito supino o sentado con antebrazo en pronación. Palpa en la cara dorsal del antebrazo distal, a nivel de 5–6 cm proximal a la muñeca, en la región entre el EDL y el EDM, en línea con el segundo metacarpiano. Solicita extensión del índice contra resistencia; el punto motor es donde se genere la contracción con el umbral más bajo.",
+  "Extensor pollicis brevis": "Con el antebrazo en posición neutra o ligera pronación, palpa en el compartimento lateral dorsal del antebrazo distal, aproximadamente 4–5 cm proximal a la muñeca y lateral al ECRL. Solicita extensión y abducción del pulgar proximalmente contra resistencia; el punto motor se halla donde la contracción sea más evidente con menor corriente.",
+  "Extensor pollicis longus": "Con el antebrazo ligeramente pronado y muñeca en posición neutra, localiza el compartimento dorsal distal, a 5–6 cm proximal a la muñeca, en la zona medial al EPL. Solicita extensión del pulgar distalmente contra resistencia; el punto motor se encuentra donde la contracción sea más potente al aplicar la menor estimulación.",
+  "Flexor carpi radialis": "Paciente sentado con antebrazo apoyado y supinado. Palpa en la cara volar-anterior del antebrazo, aproximadamente 7–8 cm distal al epicóndilo medial, en el compartimento anterior superficial. Solicita flexión y abducción radial de la muñeca contra resistencia; el punto motor se halla donde la contracción se logre con mínimo voltaje.",
+  "Flexor carpi ulnaris": "Con el antebrazo en ligera supinación y muñeca relajada, palpa en la cara anterior-ulnar del antebrazo, a unos 8 cm distal al epicóndilo medial, a nivel del compartimento anterior superficial. Para confirmar, solicita flexión y aducción ulnar de la muñeca contra resistencia; el punto motor se encontrará donde la contracción sea óptima con baja corriente.",
+  "Flexor digitorum brevis": "Con el paciente en decúbito supino y rodilla flexionada, coloca el pie en posición neutra. Palpa en la región plantar media del pie, justo debajo de los metatarsos centrales (metatarsos 2–4). Solicita plantar flexión de los dedos menores contra resistencia; el punto motor se localiza donde la contracción se vea más marcada con la estimulación más baja.",
+  "Flexor digitorum longus": "Con el paciente en decúbito supino y tobillo en posición neutra, palpa la cara posterior-medial de la pierna, aproximadamente 10–12 cm proximal al maléolo medial, justo posterior a la tibia. Solicita flexión de los dedos del pie contra resistencia; el punto motor se halla donde aparezca la contracción con menor voltaje.",
+  "Flexor digitorum profundus": "Paciente sentado con antebrazo en supinación. Palpa la cara volar del antebrazo distal, a 7–8 cm proximal a la muñeca, justo medial al arco tendinoso del pronador cuadrado. Solicita flexión de las falanges distales de los dedos índice a anular contra resistencia; el punto motor se ubica donde se observe la contracción con el umbral mínimo.",
+  "Flexor digitorum superficialis": "Con el antebrazo en supinación y el codo ligeramente flexionado, palpa la cara volar del antebrazo medio, a unos 7 cm distal al epicóndilo medial, en el músculo que forma un vientre más ancho. Solicita flexión de las falanges medias de los dedos (índice a anular) contra resistencia; el punto motor se encontrará donde la contracción se logre con la menor corriente.",
+  "Flexor hallucis brevis": "Con el pie en posición neutra y rodilla flexionada, palpa en la región plantar del antepie, justo distal a la articulación metatarsofalángica del primer dedo, en la eminencia tenar del hallux. Solicita flexión del metatarsofalángico del primer dedo contra resistencia; el punto motor se localiza donde la contracción sea palpable con mínima estimulación.",
+  "Flexor hallucis longus": "Con el paciente en decúbito supino y el tobillo en posición neutra, palpa en la región posterior-lateral de la pierna, aproximadamente 8–10 cm proximal al maléolo medial, justo lateral al tendón tibial posterior. Solicita flexión del dedo gordo contra resistencia; el punto motor se halla donde la contracción sea más evidente con la menor corriente.",
+  "Flexor pollicis longus": "Paciente sentado con antebrazo apoyado y supinado. Palpa en la cara volar del antebrazo distal, a unos 6–7 cm proximal a la muñeca, justo medial al tendón del flexor digitorum profundus. Solicita flexión de la falange distal del pulgar contra resistencia; el punto motor se encuentra donde la contracción se genere con menor voltaje.",
+  "Gastrocnemio (cabeza lateral)": "Con el paciente en decúbito prono y rodilla en ligera flexión (20–30°), palpa la región posterolateral de la pantorrilla, aproximadamente 5–6 cm distal a la línea de pliegue poplíteo y lateral al tendón de Aquiles. Solicita flexión plantar contra resistencia; el punto motor está donde aparezca la contracción con la menor estimulación.",
+  "Gastrocnemio (cabeza medial)": "Con el paciente en decúbito prono y rodilla en ligera flexión, palpa la región posteromedial de la pantorrilla, aproximadamente 5–6 cm distal a la línea poplítea y medial al tendón de Aquiles. Solicita flexión plantar contra resistencia; el punto motor se localizará donde la contracción sea más intensa con bajo voltaje.",
+  "Glúteo medio": "Paciente en decúbito lateral sobre el lado contralateral, con la cadera en ligera abducción. Palpa a nivel de la línea vertical que desciende desde la espina ilíaca anterosuperior, aproximadamente 6–8 cm inferior a la cresta iliaca, en la cara lateral del trocánter mayor. Solicita abducción de cadera contra resistencia; el punto motor se ubica donde se observe contracción con el menor voltaje.",
+  "Gracilis": "Con el paciente en decúbito supino y la cadera en abducción y ligera rotación externa, palpa en la cara medial del muslo proximal, aproximadamente 8–10 cm distal a la sínfisis púbica, justo posterior al sartorio. Solicita aducción de cadera contra resistencia; el punto motor es donde la contracción se genere con mínima estimulación.",
+  "Ilíaco": "Paciente en decúbito supino con rodilla y cadera relajadas. Palpa profundamente en la región inguinal, entre la cresta ilíaca y la espina ilíaca anterosuperior, alimentando la contracción solicitando flexión de cadera (como si levantara la rodilla hacia el pecho). El punto motor se halla donde la contracción se palpe con la menor corriente al presionar profundamente en el punto medio de la fosa iliaca.",
+  "Infraespinoso": "Con el paciente en decúbito prono y el hombro en ligera abducción (15–20°), palpa en la fosa infraespinosa de la escápula, aproximadamente 2–3 cm inferior al borde lateral de la espina de la escápula. Solicita rotación externa de hombro contra resistencia (manteniendo el codo pegado al tronco); el punto motor se localiza donde la contracción sea más fuerte con la menor estimulación.",
+  "Pectineus": "Paciente en decúbito supino y cadera en ligera abducción. Palpa en la región proximal-medial del muslo, aproximadamente 5–6 cm distal a la sínfisis púbica y justo inferior al pecten del pubis. Solicita flexión y aducción de cadera contra resistencia; el punto motor está donde la contracción se observe con el umbral más bajo.",
+  "Pectoral mayor": "Con el paciente en decúbito supino y brazo en ligera abducción (30°), palpa en la región del pectoral mayor, aproximadamente a nivel de la línea media clavicular, unos 4–5 cm distal al esternón. Solicita aducción y rotación interna de hombro contra resistencia; el punto motor se halla donde la contracción sea más marcada con mínima corriente.",
+  "Pectoralis minor": "Paciente en decúbito supino con el brazo relajado a lo largo del tronco. Palpa en la región infraclavicular, aproximadamente 2–3 cm medial al coracoides, entre la segunda y tercera costilla. Solicita depresión y rotación anterior de la escápula contra resistencia; el punto motor está donde la contracción del pectoral menor sea evidente con baja estimulación.",
+  "Peroneus brevis": "Con el paciente en decúbito supino y el tobillo en ligera eversión y dorsiflexión neutra, palpa en la región distal-lateral de la pierna, aproximadamente 6–7 cm proximal al maléolo lateral, justo posterior al peroné. Solicita eversión del pie contra resistencia; el punto motor se localiza donde la contracción sea más evidente con mínima corriente.",
+  "Peroneus longus": "Con el tobillo en dorsiflexión neutra y ligera eversión, palpa en la región lateral de la pierna, aproximadamente 8–10 cm proximal al maléolo lateral, justo anterior al peroné distal. Solicita eversión y plantar flexión del pie contra resistencia; el punto motor se halla donde la contracción se ve más potente al aplicar el menor voltaje.",
+  "Peroneus tertius": "Paciente en decúbito supino con tobillo en dorsiflexión neutra. Palpa en la región anterolateral distal de la pierna, a unos 6 cm proximal al maléolo lateral, a nivel del primer metatarsiano. Solicita dorsiflexión y eversión del pie contra resistencia; el punto motor se encuentra donde la contracción es más visible con la menor corriente.",
+  "Popliteus": "Con el paciente en decúbito prono y rodilla flexionada 90°, palpa en la región poplítea, justo posterior al epicóndilo femoral lateral, entre la cabeza del gastrocnemio lateral y el bíceps femoral proximal. Solicita rotación interna de la tibia contra resistencia; el punto motor se localiza donde se observe contracción con mínimo voltaje.",
+  "Pronator quadratus": "Paciente sentado con antebrazo en pronación sobre la mesa. Palpa profundamente en la región distal del antebrazo, justo proximal a la muñeca, entre el cúbito y el radio. Solicita pronación forzada del antebrazo contra resistencia; el punto motor se halla donde la contracción sea más evidente con la menor corriente.",
+  "Pronator teres": "Con el codo en ligera flexión (90°) y antebrazo en supinación, palpa la cara anterior del antebrazo proximal, aproximadamente 5–6 cm distal al epicóndilo medial, en la unión entre la cabeza humeral y cubital. Solicita pronación del antebrazo contra resistencia; el punto motor es donde la contracción se genere con el umbral más bajo.",
+  "Psoas mayor": "Paciente en decúbito supino con rodilla y cadera relajadas. Palpa profundamente en la región inguinal, entre la espina ilíaca anterosuperior y el ombligo, a nivel de la fosa iliaca. Solicita flexión de cadera contra resistencia (como levantar la rodilla hacia el pecho); el punto motor se halla donde se genere la contracción con mínima estimulación, aproximadamente 2–3 cm profundo y medial al punto medio de la fosa iliaca.",
+  "Rectus femoris (cuádriceps anterior)": "Con el paciente en decúbito supino y la pierna relajada, palpa en el vientre muscular del recto femoral, aproximadamente 10–12 cm proximal al borde superior de la rótula, en la línea media anterior del muslo. Solicita extensión de rodilla contra resistencia; el punto motor se ubicará donde la contracción sea máxima con la menor corriente.",
+  "Redondo mayor": "Paciente sentado con el brazo colgando en aducción y rotación interna leve. Palpa en la región posterior-lateral de la axila, aproximadamente 5–6 cm distal al ángulo inferior de la escápula, cerca de la inserción humeral. Solicita aducción y rotación interna de hombro contra resistencia; el punto motor se halla donde la contracción se produzca con bajo voltaje.",
+  "Redondo menor": "Con el paciente en decúbito prono y el brazo colgando en aducción, palpa en la región posterior del hombro, aproximadamente 2–3 cm inferior al borde lateral de la espina de la escápula y lateral a la fosa infraespinosa. Solicita rotación externa de hombro contra resistencia; el punto motor se localiza donde la contracción sea más marcada con mínima estimulación.",
+  "Romboides": "Paciente en decúbito prono con brazo en aducción pasiva. Palpa las fibras del romboides mayor en la región medial de la espalda, entre las apófisis espinosas T2–T5 y el borde medial de la escápula. Solicita retracción escapular contra resistencia (como juntar las escápulas); el punto motor se halla donde la contracción sea más evidente con el umbral más bajo.",
+  "Semimembranosus": "Con el paciente en decúbito prono y rodilla en ligera flexión, palpa la región posterior-medial del muslo, aproximadamente 6–8 cm distal a la tuberosidad isquiática, justo medial al semitendinoso. Solicita flexión de rodilla contra resistencia; el punto motor se ubica donde la contracción sea más nítida con mínima corriente.",
+  "Semitendinosus": "Paciente en decúbito prono con la rodilla en ligera flexión, palpa en la región posterior-medial del muslo, aproximadamente 5–7 cm distal a la tuberosidad isquiática, justo lateral al semimembranoso. Solicita flexión de rodilla contra resistencia; el punto motor se halla donde la contracción sea más potente con bajo voltaje.",
+  "Serrato anterior": "Con el paciente en decúbito supino y el brazo en 90° de flexión de hombro, palpa en la región lateral del tórax, aproximadamente a la altura de la axila, en la cara lateral de las costillas superiores (costillas 2–5). Solicita protraer la escápula contra resistencia (como empujar la mano hacia adelante); el punto motor se encuentra donde la contracción sea más evidente con la menor corriente.",
+  "Sóleo": "Con el paciente en decúbito prono y rodilla flexionada 90°, palpa la región posterior de la pierna, aproximadamente 8–10 cm proximal al tendón de Aquiles, en la línea media. Solicita flexión plantar del tobillo contra resistencia; el punto motor se halla donde la contracción sea más intensa con mínima estimulación...",
+  "Subscapularis": "Paciente en decúbito prono con el brazo en abducción de 90° y codo flexionado 90°. Palpa la región anterior de la escápula, aproximadamente 2–3 cm lateral al ángulo inferior de la escápula, en la fosa subescapular. Solicita rotación interna de hombro contra resistencia (codo pegado al cuerpo); el punto motor se ubica donde la contracción sea más clara con el umbral eléctrico más bajo.",
+  "Superficial flexor muscles": "Este término agrupa los músculos flexores superficiales del antebrazo (flexor carpi radialis, flexor carpi ulnaris, flexor digitorum superficialis). Para su estimulación colectiva, coloca el electrodo en el tercio proximal del antebrazo volar, aproximadamente 6–8 cm distal al epicóndilo medial, en la zona donde las fibras musculares superficiales son más prominentes. Solicita flexión de muñeca y dedos contra resistencia; el punto motor grupal se localiza donde la contracción global sea máxima con menor corriente.",
+  "Supinador": "Con el paciente sentado, codo en flexión de 90° y antebrazo en pronación, palpa en la región proximal-lateral del antebrazo, aproximadamente 5–6 cm distal al epicóndilo lateral, justo anterior al ECRL. Solicita supinación contra resistencia; el punto motor se halla donde la contracción sea más notoria con mínima estimulación.",
+  "Supraespinoso": "Paciente en decúbito prono con el brazo colgando y en ligera abducción. Palpa en la fosa supraespinosa de la escápula, a nivel del punto medio entre el acromion y el ángulo superior de la escápula. Solicita abducción inicial del hombro contra resistencia (primeros 15°); el punto motor se sitúa donde la contracción se aprecie con la menor corriente.",
+  "Tibialis anterior": "Con el paciente en decúbito supino y tobillo en posición neutra, palpa en la cara anterior-lateral de la pierna, aproximadamente 7–8 cm proximal al maléolo medial, justo lateral a la tibia. Solicita dorsiflexión del tobillo contra resistencia; el punto motor se ubica donde la contracción sea más intensa con bajo voltaje.",
+  "Tibialis posterior": "Paciente en decúbito supino con la rodilla flexionada 30° y tobillo en ligera eversión. Palpa en la cara posterior-medial de la pierna, aproximadamente 8–10 cm proximal al maléolo medial, justo posterior a la tibia. Solicita inversión y flexión plantar del pie contra resistencia; el punto motor se localiza donde la contracción sea más clara con el umbral más bajo.",
+  "Trapecio": "Con el paciente sentado o de pie, coloca el brazo en posición neutra. Para el trapecio superior, palpa la región cervical posterior, aproximadamente 2–3 cm lateral al ángulo superior de la escápula, en la unión entre el cuello y el hombro. Solicita elevación de hombros (encogimiento) contra resistencia; el punto motor se halla donde la contracción sea más fuerte con mínima corriente. Para el trapecio medio, palpa a nivel de T3–T4, 3–4 cm lateral a la línea media; solicita retracción escapular. Para el trapecio inferior, palpa a nivel de T8–T9, 4–5 cm lateral a la línea media; solicita depresión y rotación de escápula.",
+  "Triceps brachii": "Con el paciente en decúbito prono y el brazo en ligera abducción, palpa en la región posterior del brazo, aproximadamente 6–8 cm proximal al olecranon, sobre la línea media posterior. Solicita extensión de codo contra resistencia; el punto motor se ubica donde la contracción sea más evidente con el menor voltaje.",
+  "Vastus lateralis, intermedius y medialis": "Esta entrada agrupa los tres vastos del cuádriceps. El punto motor más accesible para estimulación conjunta se encuentra aproximadamente 10–12 cm proximal a la rótula sobre la cara anterior-lateral del muslo (para vasto lateral) y 8–10 cm proximal a la rótula sobre la cara medial (para vasto medial). Para el vasto intermedio (profundo), la estimulación superficial se logra mejor colocando el electrodo en la región media del muslo, justo por encima del vasto lateral. Solicita extensión de rodilla contra resistencia; los puntos motores se ubican donde cada vasto genere la contracción más potente con la menor corriente."
+};
+
+// ========================================
+// REFERENCIAS AL DOM
+// ========================================
+
+// Referencias principales del formulario
+const marcaSelect = document.getElementById('marcaSelect');
+const musculoSelect = document.getElementById('musculoSelect');
+const lateralidadSelect = document.getElementById('lateralidadSelect');
+const agregarMusculoBtn = document.getElementById('agregarMusculoBtn');
+const listaMusculos = document.getElementById('listaMusculos');
+const calcularBtn = document.getElementById('calcularBtn');
+const reiniciarBtn = document.getElementById('reiniciarBtn');
+const imprimirBtn = document.getElementById('imprimirBtn');
+const resultadoInput = document.getElementById('resultadoInput');
+const errorContainer = document.getElementById('errorContainer');
+const advertenciaContainer = document.getElementById('advertenciaContainer');
+
+// Campos de datos del paciente
+const nombreInput = document.getElementById('nombreInput');
+const pesoInput = document.getElementById('pesoInput');
+const edadInput = document.getElementById('edadInput');
+// Campo de nombre del médico
+const medicoInput = document.getElementById('medicoInput');
+const dilucionInput = document.getElementById('dilucionInput');
+
+// ========================================
+// VARIABLES GLOBALES DE ESTADO
+// ========================================
+
+let marcaSeleccionada = '';
+let musculosSeleccionados = [];
+let calculoRealizado = false;
+
+// ========================================
+// FUNCIONES PRINCIPALES DE LA CALCULADORA
+// ========================================
+
+/**
+ * Actualiza el select de músculos según la marca seleccionada
+ */
+function actualizarMusculosDisponibles() {
+  musculoSelect.innerHTML = '<option value="">Seleccione un músculo</option>';
+  if (marcaSeleccionada && dosisData[marcaSeleccionada]) {
+    const musculos = Object.keys(dosisData[marcaSeleccionada]);
+    musculos.forEach(musculo => {
+      const opt = document.createElement('option');
+      opt.value = musculo;
+      opt.textContent = musculo;
+      musculoSelect.appendChild(opt);
+    });
+  }
+}
+
+/**
+ * Valida si se debe habilitar el botón de calcular
+ */
+function validarBotonCalcular() {
+  const hayMarca = (marcaSeleccionada !== '');
+  const hayMusculos = (musculosSeleccionados.length > 0);
+  const todosConDosis = musculosSeleccionados.every(m => m.opcionDosis !== null);
+  const hayMedico = medicoInput.value.trim() !== '';
+  const hayDilucion = dilucionInput.value.trim() !== '' && parseFloat(dilucionInput.value) > 0;
+  calcularBtn.disabled = !(hayMarca && hayMusculos && todosConDosis && hayMedico && hayDilucion);
+}
+
+/**
+ * Borra todos los mensajes de error y advertencia
+ */
+function borrarMensajes() {
+  errorContainer.innerHTML = '';
+  advertenciaContainer.innerHTML = '';
+}
+
+/**
+ * Muestra un mensaje de error
+ * @param {string} msg - Mensaje de error a mostrar
+ */
+function mostrarError(msg) {
+  const div = document.createElement('div');
+  div.className = 'error';
+  div.textContent = msg;
+  errorContainer.appendChild(div);
+}
+
+/**
+ * Muestra un mensaje de advertencia
+ * @param {string} msg - Mensaje de advertencia a mostrar
+ */
+function mostrarAdvertencia(msg) {
+  const div = document.createElement('div');
+  div.className = 'advertencia';
+  div.textContent = msg;
+  advertenciaContainer.appendChild(div);
+}
+
+/**
+ * Calcula el factor de ajuste basado en edad y peso para pacientes pediátricos
+ * @returns {number} Factor de ajuste (peso/40 para menores de 18 años, 1.0 para adultos)
+ */
+function calcularFactorAjuste() {
+  const edad = parseFloat(edadInput.value);
+  const peso = parseFloat(pesoInput.value);
+  if (!isNaN(edad) && edad < 18 && !isNaN(peso) && peso > 0) {
+    return peso / 40;
+  }
+  return 1.0;
+}
+
+// ========================================
+// FUNCIONES PARA GENERAR EL REPORTE
+// ========================================
+
+/**
+ * Genera la fecha y hora actual en formato legible
+ * @returns {string} Fecha y hora formateada
+ */
+function generarFechaHora() {
+  const ahora = new Date();
+  const opciones = {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'America/Mexico_City'
+  };
+  return ahora.toLocaleDateString('es-MX', opciones);
+}
+
+/**
+ * Llena los datos del paciente en el reporte de impresión
+ */
+function llenarDatosPaciente() {
+  const nombre = nombreInput.value.trim() || 'No especificado';
+  const edad = edadInput.value.trim() || 'No especificada';
+  const peso = pesoInput.value.trim() || 'No especificado';
+  
+  document.getElementById('reporteNombre').textContent = nombre;
+  document.getElementById('reporteEdad').textContent = edad + (edad !== 'No especificada' ? ' años' : '');
+  document.getElementById('reportePeso').textContent = peso + (peso !== 'No especificado' ? ' kg' : '');
+  document.getElementById('reporteFecha').textContent = new Date().toLocaleDateString('es-MX');
+  
+  // Factor de ajuste pediátrico
+  const factor = calcularFactorAjuste();
+  const factorDiv = document.getElementById('reporteFactorAjuste');
+  if (factor !== 1.0) {
+    factorDiv.style.display = 'block';
+    factorDiv.innerHTML = `<strong>Factor de Ajuste Pediátrico:</strong> ${factor.toFixed(2)} (peso/40kg)`;
+  } else {
+    factorDiv.style.display = 'none';
+  }
+}
+
+/**
+ * Llena la información de la toxina seleccionada en el reporte
+ */
+function llenarInfoToxina() {
+  const toxinaInfo = {
+    'Dysport': 'Dysport (Abobotulinumtoxina A)',
+    'Botox': 'Botox (Onabotulinumtoxina A)',
+    'Xeomin': 'Xeomin (Incobotulinumtoxina A)'
+  };
+  document.getElementById('reporteToxina').textContent = toxinaInfo[marcaSeleccionada] || marcaSeleccionada;
+}
+
+/**
+ * Genera la tabla de músculos con dosis en el reporte
+ */
+function generarTablaMusculos() {
+  const tbody = document.getElementById('tablaMusculos');
+  tbody.innerHTML = '';
+  
+  let totalBase = 0;
+  let totalAjustado = 0;
+  const factor = calcularFactorAjuste();
+
+  // Agregar cada músculo a la tabla
+  musculosSeleccionados.forEach(mObj => {
+    const rango = dosisData[marcaSeleccionada][mObj.nombre];
+    const dosisBase = (mObj.opcionDosis === 'min') ? rango.min : rango.max;
+    // Usar la dosis ajustada editable si existe, si no, calcularla
+    const dosisAjustada = (typeof mObj.dosisAjustadaEditable === 'number') ? mObj.dosisAjustadaEditable : Math.round(dosisBase * factor);
+    totalBase += dosisBase;
+    totalAjustado += dosisAjustada;
+
+    const fila = document.createElement('tr');
+    // Determinar UI frasco según marca
+    let uiFrasco = 100;
+    if (marcaSeleccionada === 'Dysport') uiFrasco = 500;
+    // Calcular ml a aplicar
+    const mlDilucion = parseFloat(dilucionInput.value) || 1;
+    const mlAplicar = ((dosisAjustada / uiFrasco) * mlDilucion).toFixed(2);
+    fila.innerHTML = `
+      <td class="musculo-lado">${mObj.lado}</td>
+      <td class="musculo-nombre">${mObj.nombre}</td>
+      <td class="dosis-base">${dosisBase} U</td>
+      <td class="dosis-ajustada">${dosisAjustada} U</td>
+      <td class="ml-aplicar">${mlAplicar} ml</td>
+    `;
+    tbody.appendChild(fila);
+  });
+
+  // Agregar fila de totales
+  const filaTotales = document.createElement('tr');
+  filaTotales.className = 'fila-total';
+  filaTotales.innerHTML = `
+    <td colspan="2"><strong>TOTAL</strong></td>
+    <td><strong>${totalBase} U</strong></td>
+    <td><strong>${totalAjustado} U</strong></td>
+  `;
+  tbody.appendChild(filaTotales);
+
+  // Actualizar totales en el resumen
+  document.getElementById('totalBase').textContent = totalBase + ' U';
+  document.getElementById('totalAjustado').textContent = totalAjustado + ' U';
+
+  // Verificar límites y mostrar advertencia si es necesario
+  const limiteSesion = (marcaSeleccionada === "Dysport") ? 1000 : 400;
+  const advertenciaDiv = document.getElementById('advertenciaLimitesReporte');
+  if (totalAjustado > limiteSesion) {
+    advertenciaDiv.style.display = 'block';
+    advertenciaDiv.innerHTML = `
+      <strong>ADVERTENCIA:</strong> Se ha excedido el límite recomendado por sesión 
+      (${limiteSesion} U para ${marcaSeleccionada}). Dosis total: ${totalAjustado} U.
+    `;
+  } else {
+    advertenciaDiv.style.display = 'none';
+  }
+}
+
+/**
+ * Genera el reporte completo antes de imprimir
+ */
+function generarReporte() {
+  document.getElementById('fechaReporte').textContent = generarFechaHora();
+  llenarDatosPaciente();
+  llenarInfoToxina();
+  generarTablaMusculos();
+  // Actualizar nombre del médico en el reporte
+  const infoMedicoDiv = document.getElementById('infoMedicoReporte');
+  if (infoMedicoDiv) {
+    infoMedicoDiv.innerHTML = `<strong>${medicoInput.value.trim()}</strong><br>DeepLuxMed.mx - Herramienta para cálculo de dosis de toxina botulinica`;
+  }
+  // Actualizar nombre en la firma
+  const firmaMedico = document.getElementById('firmaMedicoReporte');
+  if (firmaMedico) {
+    firmaMedico.textContent = medicoInput.value.trim();
+  }
+}
+
+// ========================================
+// FUNCIONES ADICIONALES DE UTILIDAD
+// ========================================
+
+/**
+ * Obtiene información detallada de la marca seleccionada
+ * @param {string} marca - Nombre de la marca de toxina
+ * @returns {object|null} Información de la marca o null si no existe
+ */
+function obtenerInfoMarca(marca) {
+  const infoMarcas = {
+    'Dysport': {
+      nombre: 'Dysport (Abobotulinumtoxina A)',
+      limite: 1000,
+      fabricante: 'Ipsen'
+    },
+    'Botox': {
+      nombre: 'Botox (Onabotulinumtoxina A)', 
+      limite: 400,
+      fabricante: 'Allergan'
+    },
+    'Xeomin': {
+      nombre: 'Xeomin (Incobotulinumtoxina A)',
+      limite: 400,
+      fabricante: 'Merz'
+    }
+  };
+  return infoMarcas[marca] || null;
+}
+
+/**
+ * Formatea números con separadores de miles
+ * @param {number} numero - Número a formatear
+ * @returns {string} Número formateado
+ */
+function formatearNumero(numero) {
+  return numero.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}
+
+/**
+ * Valida los datos de entrada del formulario
+ * @returns {array} Array de errores encontrados
+ */
+function validarDatosEntrada() {
+  const errores = [];
+  
+  if (!marcaSeleccionada) {
+    errores.push('Debe seleccionar una marca de toxina');
+  }
+  
+  if (musculosSeleccionados.length === 0) {
+    errores.push('Debe agregar al menos un músculo');
+  }
+  
+  const todosTienenDosis = musculosSeleccionados.every(m => m.opcionDosis !== null);
+  if (!todosTienenDosis) {
+    errores.push('Debe seleccionar dosis para todos los músculos agregados');
+  }
+  
+  return errores;
+}
+
+/**
+ * Limpia y resetea todos los campos del formulario
+ */
+function limpiarFormulario() {
+  // Limpiar selects
+  marcaSelect.value = "";
+  musculoSelect.innerHTML = '<option value="">Seleccione una marca primero</option>';
+  
+  // Limpiar contenedores dinámicos
+  listaMusculos.innerHTML = '';
+  errorContainer.innerHTML = '';
+  advertenciaContainer.innerHTML = '';
+  
+  // Limpiar campos de entrada
+  nombreInput.value = "";
+  pesoInput.value = "";
+  edadInput.value = "";
+  resultadoInput.value = '';
+  medicoInput.value = '';
+  dilucionInput.value = '';
+  
+  // Resetear variables de estado
+  marcaSeleccionada = '';
+  musculosSeleccionados = [];
+  calculoRealizado = false;
+  
+  // Resetear botones
+  validarBotonCalcular();
+  imprimirBtn.disabled = true;
+}
+
+/**
+ * Confirma antes de reiniciar si hay datos ingresados
+ * @returns {boolean} True si el usuario confirma el reinicio
+ */
+function confirmarReinicio() {
+  if (musculosSeleccionados.length > 0 || nombreInput.value.trim() || 
+      pesoInput.value.trim() || edadInput.value.trim()) {
+    return confirm('¿Está seguro de que desea reiniciar? Se perderán todos los datos ingresados.');
+  }
+  return true;
+}
+
+/**
+ * Muestra información de ayuda para cada marca
+ * @param {string} marca - Marca de toxina seleccionada
+ */
+function mostrarAyudaMarca(marca) {
+  const info = obtenerInfoMarca(marca);
+  if (info) {
+    const mensaje = `${info.nombre}\nLímite por sesión: ${info.limite} U\nFabricante: ${info.fabricante}`;
+    console.log(mensaje);
+  }
+}
+
+// ========================================
+// FUNCIONES DE EXPORTACIÓN Y DEBUG
+// ========================================
+
+/**
+ * Genera datos en formato JSON para futuras integraciones
+ * @returns {object|null} Datos estructurados del cálculo o null si no hay cálculo
+ */
+function exportarDatosJSON() {
+  if (!calculoRealizado) {
+    mostrarError('Debe calcular las dosis antes de exportar los datos.');
+    return null;
+  }
+
+  const factor = calcularFactorAjuste();
+  let totalBase = 0;
+  let totalAjustado = 0;
+
+  const musculos = musculosSeleccionados.map(mObj => {
+    const rango = dosisData[marcaSeleccionada][mObj.nombre];
+    const dosisBase = (mObj.opcionDosis === 'min') ? rango.min : rango.max;
+    const dosisAjustada = Math.round(dosisBase * factor);
+    
+    totalBase += dosisBase;
+    totalAjustado += dosisAjustada;
+
+    return {
+      nombre: mObj.nombre,
+      dosisBase: dosisBase,
+      dosisAjustada: dosisAjustada,
+      tipoDosis: mObj.opcionDosis
+    };
+  });
+
+  const datos = {
+    timestamp: new Date().toISOString(),
+    paciente: {
+      nombre: nombreInput.value.trim() || null,
+      edad: edadInput.value.trim() ? parseInt(edadInput.value) : null,
+      peso: pesoInput.value.trim() ? parseFloat(pesoInput.value) : null
+    },
+    tratamiento: {
+      marca: marcaSeleccionada,
+      factorAjuste: factor,
+      limiteSesion: obtenerInfoMarca(marcaSeleccionada).limite
+    },
+    musculos: musculos,
+    totales: {
+      dosisBase: totalBase,
+      dosisAjustada: totalAjustado,
+      excedeLimite: totalAjustado > obtenerInfoMarca(marcaSeleccionada).limite
+    },
+    medico: {
+      nombre: 'Dr. Marcos Yocupicio',
+      clinica: 'DeepLuxMed.mx'
+    }
+  };
+
+  return datos;
+}
+
+/**
+ * Función para debug - mostrar estado actual de la aplicación
+ */
+function mostrarEstadoApp() {
+  console.log('=== ESTADO DE LA APLICACIÓN ===');
+  console.log('Marca seleccionada:', marcaSeleccionada);
+  console.log('Músculos seleccionados:', musculosSeleccionados.length);
+  console.log('Cálculo realizado:', calculoRealizado);
+  console.log('Botón calcular habilitado:', !calcularBtn.disabled);
+  console.log('Botón imprimir habilitado:', !imprimirBtn.disabled);
+  console.log('Factor de ajuste:', calcularFactorAjuste());
+  console.log('===============================');
+}
+
+// ========================================
+// GESTIÓN DE ERRORES Y VALIDACIONES
+// ========================================
+
+/**
+ * Función centralizada para manejo de errores
+ * @param {Error} error - Error capturado
+ * @param {string} contexto - Contexto donde ocurrió el error
+ */
+function manejarError(error, contexto = '') {
+  console.error(`Error en ${contexto}:`, error);
+  mostrarError(`Se produjo un error${contexto ? ' en ' + contexto : ''}. Por favor, inténtelo nuevamente.`);
+}
+
+/**
+ * Wrapper para funciones que pueden fallar
+ * @param {Function} fn - Función a ejecutar
+ * @param {string} contexto - Contexto de ejecución
+ * @returns {*} Resultado de la función o null si hay error
+ */
+function ejecutarConManejadorError(fn, contexto) {
+  try {
+    return fn();
+  } catch (error) {
+    manejarError(error, contexto);
+    return null;
+  }
+}
+
+// ========================================
+// EVENT LISTENERS PRINCIPALES
+// ========================================
+
+/**
+ * Evento: Cambio de marca de toxina
+ */
+marcaSelect.addEventListener('change', () => {
+  marcaSeleccionada = marcaSelect.value;
+  actualizarMusculosDisponibles();
+  listaMusculos.innerHTML = '';
+  musculosSeleccionados = [];
+  calculoRealizado = false;
+  validarBotonCalcular();
+  imprimirBtn.disabled = true;
+  borrarMensajes();
+});
+
+/**
+ * Evento: Agregar músculo a la lista
+ */
+agregarMusculoBtn.addEventListener('click', () => {
+  const musculo = musculoSelect.value;
+  const lado = lateralidadSelect.value;
+  if (!musculo || !marcaSeleccionada) return;
+  if (!lado) {
+    mostrarError('Debe seleccionar la lateralidad.');
+    return;
+  }
+  // Si ambos, agregar dos entradas
+  if (lado === 'Ambos') {
+    ['Izquierdo', 'Derecho'].forEach(lad => {
+      if (musculosSeleccionados.some(item => item.nombre === musculo && item.lado === lad)) {
+        // Ya existe ese lado, no lo agregues
+        return;
+      }
+      agregarMusculoALista(musculo, lad);
+    });
+    return;
+  }
+  // Solo un lado
+  if (musculosSeleccionados.some(item => item.nombre === musculo && item.lado === lado)) {
+    mostrarError('Ese músculo ya ha sido agregado para el lado seleccionado.');
+    return;
+  }
+  agregarMusculoALista(musculo, lado);
+});
+
+// Nueva función para agregar músculo a la lista con lateralidad
+function agregarMusculoALista(musculo, lado) {
+  borrarMensajes();
+  const contId = 'musculoCont_' + musculo.replace(/\s/g, '_') + '_' + lado + '_' + Date.now();
+  const cont = document.createElement('div');
+  cont.className = 'musculo-item';
+  cont.id = contId;
+
+  // Botón para eliminar el músculo agregado
+  const removeBtn = document.createElement('button');
+  removeBtn.className = 'remove-musculo';
+  removeBtn.title = 'Eliminar músculo';
+  removeBtn.textContent = '×';
+  removeBtn.addEventListener('click', () => {
+    listaMusculos.removeChild(cont);
+    musculosSeleccionados = musculosSeleccionados.filter(m => m.contenedorId !== contId);
+    calculoRealizado = false;
+    validarBotonCalcular();
+    imprimirBtn.disabled = true;
+  });
+
+  cont.innerHTML = `
+    <div>
+      <strong>${musculo} (${lado})</strong>
+      <div class="opciones-dosis">
+        <label title="Seleccione dosis mínima">
+          <input type="radio" name="dosis_${contId}" value="min"> Dosis Mínima
+        </label>
+        <label title="Seleccione dosis máxima">
+          <input type="radio" name="dosis_${contId}" value="max"> Dosis Máxima
+        </label>
+      </div>
+      <span class="dosis-musculo" id="${contId}_dosis"></span>
+    </div>
+  `;
+  cont.appendChild(removeBtn);
+  listaMusculos.appendChild(cont);
+
+  musculosSeleccionados.push({
+    nombre: musculo,
+    lado: lado,
+    contenedorId: contId,
+    opcionDosis: null
+  });
+
+  // Agrega listener para la selección de dosis en cada músculo
+  const radios = cont.querySelectorAll(`input[name="dosis_${contId}"]`);
+  radios.forEach(radio => {
+    radio.addEventListener('change', () => {
+      const mObj = musculosSeleccionados.find(m => m.contenedorId === contId);
+      mObj.opcionDosis = radio.value;
+      calculoRealizado = false;
+      validarBotonCalcular();
+      imprimirBtn.disabled = true;
+    });
+  });
+
+  validarBotonCalcular();
+}
+
+/**
+ * Evento: Calcular dosis
+ */
+calcularBtn.addEventListener('click', () => {
+  if (medicoInput.value.trim() === '') {
+    mostrarError('Debe ingresar el nombre del médico.');
+    return;
+  }
+  if (dilucionInput.value.trim() === '' || parseFloat(dilucionInput.value) <= 0) {
+    mostrarError('Debe ingresar la dilución del frasco en ml.');
+    return;
+  }
+  ejecutarConManejadorError(() => {
+    borrarMensajes();
+    let dosisTotalBase = 0;
+    let dosisTotalAjustada = 0;
+    const factorGlobal = calcularFactorAjuste();
+
+    musculosSeleccionados.forEach(mObj => {
+      const rango = dosisData[marcaSeleccionada][mObj.nombre];
+      let dosisBase = (mObj.opcionDosis === 'min') ? rango.min : rango.max;
+      dosisBase = Math.round(dosisBase);
+      let dosisAjustada = Math.round(dosisBase * factorGlobal);
+      mObj.dosisAjustadaEditable = dosisAjustada; // Guardar editable
+      const dosisSpan = document.getElementById(mObj.contenedorId + "_dosis");
+      dosisSpan.innerHTML = `
+        <p>Dosis Base: <strong>${dosisBase} U</strong></p>
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <button type="button" class="ajustar-dosis-btn" data-dir="-1" data-id="${mObj.contenedorId}" style="width:28px;height:28px;font-size:18px;">−</button>
+          <input type="number" min="1" value="${dosisAjustada}" class="dosis-ajustada-input" data-id="${mObj.contenedorId}" style="width:60px;text-align:center;font-size:16px;" />
+          <button type="button" class="ajustar-dosis-btn" data-dir="1" data-id="${mObj.contenedorId}" style="width:28px;height:28px;font-size:18px;">+</button>
+          <span style="margin-left:4px;">U</span>
+        </div>
+        <span class="punto-motor-info" style="display:block; font-size:12px; color:#00796b; margin-top:4px;"><strong>Punto motor:</strong> ${puntosMotoresData[mObj.nombre] || 'No disponible.'}</span>
+      `;
+      dosisTotalBase += dosisBase;
+      dosisTotalAjustada += dosisAjustada;
+    });
+
+    resultadoInput.value = dosisTotalAjustada + " U";
+
+    // Verificar el límite por sesión: 400 U para Botox y Xeomin; 1000 U para Dysport
+    let limiteSesion = (marcaSeleccionada === "Dysport") ? 1000 : 400;
+    if (dosisTotalAjustada > limiteSesion) {
+      mostrarAdvertencia(`Advertencia: Se ha excedido el límite por sesión (${limiteSesion} U)`);
+    }
+    
+    calculoRealizado = true;
+    imprimirBtn.disabled = false;
+
+    // Agregar listeners para los botones y el input de ajuste
+    setTimeout(() => {
+      document.querySelectorAll('.ajustar-dosis-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+          const dir = parseInt(this.getAttribute('data-dir'));
+          const id = this.getAttribute('data-id');
+          const mObj = musculosSeleccionados.find(m => m.contenedorId === id);
+          if (!mObj) return;
+          let input = document.querySelector(`input.dosis-ajustada-input[data-id='${id}']`);
+          let val = parseInt(input.value) || 1;
+          val += dir;
+          if (val < 1) val = 1;
+          input.value = val;
+          mObj.dosisAjustadaEditable = val;
+          actualizarTotalEditable();
+        });
+      });
+      document.querySelectorAll('input.dosis-ajustada-input').forEach(inp => {
+        inp.addEventListener('input', function() {
+          const id = this.getAttribute('data-id');
+          let val = parseInt(this.value) || 1;
+          if (val < 1) val = 1;
+          this.value = val;
+          const mObj = musculosSeleccionados.find(m => m.contenedorId === id);
+          if (mObj) {
+            mObj.dosisAjustadaEditable = val;
+            actualizarTotalEditable();
+          }
+        });
+      });
+    }, 50);
+  }, 'cálculo de dosis');
+});
+
+// Nueva función para actualizar el total editable y advertencias
+function actualizarTotalEditable() {
+  let dosisTotalAjustada = musculosSeleccionados.reduce((acc, m) => acc + (parseInt(m.dosisAjustadaEditable) || 0), 0);
+  resultadoInput.value = dosisTotalAjustada + " U";
+  advertenciaContainer.innerHTML = '';
+  let limiteSesion = (marcaSeleccionada === "Dysport") ? 1000 : 400;
+  if (dosisTotalAjustada > limiteSesion) {
+    mostrarAdvertencia(`Advertencia: Se ha excedido el límite por sesión (${limiteSesion} U)`);
+  }
+}
+
+/**
+ * Evento: Reiniciar calculadora
+ */
+reiniciarBtn.addEventListener('click', () => {
+  if (confirmarReinicio()) {
+    limpiarFormulario();
+    medicoInput.value = '';
+    dilucionInput.value = '';
+  }
+});
+
+/**
+ * Evento: Imprimir resultados
+ */
+imprimirBtn.addEventListener('click', () => {
+  if (!calculoRealizado) {
+    mostrarError('Debe calcular las dosis antes de imprimir el reporte.');
+    return;
+  }
+  if (medicoInput.value.trim() === '') {
+    mostrarError('Debe ingresar el nombre del médico antes de imprimir el reporte.');
+    return;
+  }
+  if (dilucionInput.value.trim() === '' || parseFloat(dilucionInput.value) <= 0) {
+    mostrarError('Debe ingresar la dilución del frasco en ml antes de imprimir el reporte.');
+    return;
+  }
+  
+  ejecutarConManejadorError(() => {
+    // Generar el reporte completo
+    generarReporte();
+    
+    // Pequeña pausa para asegurar que el DOM se actualice antes de imprimir
+    setTimeout(() => {
+      window.print();
+    }, 100);
+  }, 'generación del reporte');
+});
+
+// ========================================
+// VALIDACIONES DE ENTRADA
+// ========================================
+
+/**
+ * Validación de peso en tiempo real
+ */
+pesoInput.addEventListener('input', function() {
+  const peso = parseFloat(this.value);
+  if (peso && (peso < 1 || peso > 300)) {
+    this.style.borderColor = '#f44336';
+    mostrarError('El peso debe estar entre 1 y 300 kg');
+  } else {
+    this.style.borderColor = '#ccc';
+    borrarMensajes();
+  }
+  
+  // Recalcular si ya se hizo un cálculo previo
+  if (calculoRealizado) {
+    calculoRealizado = false;
+    imprimirBtn.disabled = true;
+  }
+});
+
+/**
+ * Validación de edad en tiempo real
+ */
+edadInput.addEventListener('input', function() {
+  const edad = parseFloat(this.value);
+  if (edad && (edad < 0 || edad > 120)) {
+    this.style.borderColor = '#f44336';
+    mostrarError('La edad debe estar entre 0 y 120 años');
+  } else {
+    this.style.borderColor = '#ccc';
+    borrarMensajes();
+  }
+  
+  // Recalcular si ya se hizo un cálculo previo
+  if (calculoRealizado) {
+    calculoRealizado = false;
+    imprimirBtn.disabled = true;
+  }
+});
+
+/**
+ * Validación de dilución en tiempo real
+ */
+dilucionInput.addEventListener('input', function() {
+  const dilucion = parseFloat(this.value);
+  if (dilucion && (dilucion < 0.1 || dilucion > 10)) {
+    this.style.borderColor = '#f44336';
+    mostrarError('La dilución debe estar entre 0.1 y 10 ml');
+  } else {
+    this.style.borderColor = '#ccc';
+    borrarMensajes();
+  }
+  
+  // Recalcular si ya se hizo un cálculo previo
+  if (calculoRealizado) {
+    calculoRealizado = false;
+    imprimirBtn.disabled = true;
+  }
+});
+
+// ========================================
+// ATAJOS DE TECLADO
+// ========================================
+
+/**
+ * Manejo de atajos de teclado
+ */
+document.addEventListener('keydown', function(event) {
+  // Ctrl + Enter para calcular
+  if (event.ctrlKey && event.key === 'Enter' && !calcularBtn.disabled) {
+    event.preventDefault();
+    calcularBtn.click();
+  }
+  
+  // Ctrl + P para imprimir
+  if (event.ctrlKey && event.key === 'p' && !imprimirBtn.disabled) {
+    event.preventDefault();
+    imprimirBtn.click();
+  }
+  
+  // Ctrl + R para reiniciar
+  if (event.ctrlKey && event.key === 'r') {
+    event.preventDefault();
+    if (confirmarReinicio()) {
+      limpiarFormulario();
+    }
+  }
+  
+  // Escape para cerrar mensajes de error
+  if (event.key === 'Escape') {
+    borrarMensajes();
+  }
+});
+
+// ========================================
+// FUNCIONES DE INICIALIZACIÓN
+// ========================================
+
+/**
+ * Verificar compatibilidad básica del navegador
+ * @returns {boolean} True si el navegador es compatible
+ */
+function verificarCompatibilidad() {
+  const caracteristicasRequeridas = [
+    'addEventListener' in document,
+    'querySelector' in document,
+    'JSON' in window,
+    'console' in window,
+    'localStorage' in window
+  ];
+
+  const compatible = caracteristicasRequeridas.every(feature => feature);
+  
+  if (!compatible) {
+    alert('Su navegador no es compatible con esta aplicación. Por favor, utilice un navegador más reciente.');
+    return false;
+  }
+  
+  return true;
+}
+
+/**
+ * Función de inicialización completa de la aplicación
+ */
+function inicializarAplicacion() {
+  try {
+    // Validar que todos los datos de dosis estén presentes
+    const marcas = Object.keys(dosisData);
+    marcas.forEach(marca => {
+      if (!dosisData[marca] || typeof dosisData[marca] !== 'object') {
+        throw new Error(`Datos de dosis faltantes para la marca: ${marca}`);
+      }
+    });
+
+    // Validar elementos del DOM críticos
+    const elementosRequeridos = [
+      'marcaSelect', 'musculoSelect', 'lateralidadSelect', 'agregarMusculoBtn', 'listaMusculos',
+      'calcularBtn', 'reiniciarBtn', 'imprimirBtn', 'resultadoInput',
+      'errorContainer', 'advertenciaContainer', 'nombreInput', 'pesoInput', 'edadInput', 'dilucionInput'
+    ];
+
+    elementosRequeridos.forEach(id => {
+      if (!document.getElementById(id)) {
+        throw new Error(`Elemento requerido no encontrado: ${id}`);
+      }
+    });
+
+    // Validar elementos del reporte de impresión
+    const elementosReporte = [
+      'fechaReporte', 'reporteNombre', 'reporteEdad', 'reportePeso', 'reporteFecha',
+      'reporteFactorAjuste', 'reporteToxina', 'tablaMusculos', 'totalBase', 
+      'totalAjustado', 'advertenciaLimitesReporte'
+    ];
+
+    elementosReporte.forEach(id => {
+      if (!document.getElementById(id)) {
+        console.warn(`Elemento de reporte no encontrado: ${id}`);
+      }
+    });
+
+    // Configuración inicial exitosa
+    validarBotonCalcular();
+    
+    // Logs informativos para desarrolladores
+    console.log('✅ Calculadora de Toxina Botulínica inicializada correctamente');
+    console.log('📋 Marcas disponibles:', Object.keys(dosisData).join(', '));
+    console.log('🎯 Total de músculos configurados:', Object.keys(dosisData.Botox).length);
+    console.log('⌨️  Atajos de teclado disponibles:');
+    console.log('   • Ctrl+Enter: Calcular dosis');
+    console.log('   • Ctrl+P: Imprimir reporte');
+    console.log('   • Ctrl+R: Reiniciar formulario');
+    console.log('   • Escape: Cerrar mensajes');
+    console.log('💡 Comandos de consola disponibles:');
+    console.log('   • debugCalculadora(): Mostrar estado de la aplicación');
+    console.log('   • exportarCalculadora(): Exportar datos en formato JSON');
+
+  } catch (error) {
+    console.error('❌ Error durante la inicialización:', error);
+    mostrarError('Error durante la inicialización de la aplicación. Recargue la página.');
+  }
+}
+
+// ========================================
+// INFORMACIÓN DE LA APLICACIÓN
+// ========================================
+
+/**
+ * Información de la versión y metadatos de la aplicación
+ */
+const infoAplicacion = {
+  nombre: 'Calculadora de Dosis de Toxina Botulínica',
+  version: '2.0.0',
+  autor: 'Dr. Marcos Yocupicio',
+  clinica: 'DeepLuxMed.mx',
+  fechaCreacion: '2024',
+  fechaActualizacion: new Date().toISOString().split('T')[0],
+  caracteristicas: [
+    'Cálculo de dosis para 67+ músculos',
+    'Soporte para 3 marcas de toxina botulínica',
+    'Ajuste automático para pacientes pediátricos',
+    'Reporte de impresión profesional',
+    'Validación de límites de seguridad',
+    'Interfaz responsive',
+    'Atajos de teclado',
+    'Exportación de datos JSON',
+    'Sistema de debug integrado'
+  ],
+  marcasCompatibles: ['Dysport', 'Botox', 'Xeomin'],
+  limitesSeguridad: {
+    'Dysport': 1000,
+    'Botox': 400,
+    'Xeomin': 400
+  }
+};
+
+// ========================================
+// EXPOSICIÓN DE FUNCIONES GLOBALES
+// ========================================
+
+// Exponer funciones útiles para desarrollo y debugging
+window.debugCalculadora = mostrarEstadoApp;
+window.exportarCalculadora = exportarDatosJSON;
+window.infoCalculadora = infoAplicacion;
+window.limpiarCalculadora = limpiarFormulario;
+window.obtenerEstadoCalculadora = () => ({
+  marca: marcaSeleccionada,
+  musculos: musculosSeleccionados.length,
+  calculado: calculoRealizado,
+  factor: calcularFactorAjuste()
+});
+
+// ========================================
+// EJECUCIÓN INICIAL
+// ========================================
+
+/**
+ * Ejecutar inicialización cuando el DOM esté completamente cargado
+ */
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', function() {
+    if (verificarCompatibilidad()) {
+      inicializarAplicacion();
+    }
+  });
+} else {
+  // El DOM ya está cargado
+  if (verificarCompatibilidad()) {
+    inicializarAplicacion();
+  }
+}
+
+// ========================================
+// MENSAJE DE BIENVENIDA PARA DESARROLLADORES
+// ========================================
+
+console.log(`
+🏥 ${infoAplicacion.nombre} v${infoAplicacion.version}
+👨‍⚕️ Creado por: ${infoAplicacion.autor}
+🏢 ${infoAplicacion.clinica}
+📅 Última actualización: ${infoAplicacion.fechaActualizacion}
+
+📝 Características principales:
+${infoAplicacion.caracteristicas.map(f => `   • ${f}`).join('\n')}
+
+🧪 Marcas compatibles: ${infoAplicacion.marcasCompatibles.join(', ')}
+
+💡 Comandos disponibles en consola:
+   • debugCalculadora() - Mostrar estado actual
+   • exportarCalculadora() - Exportar datos JSON
+   • infoCalculadora - Información completa
+   • limpiarCalculadora() - Reiniciar formulario
+   • obtenerEstadoCalculadora() - Estado resumido
+
+⚡ Atajos de teclado:
+   • Ctrl+Enter: Calcular    • Ctrl+P: Imprimir
+   • Ctrl+R: Reiniciar       • Escape: Cerrar mensajes
+
+Para soporte técnico o actualizaciones, contacte: DeepLuxMed.mx
+`);
+  </script>
+ </body>
+</html>
+

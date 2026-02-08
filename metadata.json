@@ -1,0 +1,7 @@
+{
+  "name": "Toxina DLM - Calculadora de Toxina Botulínica",
+  "description": "Plataforma integral para médicos especialistas en medicina estética y neurología. Incluye calculadora de dosis avanzada, mapeo facial interactivo, guía de puntos motores por ultrasonido y gestión de pacientes.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}

@@ -1,0 +1,68 @@
+/* Font Size Accessibility Classes */
+
+/* Default (Medium) - Base font sizes */
+body {
+  --font-size-xs: 0.75rem; /* 12px */
+  --font-size-sm: 0.875rem; /* 14px */
+  --font-size-base: 1rem; /* 16px */
+  --font-size-lg: 1.125rem; /* 18px */
+  --font-size-xl: 1.25rem; /* 20px */
+  --font-size-2xl: 1.5rem; /* 24px */
+  --font-size-3xl: 1.875rem; /* 30px */
+}
+
+/* Small Font Size */
+body.font-small {
+  --font-size-xs: 0.625rem; /* 10px */
+  --font-size-sm: 0.75rem; /* 12px */
+  --font-size-base: 0.875rem; /* 14px */
+  --font-size-lg: 1rem; /* 16px */
+  --font-size-xl: 1.125rem; /* 18px */
+  --font-size-2xl: 1.375rem; /* 22px */
+  --font-size-3xl: 1.625rem; /* 26px */
+}
+
+/* Large Font Size */
+body.font-large {
+  --font-size-xs: 0.875rem; /* 14px */
+  --font-size-sm: 1rem; /* 16px */
+  --font-size-base: 1.125rem; /* 18px */
+  --font-size-lg: 1.25rem; /* 20px */
+  --font-size-xl: 1.5rem; /* 24px */
+  --font-size-2xl: 1.75rem; /* 28px */
+  --font-size-3xl: 2.125rem; /* 34px */
+}
+
+/* Apply to common text elements */
+body p,
+body span,
+body div,
+body li,
+body label {
+  font-size: var(--font-size-base);
+}
+
+body h1 {
+  font-size: var(--font-size-3xl);
+}
+
+body h2 {
+  font-size: var(--font-size-2xl);
+}
+
+body h3 {
+  font-size: var(--font-size-xl);
+}
+
+body h4 {
+  font-size: var(--font-size-lg);
+}
+
+body small,
+body .text-sm {
+  font-size: var(--font-size-sm);
+}
+
+body .text-xs {
+  font-size: var(--font-size-xs);
+}
