@@ -13,6 +13,10 @@ import PatientProfile from './screens/PatientProfile';
 import Subscription from './screens/Subscription';
 import Login from './screens/Login';
 import Signup from './screens/Signup';
+import EmailConfirmation from './screens/EmailConfirmation';
+import CompleteProfile from './screens/CompleteProfile';
+
+
 import EditProfile from './screens/EditProfile';
 import EditPatient from './screens/EditPatient';
 import PathologyDetail from './screens/PathologyDetail';
@@ -117,10 +121,12 @@ const App: React.FC = () => {
             <Route element={<PublicLayout session={session} />}>
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
+              <Route path="/email-confirmation" element={<EmailConfirmation />} />
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
             </Route>
             
             <Route element={<ProtectedLayout session={session} />}>
+              <Route path="/complete-profile" element={<CompleteProfile />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/search" element={<Search />} />
               <Route path="/calculator" element={<Calculator />} />

@@ -22,8 +22,8 @@ const Signup: React.FC = () => {
     if (error) {
       setError(error.message);
     } else {
-      alert('¡Registro exitoso! Por favor verifica tu correo para confirmar tu cuenta.');
-      navigate('/login');
+      // alert('¡Registro exitoso! Por favor verifica tu correo para confirmar tu cuenta.');
+      navigate('/email-confirmation');
     }
     setLoading(false);
   };

@@ -10,6 +10,8 @@ const EditProfile: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [fullName, setFullName] = useState('');
   const [specialty, setSpecialty] = useState('');
+  const [generalLicense, setGeneralLicense] = useState('');
+  const [specialistLicense, setSpecialistLicense] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -37,6 +39,8 @@ const EditProfile: React.FC = () => {
       if (data) {
         setFullName(data.full_name || '');
         setSpecialty(data.specialty || '');
+        setGeneralLicense(data.general_license || '');
+        setSpecialistLicense(data.specialist_license || '');
         setAvatarUrl(data.avatar_url);
         setImagePreview(data.avatar_url);
       } else {
@@ -136,6 +140,8 @@ const EditProfile: React.FC = () => {
         id: user.id,
         full_name: fullName,
         specialty: specialty,
+        general_license: generalLicense,
+        specialist_license: specialistLicense,
         avatar_url: newAvatarUrl,
         updated_at: new Date(),
       };
@@ -219,6 +225,28 @@ const EditProfile: React.FC = () => {
                     onChange={(e) => setSpecialty(e.target.value)}
                     className="w-full bg-white dark:bg-surface-dark border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 font-medium focus:outline-none focus:ring-2 focus:ring-primary/50"
                     placeholder="Medicina Estética"
+                />
+            </div>
+
+            <div>
+                <label className="block text-xs font-bold uppercase text-slate-500 mb-1 ml-1">Cédula Médico General</label>
+                <input 
+                    type="text" 
+                    value={generalLicense}
+                    onChange={(e) => setGeneralLicense(e.target.value)}
+                    className="w-full bg-white dark:bg-surface-dark border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 font-medium focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    placeholder="12345678"
+                />
+            </div>
+
+            <div>
+                <label className="block text-xs font-bold uppercase text-slate-500 mb-1 ml-1">Cédula Especialidad <span className="text-slate-400 font-normal lowercase">(opcional)</span></label>
+                <input 
+                    type="text" 
+                    value={specialistLicense}
+                    onChange={(e) => setSpecialistLicense(e.target.value)}
+                    className="w-full bg-white dark:bg-surface-dark border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 font-medium focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    placeholder="87654321"
                 />
             </div>
         </div>

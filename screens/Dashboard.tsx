@@ -27,9 +27,14 @@ const Dashboard: React.FC = () => {
 
       const { data } = await supabase
         .from('user_profiles')
-        .select('full_name, avatar_url')
+        .select('full_name, avatar_url, general_license')
         .eq('id', user.id)
         .single();
+
+      if (!data?.general_license) {
+          navigate('/complete-profile');
+          return;
+      }
 
       if (data?.full_name) {
         setDoctorName(data.full_name);
