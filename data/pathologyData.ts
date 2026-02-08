@@ -27,6 +27,8 @@ export interface PathologyData {
   image: string;
 }
 
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://qwhrdmllpznvqrxygytp.supabase.co';
+
 export const pathologiesData: PathologyData[] = [
   {
     id: 'blefaroespasmo',
@@ -51,7 +53,7 @@ export const pathologiesData: PathologyData[] = [
       'AbbVie Inc. (2023). Blepharospasm - Dosing and Administration. BOTOX ONE. https://www.botoxone.com/blepharospasm/dosing',
       'Anwar, M. S., & Zafar, H. (2013). Efficacy of botulinum toxin in benign essential Blepharospasm. Pakistan Journal of Medical Sciences. https://pmc.ncbi.nlm.nih.gov/articles/PMC3905398/'
     ],
-    image: 'https://qwhrdmllpznvqrxygytp.supabase.co/storage/v1/object/public/PortadasPatologias/blefaroespasmo.jpeg',
+    image: `${supabaseUrl}/storage/v1/object/public/PortadasPatologias/blefaroespasmo.jpeg`,
   },
   {
     id: 'espasticidad-pediatrica',
@@ -78,7 +80,7 @@ export const pathologiesData: PathologyData[] = [
       'AbbVie Inc. (2023). Pediatric Spasticity - Dosing and Administration. BOTOX ONE. https://www.botoxone.com/pediatric-spasticity/dosing',
       'AbbVie Inc. (2024). Highlights of prescribing information: BOTOX. https://www.rxabbvie.com/pdf/botox_pi.pdf'
     ],
-    image: 'https://qwhrdmllpznvqrxygytp.supabase.co/storage/v1/object/public/PortadasPatologias/espasticidad.jpeg',
+    image: `${supabaseUrl}/storage/v1/object/public/PortadasPatologias/espasticidad.jpeg`,
   },
   {
     id: 'espasticidad-superior',
@@ -106,7 +108,7 @@ export const pathologiesData: PathologyData[] = [
       'AbbVie Inc. (2024). Highlights of prescribing information: BOTOX. https://www.rxabbvie.com/pdf/botox_pi.pdf',
       'Allergan, Inc. (2011). BOTOX prescribing information. U.S. FDA. https://www.accessdata.fda.gov/drugsatfda_docs/label/2011/103000s5236lbl.pdf'
     ],
-    image: 'https://qwhrdmllpznvqrxygytp.supabase.co/storage/v1/object/public/PortadasPatologias/espasticidadevc.jpeg',
+    image: `${supabaseUrl}/storage/v1/object/public/PortadasPatologias/espasticidadevc.jpeg`,
   },
   {
     id: 'sincinesias-faciales',
@@ -132,7 +134,7 @@ export const pathologiesData: PathologyData[] = [
       'Bonali, M., et al. (2025). Rehabilitation of facial nerve palsy combining neuromuscular retraining and botulinum toxin A injection. European Archives of Oto-Rhino-Laryngology. https://pmc.ncbi.nlm.nih.gov/articles/PMC12321944/',
       'Carré, F., et al. (2024). Botulinum toxin injections to manage sequelae of peripheral facial palsy. Toxins. https://pmc.ncbi.nlm.nih.gov/articles/PMC10974143/'
     ],
-    image: 'https://qwhrdmllpznvqrxygytp.supabase.co/storage/v1/object/public/PortadasPatologias/paralisisfacial.jpeg',
+    image: `${supabaseUrl}/storage/v1/object/public/PortadasPatologias/paralisisfacial.jpeg`,
   },
   {
     id: 'migrana-cronica',
@@ -163,7 +165,7 @@ export const pathologiesData: PathologyData[] = [
       'AbbVie (2024). Botox Prescribing Information (VHB). https://www.rxabbvie.com/pdf/botox_pi.pdf',
       'Dodick, D. W., et al. (2010). PREEMPT 2 trial results. Cephalalgia. https://pubmed.ncbi.nlm.nih.gov/20647171/'
     ],
-    image: 'https://qwhrdmllpznvqrxygytp.supabase.co/storage/v1/object/public/PortadasPatologias/migrania.jpeg',
+    image: `${supabaseUrl}/storage/v1/object/public/PortadasPatologias/migrania.jpeg`,
   },
   {
     id: 'estetica-facial',
@@ -191,7 +193,7 @@ export const pathologiesData: PathologyData[] = [
       'Carruthers, J., et al. (2004). Consensus recommendations on the use of botulinum toxin type a in facial aesthetics. Plastic and Reconstructive Surgery, 114(6 Suppl), 1S–22S.',
       'AbbVie Inc. (2024). Highlights of prescribing information: BOTOX (onabotulinumtoxinA).',
     ],
-    image: 'https://qwhrdmllpznvqrxygytp.supabase.co/storage/v1/object/public/PortadasPatologias/esteticafacial.jpeg',
+    image: `${supabaseUrl}/storage/v1/object/public/PortadasPatologias/esteticafacial.jpeg`,
   },
   {
     id: 'espasticidad-adulta',
@@ -217,7 +219,7 @@ export const pathologiesData: PathologyData[] = [
       'Zorowitz, R. D., et al. (2025). Muscle selection and dosing with abobotulinumtoxinA for LLS. JRM. https://pmc.ncbi.nlm.nih.gov/articles/PMC11836465/',
       'Dressler, D., et al. (2021). Consensus guidelines for botulinum toxin therapy. J Neural Transm. https://pmc.ncbi.nlm.nih.gov/articles/PMC7969540/'
     ],
-    image: 'https://qwhrdmllpznvqrxygytp.supabase.co/storage/v1/object/public/PortadasPatologias/espasticidadinferiores.jpeg',
+    image: `${supabaseUrl}/storage/v1/object/public/PortadasPatologias/espasticidadinferiores.jpeg`,
   },
   {
     id: 'distonia-cervical',
@@ -244,7 +246,7 @@ export const pathologiesData: PathologyData[] = [
       'Merz Pharmaceuticals (2023). XEOMIN Dosing & Administration Guide. https://hcp.xeomin.com/',
       'Spiegel, L. L., et al. (2020). FDA Approvals and Consensus Guidelines. Toxins. https://doi.org/10.3390/toxins12050332'
     ],
-    image: 'https://qwhrdmllpznvqrxygytp.supabase.co/storage/v1/object/public/PortadasPatologias/distoniacervical.jpeg',
+    image: `${supabaseUrl}/storage/v1/object/public/PortadasPatologias/distoniacervical.jpeg`,
   },
   {
     id: 'hiperhidrosis',
@@ -270,7 +272,7 @@ export const pathologiesData: PathologyData[] = [
       'Eilertsen, T., et al. (2024). Botulinum toxin A and B for palmoplantar hyperhidrosis. Dermatology and Therapy, 14(3), 805–811.',
       'Ito, K., et al. (2011). Therapeutic effectiveness of botulinum toxin type A based on severity of palmar hyperhidrosis. The Journal of Dermatology, 38(9), 859–863.',
     ],
-    image: 'https://qwhrdmllpznvqrxygytp.supabase.co/storage/v1/object/public/PortadasPatologias/hiperhidrosisaxilar.jpeg',
+    image: `${supabaseUrl}/storage/v1/object/public/PortadasPatologias/hiperhidrosisaxilar.jpeg`,
   },
   {
     id: 'vejiga-hiperactiva',
@@ -294,7 +296,7 @@ export const pathologiesData: PathologyData[] = [
       'Chen, A., et al. (2025). Optimizing the Injection Schema (Higher Doses). Neurourology. https://pubmed.ncbi.nlm.nih.gov/40836399/',
       'Santos-Silva, A., et al. (2013). Botulinum toxin for bladder dysfunction. Int J Urol. https://pubmed.ncbi.nlm.nih.gov/23634720/'
     ],
-    image: 'https://qwhrdmllpznvqrxygytp.supabase.co/storage/v1/object/public/PortadasPatologias/vejiga.jpeg',
+    image: `${supabaseUrl}/storage/v1/object/public/PortadasPatologias/vejiga.jpeg`,
   },
   {
     id: 'sialorrea',
@@ -320,7 +322,7 @@ export const pathologiesData: PathologyData[] = [
       'Jost, W. H., et al. (2019). Therapy of Sialorrhea with BoNT. Neurology. https://pmc.ncbi.nlm.nih.gov/articles/PMC6858891/',
       'Song, T., et al. (2024). RimabotulinumtoxinB Update. Dermatol Surg. https://pubmed.ncbi.nlm.nih.gov/39196834/'
     ],
-    image: 'https://qwhrdmllpznvqrxygytp.supabase.co/storage/v1/object/public/PortadasPatologias/sialorrea.jpeg',
+    image: `${supabaseUrl}/storage/v1/object/public/PortadasPatologias/sialorrea.jpeg`,
   }
 ];
 
