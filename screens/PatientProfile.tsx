@@ -3,7 +3,6 @@ import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import { supabase } from '../supabaseClient';
-import { Patient, Treatment } from '../types';
 
 const PatientProfile: React.FC = () => {
   const navigate = useNavigate();
@@ -21,7 +20,7 @@ const PatientProfile: React.FC = () => {
         if (!patientId) {
             // Fallback for demo if no ID passed (e.g. direct nav)
             // Fetch the most recent patient
-            const { data: recent } = await supabase.from('patients').select('*').limit(1).single();
+            const { data: recent } = await supabase.from('patients').select('*').order('created_at', { ascending: false }).limit(1).maybeSingle();
             if (recent) {
               setPatient(recent);
               fetchTreatments(recent.id);
@@ -153,18 +152,18 @@ const PatientProfile: React.FC = () => {
              <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <p className="text-xs text-text-muted mb-0.5">Edad</p>
-                  <p className="font-medium">{patient?.age ? `${patient.age} años` : 'No registrada'}</p>
+                  <p className="font-medium">{age !== '--' ? `${age} años` : 'No registrada'}</p>
                 </div>
                 <div>
                   <p className="text-xs text-text-muted mb-0.5">Teléfono</p>
                   <p className="font-medium">{patient?.phone || 'No registrado'}</p>
                 </div>
-                {patient?.date_of_birth && (
+                {patient?.birth_date && (
                   <div>
                     <p className="text-xs text-text-muted mb-0.5">Fecha Nacimiento</p>
                     <p className="font-medium flex items-center gap-1">
                       <span className="material-symbols-outlined text-xs">cake</span>
-                      {new Date(patient.date_of_birth).toLocaleDateString()}
+                      {new Date(patient.birth_date).toLocaleDateString()}
                     </p>
                   </div>
                 )}
@@ -174,7 +173,7 @@ const PatientProfile: React.FC = () => {
          {/* History List */}
          <section>
             <h3 className="text-lg font-bold mb-3 px-1">Historial de Tratamientos</h3>
-            <div className="bg-white dark:bg-surface-dark rounded-xl overflow-hidden shadow-sm border border-gray-100 dark:border-gray-800">
+            <div className="bg-white dark:bg-surface-dark rounded-xl overflow-hidden shadow-sm border border-slate-100 dark:border-slate-800">
                {treatments.length === 0 ? (
                    <div className="p-8 text-center text-text-muted italic">Sin tratamientos previos</div>
                ) : (
@@ -184,7 +183,7 @@ const PatientProfile: React.FC = () => {
                       <div 
                         key={i} 
                         onClick={() => { setSelectedTreatment(t); setShowTreatmentModal(true); }}
-                        className="bg-primary/5 dark:bg-primary/10 p-4 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center cursor-pointer hover:bg-primary/10 transition-colors"
+                        className="bg-primary/5 dark:bg-primary/10 p-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center cursor-pointer hover:bg-primary/10 transition-colors"
                       >
                         <div>
                           <p className="text-sm font-bold text-primary">{t.product_name}</p>
@@ -204,7 +203,10 @@ const PatientProfile: React.FC = () => {
          </section>
       </main>
 
-      <button className="fixed bottom-28 right-5 z-40 bg-primary text-white rounded-full p-4 shadow-lg shadow-primary/30 flex items-center justify-center active:scale-95 group transition-all">
+      <button
+        onClick={() => navigate('/calculator')}
+        className="fixed bottom-28 right-5 z-40 bg-primary text-white rounded-full p-4 shadow-lg shadow-primary/30 flex items-center justify-center active:scale-95 group transition-all"
+      >
         <span className="material-symbols-outlined text-[28px] group-hover:rotate-90 transition-transform">add</span>
         <span className="ml-2 font-bold pr-1 hidden group-hover:block transition-all">Nuevo Tratamiento</span>
       </button>

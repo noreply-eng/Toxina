@@ -9,7 +9,7 @@ const NewPatient: React.FC = () => {
     full_name: '',
     email: '',
     phone: '',
-    date_of_birth: '',
+    birth_date: '',
     gender: '',
     weight: '',
     height: '',
@@ -114,8 +114,8 @@ const NewPatient: React.FC = () => {
                   </label>
                   <input
                     type="date"
-                    name="date_of_birth"
-                    value={formData.date_of_birth}
+                    name="birth_date"
+                    value={formData.birth_date}
                     onChange={handleChange}
                     className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-text-main dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
                   />

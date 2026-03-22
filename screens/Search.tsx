@@ -9,6 +9,7 @@ const Search: React.FC = () => {
   const [loadingPatients, setLoadingPatients] = useState(true);
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   // Load patients on mount
   useEffect(() => {
@@ -25,15 +26,52 @@ const Search: React.FC = () => {
   const handleDelete = async () => {
     if (!deleteConfirm) return;
     setDeleting(true);
-    
-    // Delete patient and related data
-    await supabase.from('consultations').delete().eq('patient_id', deleteConfirm.id);
-    await supabase.from('patients').delete().eq('id', deleteConfirm.id);
-    
-    // Refresh list
-    await fetchPatients();
-    setDeleteConfirm(null);
-    setDeleting(false);
+    setDeleteError(null);
+
+    try {
+      // Delete treatment_details first (children), then treatments, then consultations, finally patient.
+      const { data: treatments, error: treatmentsError } = await supabase
+        .from('treatments')
+        .select('id')
+        .eq('patient_id', deleteConfirm.id);
+
+      if (treatmentsError) throw treatmentsError;
+
+      const treatmentIds = (treatments || []).map((t: { id: string }) => t.id);
+      if (treatmentIds.length > 0) {
+        const { error: detailDeleteError } = await supabase
+          .from('treatment_details')
+          .delete()
+          .in('treatment_id', treatmentIds);
+
+        if (detailDeleteError) throw detailDeleteError;
+      }
+
+      const { error: treatmentDeleteError } = await supabase
+        .from('treatments')
+        .delete()
+        .eq('patient_id', deleteConfirm.id);
+      if (treatmentDeleteError) throw treatmentDeleteError;
+
+      const { error: consultationDeleteError } = await supabase
+        .from('consultations')
+        .delete()
+        .eq('patient_id', deleteConfirm.id);
+      if (consultationDeleteError) throw consultationDeleteError;
+
+      const { error: patientDeleteError } = await supabase
+        .from('patients')
+        .delete()
+        .eq('id', deleteConfirm.id);
+      if (patientDeleteError) throw patientDeleteError;
+
+      await fetchPatients();
+      setDeleteConfirm(null);
+    } catch (error: any) {
+      setDeleteError(error?.message || 'No se pudo eliminar el paciente.');
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const filteredPatients = useMemo(() => {
@@ -173,6 +211,9 @@ const Search: React.FC = () => {
             <p className="text-sm text-center text-slate-500 dark:text-slate-400 mb-6">
               Se eliminará permanentemente a <strong>{deleteConfirm.name}</strong> y todas sus consultas asociadas. Esta acción no se puede deshacer.
             </p>
+            {deleteError && (
+              <p className="mb-4 text-sm text-center text-red-600 dark:text-red-400">{deleteError}</p>
+            )}
             <div className="flex gap-3">
               <button
                 onClick={() => setDeleteConfirm(null)}

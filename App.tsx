@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Routes, Route, useNavigate, useLocation, Navigate, Outlet } from 'react-router-dom';
+import { Routes, Route, useLocation, Navigate, Outlet } from 'react-router-dom';
 import { supabase } from './supabaseClient';
 import { Session } from '@supabase/supabase-js';
 import Dashboard from './screens/Dashboard';
@@ -28,6 +28,8 @@ import FontSize from './screens/FontSize';
 import TemplateManager from './screens/TemplateManager';
 import DataManagement from './screens/DataManagement';
 import Navigation from './components/Navigation';
+import OfflineBanner from './components/OfflineBanner';
+import PWAInstallBanner from './components/PWAInstallBanner';
 
 // layout wrappers
 const ProtectedLayout = ({ session }: { session: Session | null }) => {
@@ -48,7 +50,6 @@ const App: React.FC = () => {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
   const location = useLocation();
 
   useEffect(() => {
@@ -83,7 +84,7 @@ const App: React.FC = () => {
       const { data } = await supabase
         .from('user_profiles')
         .select('font_size')
-        .eq('user_id', session.user.id)
+        .eq('id', session.user.id)
         .single();
       
       if (data?.font_size) {
@@ -116,6 +117,7 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col transition-colors duration-200">
+      <OfflineBanner />
       <main className="flex-1 overflow-hidden">
         <Routes>
             <Route element={<PublicLayout session={session} />}>
@@ -154,6 +156,7 @@ const App: React.FC = () => {
       {session && location.pathname !== '/login' && location.pathname !== '/signup' && (
         <Navigation />
       )}
+      <PWAInstallBanner />
     </div>
   );
 };

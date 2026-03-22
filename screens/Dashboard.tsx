@@ -45,7 +45,7 @@ const Dashboard: React.FC = () => {
     };
 
     fetchProfile();
-  }, []);
+  }, [navigate]);
 
   useEffect(() => {
     // Shuffle pathologies on mount/refresh
@@ -72,7 +72,7 @@ const Dashboard: React.FC = () => {
       // Fetch consultations for today
       const { data: consultations } = await supabase
         .from('consultations')
-        .select('id, status, consultation_date, patients(id, first_name, last_name), treatment_type')
+        .select('id, status, consultation_date, patients(id, full_name), treatment_type')
         .gte('consultation_date', today.toISOString())
         .lt('consultation_date', tomorrow.toISOString())
         .order('consultation_date', { ascending: true });
@@ -84,16 +84,16 @@ const Dashboard: React.FC = () => {
 
         // Find next pending appointment
         const now = new Date();
-        const nextPending = consultations.find((c: { status?: string; consultation_date?: string }) => 
+        const nextPending = consultations.find((c: { status?: string; consultation_date?: string }) =>
           c.status !== 'completed' && new Date(c.consultation_date || '') >= now
-        ) as { patients?: { id: string; first_name?: string; last_name?: string } | { id: string; first_name?: string; last_name?: string }[]; treatment_type?: string; consultation_date?: string } | undefined;
+        ) as { patients?: { id: string; full_name?: string } | { id: string; full_name?: string }[]; treatment_type?: string; consultation_date?: string } | undefined;
         
         if (nextPending?.patients) {
           const patient = Array.isArray(nextPending.patients) ? nextPending.patients[0] : nextPending.patients;
           
           if (patient) {
             setNextAppointment({
-              patientName: `${patient.first_name || ''} ${patient.last_name || ''}`.trim() || 'Paciente',
+              patientName: patient.full_name || 'Paciente',
               treatment: nextPending.treatment_type || 'Tratamiento',
               time: new Date(nextPending.consultation_date || '').toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
               patientId: patient.id

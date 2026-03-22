@@ -107,14 +107,16 @@ const DataManagement = () => {
         .from('patients')
         .select(`
           full_name,
-          curp,
           birth_date,
           gender,
-          weight_kg,
-          height_cm,
+          weight,
+          height,
           phone,
           email,
-          medical_notes,
+          medical_history,
+          allergies,
+          current_medications,
+          notes,
           created_at
         `)
         .order('full_name');

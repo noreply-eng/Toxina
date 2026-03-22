@@ -1,5 +1,4 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Screen } from '../types';
 import { dosisData, puntosMotoresData } from '../constants/toxinData';
 import { pathologiesData, getPathologyTemplate } from '../data/pathologyData';
 import { supabase } from '../supabaseClient';
@@ -207,7 +206,6 @@ const Calculator: React.FC = () => {
         }
         
         targetPatientId = newPatient.id;
-        targetPatientId = newPatient.id;
         updateState({ selectedPatient: { id: newPatient.id, full_name: newPatient.full_name } });
       }
 
@@ -339,10 +337,8 @@ const Calculator: React.FC = () => {
     }
 
     if (musclesToAdd.length > 0) {
-    if (musclesToAdd.length > 0) {
       updateState({ selectedMuscles: [...selectedMuscles, ...musclesToAdd] });
       setIsCalculated(false); // Invalidate calculation
-    }
     }
   };
 
@@ -414,10 +410,8 @@ const Calculator: React.FC = () => {
     });
     
     if (newMuscles.length > 0) {
-    if (newMuscles.length > 0) {
       updateState({ selectedMuscles: [...selectedMuscles, ...newMuscles] });
       setIsCalculated(false);
-    }
     }
     
     if (skippedMuscles.length > 0) {
@@ -447,15 +441,6 @@ const Calculator: React.FC = () => {
     setIsCalculated(true);
   };
 
-  const getLimitWarning = () => {
-    if (!selectedBrand) return null;
-    const limit = selectedBrand === 'Dysport' ? 1000 : 400;
-    if (totalUnits > limit) {
-      return `Advertencia: Se ha excedido el límite por sesión (${limit} U)`;
-    }
-    return null;
-  };
-    
   // Formatting Volume
   const getVolumeToApply = (units: number) => {
       const dilutionVal = parseFloat(dilution);
@@ -852,7 +837,7 @@ const Calculator: React.FC = () => {
                         disabled={!selectedBrand}
                         className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border-none rounded-xl focus:ring-2 focus:ring-primary/50 text-slate-800 dark:text-slate-100 appearance-none disabled:opacity-50"
                     >
-                        <option value="">{selectedBrand ? 'Seleccione un músculo manually...' : 'Seleccione una marca primero'}</option>
+                        <option value="">{selectedBrand ? 'Seleccione un músculo...' : 'Seleccione una marca primero'}</option>
                         {availableMuscles.map(m => (
                             <option key={m} value={m}>{m}</option>
                         ))}

@@ -52,7 +52,7 @@ const Navigation: React.FC = () => {
                 isActive ? 'text-primary' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
               }`}
             >
-              <span className={`material-symbols-outlined text-2xl ${isActive ? 'filled' : ''}`}>
+              <span className={`material-symbols-outlined text-2xl ${isActive ? 'material-symbols-filled' : ''}`}>
                 {item.icon}
               </span>
               <span className={`text-[10px] font-medium leading-none`}>

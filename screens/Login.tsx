@@ -7,8 +7,10 @@ const Login: React.FC = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [resetMessage, setResetMessage] = useState<string | null>(null);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,6 +28,27 @@ const Login: React.FC = () => {
       navigate('/dashboard');
     }
     setLoading(false);
+  };
+
+  const handleForgotPassword = async () => {
+    setError(null);
+    setResetMessage(null);
+
+    if (!email.trim()) {
+      setError('Ingresa tu correo para enviar el enlace de recuperación.');
+      return;
+    }
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: `${window.location.origin}/login`,
+    });
+
+    if (error) {
+      setError(error.message);
+      return;
+    }
+
+    setResetMessage('Te enviamos un correo para restablecer tu contraseña.');
   };
 
   return (
@@ -51,6 +74,11 @@ const Login: React.FC = () => {
               {error}
             </div>
           )}
+          {resetMessage && (
+            <div className="p-3 bg-green-100 border border-green-200 text-green-700 rounded-xl text-sm font-medium">
+              {resetMessage}
+            </div>
+          )}
 
           <div className="space-y-1.5">
             <label className="text-[10px] font-black text-text-muted uppercase tracking-widest ml-1">Correo Institucional</label>
@@ -74,16 +102,31 @@ const Login: React.FC = () => {
               <input 
                 className="flex-1 w-full border-none bg-transparent h-14 px-3 text-base focus:ring-0" 
                 placeholder="••••••••" 
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
               />
-              <button className="px-4 text-slate-400" type="button"><span className="material-symbols-outlined">visibility</span></button>
+              <button
+                className="px-4 text-slate-400"
+                type="button"
+                onClick={() => setShowPassword((current) => !current)}
+                aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+              >
+                <span className="material-symbols-outlined">{showPassword ? 'visibility_off' : 'visibility'}</span>
+              </button>
             </div>
           </div>
 
-          <div className="flex justify-end"><a className="text-xs font-bold text-primary hover:underline" href="#">¿Olvidaste tu contraseña?</a></div>
+          <div className="flex justify-end">
+            <button
+              type="button"
+              className="text-xs font-bold text-primary hover:underline"
+              onClick={handleForgotPassword}
+            >
+              ¿Olvidaste tu contraseña?
+            </button>
+          </div>
 
           <button 
             type="submit" 
