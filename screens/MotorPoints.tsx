@@ -42,7 +42,7 @@ const MotorPoints: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-background-light dark:bg-background-dark pb-32">
+    <div className="flex flex-col min-h-screen w-full max-w-full min-w-0 overflow-x-hidden bg-background-light dark:bg-background-dark pb-32">
       <header className="sticky top-0 z-50 bg-white/90 dark:bg-surface-dark/90 px-4 py-3 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
         <button onClick={() => navigate(-1)} className="flex size-10 items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-800">
           <span className="material-symbols-outlined">arrow_back</span>
@@ -55,8 +55,8 @@ const MotorPoints: React.FC = () => {
         </button>
       </header>
 
-      <main className="flex-1 overflow-y-auto no-scrollbar">
-        <div className="px-5 pt-6 pb-2">
+      <main className="flex-1 min-w-0 w-full max-w-full overflow-y-auto overflow-x-hidden no-scrollbar">
+        <div className="px-5 pt-6 pb-2 min-w-0 max-w-full break-words">
           <span className="inline-block px-2 py-1 mb-2 text-[10px] font-bold tracking-widest text-primary bg-primary/10 rounded uppercase">
             {categoryNames[muscle.category]}
           </span>
@@ -89,30 +89,37 @@ const MotorPoints: React.FC = () => {
 
         {/* Image Section */}
         {muscle.usgGuidance && view === 'USG' ? (
-          <div className="px-5 pb-6">
-            <div className="relative w-full aspect-[4/3] rounded-3xl overflow-hidden shadow-lg bg-gray-900 group">
-               <div 
-                 className="absolute inset-0 bg-cover bg-center opacity-80" 
-                 style={{backgroundImage: muscle.usgGuidance.imageUrl ? `url('${muscle.usgGuidance.imageUrl}')` : `url('https://images.unsplash.com/photo-1559757175-0eb30cd8c063?auto=format&fit=crop&q=80&w=800')`}}
-               />
-               <div className="absolute top-4 left-4">
+          <div className="px-5 pb-6 min-w-0 max-w-full">
+            <div className="flex w-full justify-center min-w-0">
+              <div className="relative inline-block max-w-full rounded-3xl overflow-hidden shadow-lg bg-slate-900 ring-1 ring-black/5 dark:ring-white/10 group">
+                <img
+                  src={
+                    muscle.usgGuidance.imageUrl ||
+                    'https://images.unsplash.com/photo-1559757175-0eb30cd8c063?auto=format&fit=max&q=80&w=1200'
+                  }
+                  alt={`Ecografía — ${muscle.name}`}
+                  className="block max-h-[85dvh] max-w-full w-auto h-auto object-contain"
+                  loading="lazy"
+                  decoding="async"
+                />
+                <div className="pointer-events-none absolute top-3 left-3 z-10 sm:top-4 sm:left-4">
                   <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-md text-white text-[10px] font-bold border border-white/10">
                     <span className="material-symbols-outlined text-[16px]">visibility</span>
                     {muscle.usgGuidance.view.toUpperCase()}
                   </span>
-               </div>
-               
-               {/* Interactive Pin */}
-               {muscle.motorPoint.coordinates && (
-                 <div 
-                   className="absolute flex flex-col items-center group-hover:scale-110 transition-transform cursor-pointer"
-                   style={{ 
-                     top: `${muscle.motorPoint.coordinates.y}%`, 
-                     left: `${muscle.motorPoint.coordinates.x}%` 
-                   }}
-                 >
+                </div>
+
+                {/* Interactive Pin (posición % respecto al marco de la imagen renderizada) */}
+                {muscle.motorPoint.coordinates && (
+                  <div
+                    className="absolute flex flex-col items-center group-hover:scale-110 transition-transform cursor-pointer z-20"
+                    style={{
+                      top: `${muscle.motorPoint.coordinates.y}%`,
+                      left: `${muscle.motorPoint.coordinates.x}%`,
+                    }}
+                  >
                     <div className="relative flex items-center justify-center">
-                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75"></span>
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
                       <div className="relative flex size-6 items-center justify-center rounded-full bg-primary text-white shadow-lg border-2 border-white">
                         <span className="material-symbols-outlined text-[14px] font-bold">target</span>
                       </div>
@@ -121,8 +128,9 @@ const MotorPoints: React.FC = () => {
                       <p className="text-[10px] font-black text-primary uppercase">Punto Motor</p>
                       <p className="text-[8px] text-text-muted font-bold uppercase">{muscle.region}</p>
                     </div>
-                 </div>
-               )}
+                  </div>
+                )}
+              </div>
             </div>
             
             <div className="mt-3 flex items-start gap-2 text-[10px] text-text-muted px-1">
@@ -132,41 +140,60 @@ const MotorPoints: React.FC = () => {
           </div>
         ) : (
           /* Anatomy View - Show anatomical details */
-          <div className="px-5 pb-6">
-            <div className="bg-white dark:bg-surface-dark p-5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 space-y-4">
+          <div className="px-5 pb-6 min-w-0 max-w-full space-y-4">
+            {muscle.motorPoint.imageUrl && (
+              <div className="flex w-full justify-center min-w-0">
+                <div className="relative inline-block max-w-full rounded-3xl overflow-hidden shadow-lg bg-slate-100 dark:bg-slate-800 ring-1 ring-black/5 dark:ring-white/10">
+                  <img
+                    src={muscle.motorPoint.imageUrl}
+                    alt={`Punto motor — ${muscle.name}`}
+                    className="block max-h-[85dvh] max-w-full w-auto h-auto object-contain"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                  <div className="pointer-events-none absolute top-3 left-3 z-10 sm:top-4 sm:left-4">
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-black/55 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wide text-white backdrop-blur-md border border-white/10">
+                      <span className="material-symbols-outlined text-[14px]">pin_drop</span>
+                      Punto motor
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+            <div className="relative overflow-hidden bg-white dark:bg-surface-dark p-5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 space-y-4 break-words">
               <div>
                 <h4 className="font-bold text-sm text-text-main dark:text-white mb-2 flex items-center gap-2">
                   <span className="material-symbols-outlined text-primary">neurology</span>
                   Inervación
                 </h4>
-                <p className="text-sm text-text-muted">{muscle.anatomy.innervation}</p>
+                <p className="text-sm text-text-muted break-words">{muscle.anatomy.innervation}</p>
               </div>
               <div>
                 <h4 className="font-bold text-sm text-text-main dark:text-white mb-2 flex items-center gap-2">
                   <span className="material-symbols-outlined text-primary">start</span>
                   Origen
                 </h4>
-                <p className="text-sm text-text-muted">{muscle.anatomy.origin}</p>
+                <p className="text-sm text-text-muted break-words">{muscle.anatomy.origin}</p>
               </div>
               <div>
                 <h4 className="font-bold text-sm text-text-main dark:text-white mb-2 flex items-center gap-2">
                   <span className="material-symbols-outlined text-primary">location_on</span>
                   Inserción
                 </h4>
-                <p className="text-sm text-text-muted">{muscle.anatomy.insertion}</p>
+                <p className="text-sm text-text-muted break-words">{muscle.anatomy.insertion}</p>
               </div>
             </div>
           </div>
         )}
 
-        <div className="px-5 space-y-4">
+        <div className="px-5 space-y-4 min-w-0 max-w-full">
           {/* Dosing Information */}
-          <div className="bg-white dark:bg-surface-dark p-5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800">
-             <div className="flex items-center gap-3 mb-4">
-               <div className="size-10 rounded-full bg-green-50 dark:bg-green-900/30 flex items-center justify-center text-green-600">
-                 <span className="material-symbols-outlined">medication</span>
+          <div className="relative overflow-hidden bg-white dark:bg-surface-dark p-5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800">
+             <div className="flex items-center gap-3 mb-4 min-w-0">
+               <div className="size-10 shrink-0 overflow-hidden rounded-full bg-green-50 dark:bg-green-900/30 flex items-center justify-center text-green-600">
+                 <span className="material-symbols-outlined text-[22px] leading-none">medication</span>
                </div>
-               <h3 className="font-bold text-text-main dark:text-white">Dosificación</h3>
+               <h3 className="font-bold text-text-main dark:text-white min-w-0 flex-1 break-words text-lg">Dosificación</h3>
              </div>
              <div className="space-y-3">
                <div className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
@@ -185,18 +212,18 @@ const MotorPoints: React.FC = () => {
           </div>
 
           {/* Injection Technique */}
-          <div className="bg-white dark:bg-surface-dark p-5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800">
-             <div className="flex items-center gap-3 mb-4">
-               <div className="size-10 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-primary">
-                 <span className="material-symbols-outlined">vaccines</span>
+          <div className="relative overflow-hidden bg-white dark:bg-surface-dark p-5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800">
+             <div className="flex items-center gap-3 mb-4 min-w-0">
+               <div className="size-10 shrink-0 overflow-hidden rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-primary">
+                 <span className="material-symbols-outlined text-[22px] leading-none">vaccines</span>
                </div>
-               <h3 className="font-bold text-text-main dark:text-white">Técnica de Inyección</h3>
+               <h3 className="font-bold text-text-main dark:text-white min-w-0 flex-1 break-words text-lg">Técnica de Inyección</h3>
              </div>
              <ul className="space-y-3">
                {muscle.motorPoint.techniqueNotes.map((note, idx) => (
-                 <li key={idx} className="flex gap-3 text-xs leading-relaxed text-text-muted">
+                 <li key={idx} className="flex gap-3 text-xs leading-relaxed text-text-muted min-w-0">
                    <div className="size-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
-                   <span>{note}</span>
+                   <span className="min-w-0 break-words">{note}</span>
                  </li>
                ))}
              </ul>
@@ -205,29 +232,29 @@ const MotorPoints: React.FC = () => {
           {/* USG Guidance Section */}
           {muscle.usgGuidance && (
             <>
-              <div className="bg-white dark:bg-surface-dark p-5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800">
-                 <div className="flex items-center gap-3 mb-4">
-                   <div className="size-10 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-blue-600">
-                     <span className="material-symbols-outlined">ultrasound</span>
+              <div className="relative overflow-hidden bg-white dark:bg-surface-dark p-5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800">
+                 <div className="flex items-center gap-3 mb-4 min-w-0">
+                   <div className="size-10 shrink-0 overflow-hidden rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-blue-600">
+                     <span className="material-symbols-outlined text-[22px] leading-none" aria-hidden>ultrasound</span>
                    </div>
-                   <h3 className="font-bold text-text-main dark:text-white">Guía de Ultrasonido</h3>
+                   <h3 className="font-bold text-text-main dark:text-white min-w-0 flex-1 break-words text-lg">Guía de Ultrasonido</h3>
                  </div>
-                 <div className="space-y-3">
-                   <div>
+                 <div className="space-y-3 min-w-0 break-words">
+                   <div className="min-w-0">
                      <p className="text-xs font-bold text-text-main dark:text-white mb-1">Transductor:</p>
-                     <p className="text-xs text-text-muted">{muscle.usgGuidance.transducerType}</p>
+                     <p className="text-xs text-text-muted break-words">{muscle.usgGuidance.transducerType}</p>
                    </div>
-                   <div>
+                   <div className="min-w-0">
                      <p className="text-xs font-bold text-text-main dark:text-white mb-1">Abordaje:</p>
-                     <p className="text-xs text-text-muted">{muscle.usgGuidance.approach}</p>
+                     <p className="text-xs text-text-muted break-words">{muscle.usgGuidance.approach}</p>
                    </div>
-                   <div>
+                   <div className="min-w-0">
                      <p className="text-xs font-bold text-text-main dark:text-white mb-1">Puntos de Referencia:</p>
                      <ul className="space-y-1">
                        {muscle.usgGuidance.landmarks.map((landmark, idx) => (
-                         <li key={idx} className="flex gap-2 text-xs text-text-muted">
+                         <li key={idx} className="flex gap-2 text-xs text-text-muted min-w-0">
                            <div className="size-1.5 rounded-full bg-blue-500 mt-1.5 shrink-0" />
-                           <span>{landmark}</span>
+                           <span className="min-w-0 break-words">{landmark}</span>
                          </li>
                        ))}
                      </ul>
@@ -236,18 +263,18 @@ const MotorPoints: React.FC = () => {
               </div>
 
               {/* Precautions */}
-              <div className="bg-orange-50 dark:bg-orange-900/20 p-5 rounded-2xl border border-orange-100 dark:border-orange-900/30">
-                 <div className="flex items-center gap-3 mb-3">
-                   <div className="size-10 rounded-full bg-orange-100 dark:bg-orange-900/40 flex items-center justify-center text-orange-600">
-                     <span className="material-symbols-outlined">warning</span>
+              <div className="relative overflow-hidden bg-orange-50 dark:bg-orange-900/20 p-5 rounded-2xl border border-orange-100 dark:border-orange-900/30">
+                 <div className="flex items-center gap-3 mb-3 min-w-0">
+                   <div className="size-10 shrink-0 overflow-hidden rounded-full bg-orange-100 dark:bg-orange-900/40 flex items-center justify-center text-orange-600">
+                     <span className="material-symbols-outlined text-[22px] leading-none">warning</span>
                    </div>
-                   <h3 className="font-bold text-orange-900 dark:text-orange-200">Precauciones</h3>
+                   <h3 className="font-bold text-orange-900 dark:text-orange-200 min-w-0 flex-1 break-words text-lg">Precauciones</h3>
                  </div>
                  <ul className="space-y-2">
                    {muscle.usgGuidance.precautions.map((precaution, idx) => (
-                     <li key={idx} className="flex gap-2 text-xs text-orange-800 dark:text-orange-300 leading-relaxed">
+                     <li key={idx} className="flex gap-2 text-xs text-orange-800 dark:text-orange-300 leading-relaxed min-w-0">
                        <div className="size-1.5 rounded-full bg-orange-600 mt-1.5 shrink-0" />
-                       <span>{precaution}</span>
+                       <span className="min-w-0 break-words">{precaution}</span>
                      </li>
                    ))}
                  </ul>
@@ -256,12 +283,12 @@ const MotorPoints: React.FC = () => {
           )}
 
           {/* Clinical Indications */}
-          <div className="bg-white dark:bg-surface-dark p-5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800">
-             <div className="flex items-center gap-3 mb-4">
-               <div className="size-10 rounded-full bg-purple-50 dark:bg-purple-900/30 flex items-center justify-center text-purple-600">
-                 <span className="material-symbols-outlined">clinical_notes</span>
+          <div className="relative overflow-hidden bg-white dark:bg-surface-dark p-5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800">
+             <div className="flex items-center gap-3 mb-4 min-w-0">
+               <div className="size-10 shrink-0 overflow-hidden rounded-full bg-purple-50 dark:bg-purple-900/30 flex items-center justify-center text-purple-600">
+                 <span className="material-symbols-outlined text-[22px] leading-none">clinical_notes</span>
                </div>
-               <h3 className="font-bold text-text-main dark:text-white">Indicaciones Clínicas</h3>
+               <h3 className="font-bold text-text-main dark:text-white min-w-0 flex-1 break-words text-lg">Indicaciones Clínicas</h3>
              </div>
              <div className="flex flex-wrap gap-2">
                {muscle.indications.map((indication, idx) => (

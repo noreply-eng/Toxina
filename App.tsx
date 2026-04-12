@@ -30,6 +30,7 @@ import DataManagement from './screens/DataManagement';
 import Navigation from './components/Navigation';
 import OfflineBanner from './components/OfflineBanner';
 import PWAInstallBanner from './components/PWAInstallBanner';
+import UpdatePrompt from './components/UpdatePrompt';
 
 // layout wrappers
 const ProtectedLayout = ({ session }: { session: Session | null }) => {
@@ -118,7 +119,7 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen flex flex-col transition-colors duration-200">
       <OfflineBanner />
-      <main className="flex-1 overflow-hidden">
+      <main className="flex-1 min-w-0 overflow-x-hidden overflow-y-hidden">
         <Routes>
             <Route element={<PublicLayout session={session} />}>
               <Route path="/login" element={<Login />} />
@@ -157,6 +158,7 @@ const App: React.FC = () => {
         <Navigation />
       )}
       <PWAInstallBanner />
+      <UpdatePrompt />
     </div>
   );
 };

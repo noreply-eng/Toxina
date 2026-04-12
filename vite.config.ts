@@ -13,7 +13,7 @@ export default defineConfig(({ mode }) => {
       plugins: [
         react(),
         VitePWA({
-          registerType: 'autoUpdate',
+          registerType: 'prompt',
           includeAssets: ['icons/*.png', 'imgportada/*.jpeg'],
           manifest: {
             name: 'Toxina DLM — Clínica de Toxina Botulínica',
@@ -45,6 +45,7 @@ export default defineConfig(({ mode }) => {
             ],
           },
           workbox: {
+            cleanupOutdatedCaches: true,
             globPatterns: ['**/*.{js,css,html,ico,png,svg,jpeg,jpg,webp,woff,woff2}'],
             runtimeCaching: [
               {
@@ -69,15 +70,6 @@ export default defineConfig(({ mode }) => {
                 options: {
                   cacheName: 'google-fonts-webfonts',
                   expiration: { maxEntries: 30, maxAgeSeconds: 60 * 60 * 24 * 365 },
-                  cacheableResponse: { statuses: [0, 200] },
-                },
-              },
-              {
-                urlPattern: /^https:\/\/esm\.sh\/.*/i,
-                handler: 'CacheFirst',
-                options: {
-                  cacheName: 'esm-imports',
-                  expiration: { maxEntries: 30, maxAgeSeconds: 60 * 60 * 24 * 30 },
                   cacheableResponse: { statuses: [0, 200] },
                 },
               },

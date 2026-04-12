@@ -42,7 +42,9 @@ const MuscleList: React.FC = () => {
       }
     }
 
-    return muscles;
+    return [...muscles].sort((a, b) =>
+      a.name.localeCompare(b.name, 'es', { sensitivity: 'base' })
+    );
   }, [searchQuery, filter]);
 
   // Get icon for muscle category

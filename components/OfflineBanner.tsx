@@ -19,9 +19,19 @@ const OfflineBanner: React.FC = () => {
   if (!isOffline) return null;
 
   return (
-    <div className="bg-amber-500 text-white text-center text-xs font-semibold py-1.5 px-4 flex items-center justify-center gap-2 z-50">
-      <span className="material-symbols-outlined text-sm">cloud_off</span>
-      Sin conexión — Usando datos guardados
+    <div className="fixed top-0 left-0 right-0 z-[110] animate-slide-down">
+      <div className="bg-amber-500/90 dark:bg-amber-600/90 backdrop-blur-md text-white py-2 px-4 shadow-lg border-b border-white/10">
+        <div className="max-w-md mx-auto flex items-center justify-center gap-3">
+          <div className="relative flex items-center justify-center">
+            <span className="material-symbols-outlined text-xl animate-pulse">cloud_off</span>
+            <div className="absolute -top-1 -right-1 w-2 h-2 bg-white rounded-full animate-ping"></div>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-sm font-bold leading-tight">Sin conexión</span>
+            <span className="text-[10px] opacity-90 leading-tight">Usando datos locales (Calculadoras y Guías)</span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
