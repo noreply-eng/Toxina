@@ -18,12 +18,20 @@ export interface UserProfile {
   specialty: string | null;
   avatar_url: string | null;
   subscription_tier: string;
+  general_license?: string | null;
+  specialist_license?: string | null;
   default_brand?: string;
   unit_system?: string;
   default_dose_option?: string;
   default_dilution?: string;
   language?: string;
   dark_mode?: boolean;
+  terms_accepted_at?: string | null;
+  terms_version?: string | null;
+  privacy_sensitive_accepted_at?: string | null;
+  privacy_version?: string | null;
+  secondary_purposes_accepted_at?: string | null;
+  consent_revoked_at?: string | null;
 }
 
 export interface BucketListItem {

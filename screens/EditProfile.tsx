@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
+import { getAuthUser } from '../utils/auth';
 import { UserProfile } from '../types';
 
 const EditProfile: React.FC = () => {
@@ -23,7 +24,7 @@ const EditProfile: React.FC = () => {
 
   const fetchProfile = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = await getAuthUser();
       if (!user) return;
 
       const { data, error } = await supabase
@@ -87,7 +88,7 @@ const EditProfile: React.FC = () => {
   const uploadAvatar = async (file: File): Promise<string | null> => {
     try {
       setUploading(true);
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = await getAuthUser();
       if (!user) throw new Error('No user');
 
       const fileExt = file.name.split('.').pop();
@@ -125,7 +126,7 @@ const EditProfile: React.FC = () => {
     setSaving(true);
     setError(null);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = await getAuthUser();
       if (!user) throw new Error('No user');
 
       let newAvatarUrl = avatarUrl;

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import PageContainer from '../components/PageContainer';
 import ScheduleConsultationModal from '../components/ScheduleConsultationModal';
 import VisitTypeBadge from '../components/VisitTypeBadge';
 import {
@@ -10,6 +11,7 @@ import {
   markConsultationInProgress,
   completeConsultation,
 } from '../hooks/useConsultations';
+import StaleDataNotice, { useClinicalCacheMeta } from '../components/StaleDataNotice';
 import type { Consultation, ConsultationStatus } from '../types/clinical';
 import { CONSULTATION_STATUS_LABELS } from '../types/clinical';
 import {
@@ -47,6 +49,9 @@ const Agenda: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [editingConsultation, setEditingConsultation] = useState<Consultation | null>(null);
   const [actionConsultation, setActionConsultation] = useState<Consultation | null>(null);
+  const [usingCachedData, setUsingCachedData] = useState(false);
+  const [cacheUserId, setCacheUserId] = useState<string | undefined>();
+  const { lastSyncedAt } = useClinicalCacheMeta(cacheUserId);
 
   const statusList = useMemo((): ConsultationStatus[] | undefined => {
     if (statusFilter === 'scheduled') {
@@ -60,17 +65,18 @@ const Agenda: React.FC = () => {
     setLoadError(null);
     try {
       const userId = await getCurrentUserId();
+      setCacheUserId(userId);
 
-      let data: Consultation[];
+      let result;
 
       if (viewMode === 'upcoming') {
-        data = await fetchUpcoming(userId, {
+        result = await fetchUpcoming(userId, {
           from: new Date().toISOString(),
           status: statusList,
           limit: 50,
         });
       } else if (viewMode === 'day') {
-        data = await fetchUpcoming(userId, {
+        result = await fetchUpcoming(userId, {
           from: toQueryFrom(selectedDate),
           to: toQueryTo(selectedDate),
           status: statusList,
@@ -78,14 +84,15 @@ const Agenda: React.FC = () => {
       } else {
         const weekStart = startOfWeek(selectedDate);
         const weekEnd = addDays(weekStart, 6);
-        data = await fetchUpcoming(userId, {
+        result = await fetchUpcoming(userId, {
           from: toQueryFrom(weekStart),
           to: toQueryTo(weekEnd),
           status: statusList,
         });
       }
 
-      setConsultations(data);
+      setConsultations(result.data);
+      setUsingCachedData(result.fromCache);
     } catch (err) {
       console.error(err);
       setLoadError(getErrorMessage(err));
@@ -252,8 +259,9 @@ const Agenda: React.FC = () => {
         : 'Todas las citas próximas';
 
   return (
-    <div className="flex flex-col min-h-screen bg-background-light dark:bg-background-dark pb-32">
-      <header className="bg-white dark:bg-surface-dark px-4 pb-3 pt-12 sticky top-0 z-10 shadow-sm border-b border-slate-100 dark:border-slate-800">
+    <div className="flex flex-col min-h-screen bg-background-light dark:bg-background-dark pb-32 lg:pb-8">
+      <header className="bg-white dark:bg-surface-dark pb-3 pt-12 lg:pt-6 sticky top-0 z-10 shadow-sm border-b border-slate-100 dark:border-slate-800">
+        <PageContainer maxWidth="max-w-5xl">
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-2xl font-bold text-text-main dark:text-white">Agenda</h1>
           <div className="flex items-center gap-2">
@@ -334,9 +342,11 @@ const Agenda: React.FC = () => {
             Todas
           </button>
         </div>
+        </PageContainer>
       </header>
 
-      <main className="flex-1 p-4">
+      <main className="flex-1">
+        <PageContainer maxWidth="max-w-5xl" className="py-4">
         {loadError && (
           <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
             <p className="text-sm text-red-700 dark:text-red-400 font-medium">{loadError}</p>
@@ -348,6 +358,12 @@ const Agenda: React.FC = () => {
             </button>
           </div>
         )}
+
+        <StaleDataNotice
+          visible={usingCachedData}
+          lastSyncedAt={lastSyncedAt}
+          className="mb-4"
+        />
 
         {loading ? (
           <p className="text-center text-text-muted animate-pulse py-8">Cargando citas...</p>
@@ -386,6 +402,7 @@ const Agenda: React.FC = () => {
         ) : (
           <div className="space-y-3">{consultations.map(renderConsultationCard)}</div>
         )}
+        </PageContainer>
       </main>
 
       <ScheduleConsultationModal

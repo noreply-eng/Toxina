@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
+import { getAuthUser } from '../utils/auth';
 import {
   ToxinBrand,
   UnitSystem,
@@ -22,7 +23,7 @@ const UnitPreferences: React.FC = () => {
   const loadPreferences = async () => {
     setLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = await getAuthUser();
       if (!user) return;
 
       const { data, error } = await supabase
@@ -45,7 +46,7 @@ const UnitPreferences: React.FC = () => {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = await getAuthUser();
       if (!user) {
         alert('Debe iniciar sesión');
         return;

@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
+import LegalFooterLinks from '../components/LegalFooterLinks';
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
@@ -142,8 +143,9 @@ const Login: React.FC = () => {
         </form>
       </div>
 
-      <div className="w-full text-center py-6 z-10">
+      <div className="w-full text-center py-6 z-10 space-y-3">
         <p className="text-slate-500 text-sm font-bold">¿No tienes cuenta? <button onClick={() => navigate('/signup')} className="text-primary font-black hover:underline ml-1">Regístrate</button></p>
+        <LegalFooterLinks />
       </div>
     </div>
   );

@@ -2,6 +2,9 @@
 import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
+import { getAuthUser } from '../utils/auth';
+import { fetchAllPatients, fetchPatientById } from '../hooks/usePatients';
+import { updatePatientMutation } from '../services/clinicalMutations';
 import ScheduleConsultationModal from '../components/ScheduleConsultationModal';
 import VisitTypeBadge from '../components/VisitTypeBadge';
 import {
@@ -62,8 +65,8 @@ const PatientProfile: React.FC = () => {
 
   const loadConsultations = React.useCallback(async (pid: string) => {
     try {
-      const data = await fetchByPatient(pid);
-      setConsultations(data);
+      const result = await fetchByPatient(pid);
+      setConsultations(result.data);
     } catch (err) {
       console.error(err);
     }
@@ -72,13 +75,17 @@ const PatientProfile: React.FC = () => {
   React.useEffect(() => {
     const fetchPatientData = async () => {
       try {
+        const user = await getAuthUser();
+        if (!user) {
+          setLoading(false);
+          return;
+        }
+
         if (!patientId) {
-          const { data: recent } = await supabase
-            .from('patients')
-            .select('*')
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .maybeSingle();
+          const result = await fetchAllPatients(user.id);
+          const recent = [...result.data].sort((a, b) =>
+            (b.created_at ?? '').localeCompare(a.created_at ?? '')
+          )[0];
           if (recent) {
             setPatient(recent);
             await fetchTreatments(recent.id);
@@ -88,11 +95,8 @@ const PatientProfile: React.FC = () => {
           return;
         }
 
-        const { data: patientData } = await supabase
-          .from('patients')
-          .select('*')
-          .eq('id', patientId)
-          .single();
+        const result = await fetchPatientById(user.id, patientId);
+        const patientData = result.data;
 
         if (patientData) {
           setPatient(patientData);
@@ -142,12 +146,13 @@ const PatientProfile: React.FC = () => {
     if (!patientId) return;
     setSavingSummary(true);
     try {
-      const { error } = await supabase
-        .from('patients')
-        .update({ medical_summary: summaryDraft.trim() || null })
-        .eq('id', patientId);
-      if (error) throw error;
-      setPatient((prev) => (prev ? { ...prev, medical_summary: summaryDraft.trim() || undefined } : prev));
+      const user = await getAuthUser();
+      if (!user) return;
+
+      const updated = await updatePatientMutation(user.id, patientId, {
+        medical_summary: summaryDraft.trim() || null,
+      });
+      setPatient((prev) => (prev ? { ...prev, medical_summary: updated.medical_summary ?? undefined } : prev));
       setEditingSummary(false);
     } catch (err) {
       console.error(err);

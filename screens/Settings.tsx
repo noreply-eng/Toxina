@@ -1,6 +1,8 @@
 
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import PageContainer from '../components/PageContainer';
+import LegalFooterLinks from '../components/LegalFooterLinks';
 
 interface SettingsProps {
   toggleDarkMode: () => void;
@@ -8,6 +10,8 @@ interface SettingsProps {
 }
 
 import { supabase } from '../supabaseClient';
+import { getAuthUser } from '../utils/auth';
+import { clearClinicalCacheForUser } from '../services/clinicalCache';
 import { UserProfile, BucketListItem } from '../types';
 import {
   BRAND_LABELS,
@@ -20,6 +24,7 @@ import {
 
 const SETTINGS_ROUTES: Record<string, string> = {
   profile: '/profile',
+  privacy: '/privacidad',
   sub: '/subscription',
   'motor-points': '/motor-points',
   units: '/unit-preferences',
@@ -46,7 +51,7 @@ const Settings: React.FC<SettingsProps> = ({ toggleDarkMode, isDarkMode }) => {
 
   const fetchData = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = await getAuthUser();
       
       if (!user) {
         // Should not happen if protected, but handle it
@@ -130,8 +135,12 @@ const Settings: React.FC<SettingsProps> = ({ toggleDarkMode, isDarkMode }) => {
 
   const handleLogout = async () => {
     try {
+      const user = await getAuthUser();
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
+      if (user) {
+        await clearClinicalCacheForUser(user.id);
+      }
     } catch (error) {
       console.error('Error logs out:', error);
       navigate('/login');
@@ -141,7 +150,7 @@ const Settings: React.FC<SettingsProps> = ({ toggleDarkMode, isDarkMode }) => {
   const handleAddBucketItem = async () => {
     if (!newBucketItem.trim()) return;
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = await getAuthUser();
       if (!user) return;
 
       const { data, error } = await supabase
@@ -216,6 +225,7 @@ const Settings: React.FC<SettingsProps> = ({ toggleDarkMode, isDarkMode }) => {
          { id: 'font-size', name: 'Tamaño de Fuente', icon: 'text_fields', type: 'link' },
          { id: 'templates', name: 'Plantillas', icon: 'description', type: 'link' },
          { id: 'data', name: 'Gestión de Datos', icon: 'database', type: 'link' },
+         { id: 'privacy', name: 'Privacidad y ARCO', icon: 'shield', type: 'link' },
          { id: 'lang', name: 'Idioma', val: languageLabel, icon: 'language', type: 'link' },
          { id: 'dark', name: 'Modo Oscuro', icon: 'dark_mode', type: 'toggle', active: isDarkMode, action: toggleDarkMode }
        ]
@@ -223,8 +233,9 @@ const Settings: React.FC<SettingsProps> = ({ toggleDarkMode, isDarkMode }) => {
   ];
 
   return (
-    <div className="flex flex-col min-h-screen bg-background-light dark:bg-background-dark pb-32 overflow-y-auto no-scrollbar">
-      <header className="sticky top-0 z-20 flex items-center justify-between bg-background-light/90 dark:bg-background-dark/90 px-5 pt-12 pb-4 backdrop-blur-md">
+    <div className="flex flex-col min-h-screen bg-background-light dark:bg-background-dark pb-32 lg:pb-8 overflow-y-auto no-scrollbar">
+      <header className="sticky top-0 z-20 bg-background-light/90 dark:bg-background-dark/90 backdrop-blur-md">
+        <PageContainer maxWidth="max-w-4xl" className="flex items-center justify-between pt-12 lg:pt-6 pb-4">
         <h1 className="text-3xl font-bold tracking-tight">Ajustes</h1>
         <div className="h-10 w-10 overflow-hidden rounded-full border-2 border-white dark:border-slate-800 shadow-sm bg-slate-200">
            {profile?.avatar_url ? (
@@ -233,9 +244,11 @@ const Settings: React.FC<SettingsProps> = ({ toggleDarkMode, isDarkMode }) => {
              <span className="material-symbols-outlined text-slate-400 h-full w-full flex items-center justify-center">person</span>
            )}
         </div>
+        </PageContainer>
       </header>
 
-      <main className="flex-1 px-4 space-y-6">
+      <main className="flex-1">
+        <PageContainer maxWidth="max-w-4xl" className="space-y-6 pb-6">
         {/* Bucket List Section */}
         <section>
           <div className="flex items-center justify-between mb-2 px-1">
@@ -335,7 +348,8 @@ const Settings: React.FC<SettingsProps> = ({ toggleDarkMode, isDarkMode }) => {
           </section>
         ))}
 
-        <div className="py-4 text-center">
+        <div className="py-4 text-center space-y-3">
+          <LegalFooterLinks />
           <p className="text-[10px] font-bold text-slate-400 dark:text-slate-600 uppercase tracking-widest">Versión 1.0.3 - Dynamic</p>
         </div>
 
@@ -345,6 +359,7 @@ const Settings: React.FC<SettingsProps> = ({ toggleDarkMode, isDarkMode }) => {
         >
           <span className="text-red-600 dark:text-red-400 font-bold text-sm">Cerrar Sesión</span>
         </button>
+        </PageContainer>
       </main>
     </div>
   );

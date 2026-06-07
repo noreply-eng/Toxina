@@ -1,4 +1,15 @@
 import { supabase } from '../supabaseClient';
+import { getAuthUser } from '../utils/auth';
+import {
+  fetchConsultationsByPatientCached,
+  fetchUpcomingCached,
+  upsertConsultationInCache,
+  type CachedFetchResult,
+} from '../services/clinicalCache';
+import {
+  createConsultationMutation,
+  updateConsultationMutation,
+} from '../services/clinicalMutations';
 import type {
   Consultation,
   CreateConsultationInput,
@@ -22,52 +33,26 @@ const CONSULTATION_SELECT = `
   patients (id, full_name, avatar_url)
 `;
 
+export type { CachedFetchResult };
+
 export async function getCurrentUserId(): Promise<string> {
-  const { data: { user }, error } = await supabase.auth.getUser();
-  if (error || !user) throw new Error('Usuario no autenticado');
+  const user = await getAuthUser();
+  if (!user) throw new Error('Usuario no autenticado');
   return user.id;
 }
 
 export async function fetchUpcoming(
   userId: string,
   options: FetchUpcomingOptions = {}
-): Promise<Consultation[]> {
-  let query = supabase
-    .from('consultations')
-    .select(CONSULTATION_SELECT)
-    .eq('user_id', userId)
-    .order('consultation_date', { ascending: true });
-
-  if (options.from) {
-    query = query.gte('consultation_date', options.from);
-  }
-  if (options.to) {
-    query = query.lte('consultation_date', options.to);
-  }
-  if (options.status) {
-    const statuses = Array.isArray(options.status) ? options.status : [options.status];
-    query = query.in('status', statuses);
-  }
-  if (options.limit) {
-    query = query.limit(options.limit);
-  }
-
-  const { data, error } = await query;
-  if (error) throw error;
-  return (data ?? []) as Consultation[];
+): Promise<CachedFetchResult<Consultation[]>> {
+  return fetchUpcomingCached(userId, options);
 }
 
-export async function fetchByPatient(patientId: string): Promise<Consultation[]> {
+export async function fetchByPatient(
+  patientId: string
+): Promise<CachedFetchResult<Consultation[]>> {
   const userId = await getCurrentUserId();
-  const { data, error } = await supabase
-    .from('consultations')
-    .select(CONSULTATION_SELECT)
-    .eq('user_id', userId)
-    .eq('patient_id', patientId)
-    .order('consultation_date', { ascending: false });
-
-  if (error) throw error;
-  return (data ?? []) as Consultation[];
+  return fetchConsultationsByPatientCached(userId, patientId);
 }
 
 export async function fetchById(id: string): Promise<Consultation | null> {
@@ -80,6 +65,9 @@ export async function fetchById(id: string): Promise<Consultation | null> {
     .maybeSingle();
 
   if (error) throw error;
+  if (data) {
+    await upsertConsultationInCache(data as Consultation);
+  }
   return data as Consultation | null;
 }
 
@@ -87,24 +75,7 @@ export async function createConsultation(
   input: CreateConsultationInput
 ): Promise<Consultation> {
   const userId = await getCurrentUserId();
-  const { data, error } = await supabase
-    .from('consultations')
-    .insert({
-      user_id: userId,
-      patient_id: input.patient_id,
-      consultation_date: input.consultation_date,
-      visit_type: input.visit_type,
-      treatment_type: input.treatment_type ?? null,
-      pathology_id: input.pathology_id ?? null,
-      notes: input.notes ?? null,
-      linked_treatment_id: input.linked_treatment_id ?? null,
-      status: input.status ?? 'scheduled',
-    })
-    .select(CONSULTATION_SELECT)
-    .single();
-
-  if (error) throw error;
-  return data as Consultation;
+  return createConsultationMutation(userId, input);
 }
 
 export async function updateConsultation(
@@ -112,16 +83,7 @@ export async function updateConsultation(
   input: UpdateConsultationInput
 ): Promise<Consultation> {
   const userId = await getCurrentUserId();
-  const { data, error } = await supabase
-    .from('consultations')
-    .update(input)
-    .eq('user_id', userId)
-    .eq('id', id)
-    .select(CONSULTATION_SELECT)
-    .single();
-
-  if (error) throw error;
-  return data as Consultation;
+  return updateConsultationMutation(userId, id, input);
 }
 
 export async function completeConsultation(
@@ -130,11 +92,7 @@ export async function completeConsultation(
 ): Promise<Consultation> {
   const updates: UpdateConsultationInput = { status: 'completed' };
   if (treatmentId) {
-    const { error: linkError } = await supabase
-      .from('consultations')
-      .update({ linked_treatment_id: treatmentId })
-      .eq('id', id);
-    if (linkError) throw linkError;
+    updates.linked_treatment_id = treatmentId;
   }
   return updateConsultation(id, updates);
 }

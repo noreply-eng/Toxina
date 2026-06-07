@@ -8,6 +8,22 @@ interface BeforeInstallPromptEvent extends Event {
 const DISMISS_KEY = 'pwa-install-dismissed';
 const DISMISS_DAYS = 30;
 
+function isStandaloneMode(): boolean {
+  return (
+    window.matchMedia('(display-mode: standalone)').matches
+    || window.matchMedia('(display-mode: fullscreen)').matches
+    || (window.navigator as Navigator & { standalone?: boolean }).standalone === true
+  );
+}
+
+function isIOSDevice(): boolean {
+  const ua = window.navigator.userAgent;
+  return (
+    /iPad|iPhone|iPod/.test(ua)
+    || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+  );
+}
+
 export function usePWAInstall() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstallable, setIsInstallable] = useState(false);
@@ -16,17 +32,12 @@ export function usePWAInstall() {
   const [isDismissed, setIsDismissed] = useState(false);
 
   useEffect(() => {
-    // Check if already installed (standalone mode)
-    const standalone = window.matchMedia('(display-mode: standalone)').matches
-      || (window.navigator as any).standalone === true;
+    const standalone = isStandaloneMode();
     setIsStandalone(standalone);
 
-    // Detect iOS
-    const ua = window.navigator.userAgent;
-    const isiOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-    setIsIOS(isiOS && !standalone);
+    const ios = isIOSDevice();
+    setIsIOS(ios && !standalone);
 
-    // Check dismiss cookie
     const dismissedAt = localStorage.getItem(DISMISS_KEY);
     if (dismissedAt) {
       const diff = Date.now() - parseInt(dismissedAt, 10);
@@ -37,7 +48,6 @@ export function usePWAInstall() {
       }
     }
 
-    // Listen for the install prompt (Chrome / Edge / Samsung Internet)
     const handler = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
@@ -46,23 +56,25 @@ export function usePWAInstall() {
 
     window.addEventListener('beforeinstallprompt', handler);
 
-    // Detect if the app was installed
     window.addEventListener('appinstalled', () => {
       setIsInstallable(false);
       setDeferredPrompt(null);
+      setIsStandalone(true);
     });
 
     return () => window.removeEventListener('beforeinstallprompt', handler);
   }, []);
 
   const install = useCallback(async () => {
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
+    if (!deferredPrompt) return false;
+    await deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
+    setDeferredPrompt(null);
     if (outcome === 'accepted') {
       setIsInstallable(false);
+      return true;
     }
-    setDeferredPrompt(null);
+    return false;
   }, [deferredPrompt]);
 
   const dismiss = useCallback(() => {
@@ -72,5 +84,12 @@ export function usePWAInstall() {
 
   const showBanner = !isStandalone && !isDismissed && (isInstallable || isIOS);
 
-  return { isInstallable, isIOS, isStandalone, showBanner, install, dismiss };
+  return {
+    isInstallable,
+    isIOS,
+    isStandalone,
+    showBanner,
+    install,
+    dismiss,
+  };
 }

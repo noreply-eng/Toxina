@@ -2,6 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
+import { getAuthUser, isOnline } from '../utils/auth';
+import { updatePatientMutation } from '../services/clinicalMutations';
 
 const EditPatient: React.FC = () => {
   const navigate = useNavigate();
@@ -135,7 +137,11 @@ const EditPatient: React.FC = () => {
       // Upload new image if selected
       const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
       if (fileInput?.files && fileInput.files.length > 0) {
-        newAvatarUrl = await uploadAvatar(fileInput.files[0]);
+        if (!isOnline()) {
+          setError('Sin conexión: la foto se podrá subir cuando vuelva internet. Guardando el resto de datos.');
+        } else {
+          newAvatarUrl = await uploadAvatar(fileInput.files[0]);
+        }
       }
 
       const updates = {
@@ -154,12 +160,10 @@ const EditPatient: React.FC = () => {
         avatar_url: newAvatarUrl,
       };
 
-      const { error } = await supabase
-        .from('patients')
-        .update(updates)
-        .eq('id', id);
+      const user = await getAuthUser();
+      if (!user) throw new Error('No autenticado');
 
-      if (error) throw error;
+      await updatePatientMutation(user.id, id, updates);
 
       navigate(`/patient/${id}`);
     } catch (err: any) {

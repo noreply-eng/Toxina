@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../supabaseClient';
+import { getAuthUser } from '../utils/auth';
+import { searchPatients } from '../hooks/usePatients';
 import { pathologiesData } from '../data/pathologyData';
 import {
   createConsultation,
@@ -99,15 +101,21 @@ const ScheduleConsultationModal: React.FC<ScheduleConsultationModalProps> = ({
       return;
     }
 
-    const searchPatients = async () => {
-      const { data } = await supabase
-        .from('patients')
-        .select('id, full_name')
-        .ilike('full_name', `%${patientSearch}%`)
-        .limit(8);
-      if (data) setPatientOptions(data);
+    const searchPatientOptions = async () => {
+      const user = await getAuthUser();
+      if (!user) return;
+
+      const result = await searchPatients(user.id, patientSearch, 8);
+      if (result.data) {
+        setPatientOptions(
+          result.data.map((patient) => ({
+            id: patient.id,
+            full_name: patient.full_name,
+          }))
+        );
+      }
     };
-    searchPatients();
+    searchPatientOptions();
   }, [patientSearch, isOpen, isPatientLocked]);
 
   useEffect(() => {

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
+import { getAuthUser } from '../utils/auth';
 import ColorPicker from '../components/ColorPicker';
 
 const BrandColors: React.FC = () => {
@@ -21,7 +22,7 @@ const BrandColors: React.FC = () => {
   const loadUserColors = async () => {
     setLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = await getAuthUser();
       if (!user) return;
 
       const { data, error } = await supabase
@@ -50,7 +51,7 @@ const BrandColors: React.FC = () => {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = await getAuthUser();
       if (!user) {
         alert('Debe iniciar sesión');
         return;

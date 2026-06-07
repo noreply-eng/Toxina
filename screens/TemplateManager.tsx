@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
+import { getAuthUser } from '../utils/auth';
 import { useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, 
@@ -46,7 +47,7 @@ const TemplateManager = () => {
   const fetchTemplates = async () => {
     try {
       setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = await getAuthUser();
       if (!user) return;
 
       const { data, error } = await supabase
@@ -66,7 +67,7 @@ const TemplateManager = () => {
 
   const handleSave = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = await getAuthUser();
       if (!user) return;
 
       if (!currentTemplate.title || !currentTemplate.content) {

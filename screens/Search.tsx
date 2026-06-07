@@ -1,6 +1,11 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
+import { getAuthUser } from '../utils/auth';
+import { fetchAllPatients } from '../hooks/usePatients';
+import { removePatientFromCache } from '../services/clinicalCache';
+import PageContainer from '../components/PageContainer';
+import StaleDataNotice from '../components/StaleDataNotice';
 
 const Search: React.FC = () => {
   const navigate = useNavigate();
@@ -10,6 +15,7 @@ const Search: React.FC = () => {
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [usingCachedData, setUsingCachedData] = useState(false);
 
   // Load patients on mount
   useEffect(() => {
@@ -18,8 +24,15 @@ const Search: React.FC = () => {
 
   const fetchPatients = async () => {
     setLoadingPatients(true);
-    const { data } = await supabase.from('patients').select('*').order('full_name');
-    if (data) setPatients(data);
+    const user = await getAuthUser();
+    if (!user) {
+      setLoadingPatients(false);
+      return;
+    }
+
+    const result = await fetchAllPatients(user.id);
+    setPatients(result.data);
+    setUsingCachedData(result.fromCache);
     setLoadingPatients(false);
   };
 
@@ -65,6 +78,7 @@ const Search: React.FC = () => {
         .eq('id', deleteConfirm.id);
       if (patientDeleteError) throw patientDeleteError;
 
+      await removePatientFromCache(deleteConfirm.id);
       await fetchPatients();
       setDeleteConfirm(null);
     } catch (error: any) {
@@ -85,8 +99,9 @@ const Search: React.FC = () => {
   }, [searchQuery, patients]);
 
   return (
-    <div className="flex flex-col min-h-screen bg-background-light dark:bg-background-dark">
-      <header className="bg-white dark:bg-surface-dark px-4 pb-2 pt-12 sticky top-0 z-10 shadow-sm border-b border-slate-100 dark:border-slate-800">
+    <div className="flex flex-col min-h-screen bg-background-light dark:bg-background-dark pb-32 lg:pb-8">
+      <header className="bg-white dark:bg-surface-dark pb-2 pt-12 lg:pt-6 sticky top-0 z-10 shadow-sm border-b border-slate-100 dark:border-slate-800">
+        <PageContainer maxWidth="max-w-5xl">
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-2xl font-bold tracking-tight text-text-main dark:text-white">
             Buscar Pacientes
@@ -118,16 +133,19 @@ const Search: React.FC = () => {
             </button>
           )}
         </div>
+        </PageContainer>
       </header>
 
-      <main className="flex-1 overflow-y-auto pb-32">
-        <div className="p-4 space-y-3">
+      <main className="flex-1 overflow-y-auto">
+        <PageContainer maxWidth="max-w-5xl" className="py-4">
+        <StaleDataNotice visible={usingCachedData} className="mb-4" />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
           {loadingPatients ? (
-            <div className="flex justify-center p-8">
+            <div className="flex justify-center p-8 lg:col-span-2">
               <p className="text-text-muted animate-pulse">Cargando pacientes...</p>
             </div>
           ) : filteredPatients.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 px-4">
+            <div className="flex flex-col items-center justify-center py-20 px-4 lg:col-span-2">
               <div className="w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-4">
                 <span className="material-symbols-outlined text-3xl text-slate-400">person_off</span>
               </div>
@@ -196,6 +214,7 @@ const Search: React.FC = () => {
             ))
           )}
         </div>
+        </PageContainer>
       </main>
 
       {/* Delete confirmation modal */}

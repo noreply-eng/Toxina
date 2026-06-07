@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
+import { getAuthUser } from '../utils/auth';
 import { dosisData } from '../constants/toxinData';
 import { DoseOption, ToxinBrand } from '../utils/userPreferences';
 
@@ -19,7 +20,7 @@ const ToxinDoseSettings: React.FC = () => {
   const loadPreferences = async () => {
     setLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = await getAuthUser();
       if (!user) return;
 
       const { data, error } = await supabase
@@ -43,7 +44,7 @@ const ToxinDoseSettings: React.FC = () => {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = await getAuthUser();
       if (!user) {
         alert('Debe iniciar sesión');
         return;

@@ -12,6 +12,9 @@ import {
   type ToxinBrand,
 } from '../data/pathologyData';
 import { supabase } from '../supabaseClient';
+import { getAuthUser } from '../utils/auth';
+import { searchPatients, fetchPatientById } from '../hooks/usePatients';
+import { saveTreatmentMutation } from '../services/clinicalMutations';
 import { Copy, Save, CheckCircle2, User, Search, UserPlus, Printer, FileText } from 'lucide-react';
 import { usePrintPreferences } from '../hooks/usePrintPreferences';
 import { guiaUsgData } from '../constants/usgData';
@@ -79,7 +82,7 @@ const Calculator: React.FC = () => {
   // Effects
   useEffect(() => {
     const fetchUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = await getAuthUser();
       if (user) {
         const { data } = await supabase.from('user_profiles').select('full_name').eq('id', user.id).single();
         if (data?.full_name) setDoctorName(data.full_name);
@@ -100,11 +103,11 @@ const Calculator: React.FC = () => {
     if (!navState?.patientId || !isLoaded) return;
 
     const loadPatient = async () => {
-      const { data } = await supabase
-        .from('patients')
-        .select('id, full_name, age, weight')
-        .eq('id', navState.patientId!)
-        .single();
+      const user = await getAuthUser();
+      if (!user) return;
+
+      const result = await fetchPatientById(user.id, navState.patientId!);
+      const data = result.data;
 
       if (data) {
         updateState({
@@ -132,15 +135,23 @@ const Calculator: React.FC = () => {
 
   useEffect(() => {
     if (searchQuery.length > 1) {
-      const searchPatients = async () => {
-        const { data } = await supabase
-          .from('patients')
-          .select('id, full_name, age, weight')
-          .ilike('full_name', `%${searchQuery}%`)
-          .limit(10);
-        if (data) setPatients(data);
+      const searchPatientsList = async () => {
+        const user = await getAuthUser();
+        if (!user) return;
+
+        const result = await searchPatients(user.id, searchQuery, 10);
+        if (result.data) {
+          setPatients(
+            result.data.map((patient) => ({
+              id: patient.id,
+              full_name: patient.full_name,
+              age: patient.age ?? undefined,
+              weight: patient.weight ?? undefined,
+            }))
+          );
+        }
       };
-      searchPatients();
+      searchPatientsList();
     } else {
       setPatients([]);
     }
@@ -260,69 +271,30 @@ const Calculator: React.FC = () => {
     
     try {
       setIsSaving(true);
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = await getAuthUser();
       if (!user) throw new Error('No user found');
 
-      let targetPatientId = selectedPatient?.id;
-
-      // If no patient selected but name provided, create a new patient
-      if (!targetPatientId && patientName.trim()) {
-        const newPatientData: { 
-          user_id: string; 
-          full_name: string; 
-          age?: number; 
-          weight?: number;
-        } = {
-          user_id: user.id,
-          full_name: patientName.trim(),
-        };
-        
-        // Add age if provided
-        if (patientAge && !isNaN(parseInt(patientAge))) {
-          newPatientData.age = parseInt(patientAge);
-        }
-        
-        // Add weight if provided
-        if (patientWeight && !isNaN(parseFloat(patientWeight))) {
-          newPatientData.weight = parseFloat(patientWeight);
-        }
-        
-        const { data: newPatient, error: pError } = await supabase
-          .from('patients')
-          .insert(newPatientData)
-          .select()
-          .single();
-        
-        if (pError) {
-          console.error('Error creating patient:', pError);
-          alert('Error al crear el paciente: ' + pError.message);
-          setIsSaving(false);
-          return;
-        }
-        
-        targetPatientId = newPatient.id;
-        updateState({ selectedPatient: { id: newPatient.id, full_name: newPatient.full_name } });
-      }
-
-      if (!targetPatientId) {
-        alert('Error: No se pudo determinar el ID del paciente.');
-        setIsSaving(false);
-        return;
-      }
-
-      // Build notes with full session info
       const sessionNotes = [
         pathologyTitle ? `Patología: ${pathologyTitle}` : '',
         adjustmentFactor !== 1 ? `Factor pediátrico: ${adjustmentFactor.toFixed(2)}` : '',
         doctorName ? `Médico: Dr. ${doctorName}` : ''
       ].filter(Boolean).join(' | ');
 
-      // 1. Insert Treatment
-      const { data: treatment, error: tError } = await supabase
-        .from('treatments')
-        .insert({
-          user_id: user.id,
-          patient_id: targetPatientId,
+      const createPatientPayload =
+        !selectedPatient?.id && patientName.trim()
+          ? {
+              full_name: patientName.trim(),
+              ...(patientAge && !isNaN(parseInt(patientAge)) ? { age: parseInt(patientAge) } : {}),
+              ...(patientWeight && !isNaN(parseFloat(patientWeight))
+                ? { weight: parseFloat(patientWeight) }
+                : {}),
+            }
+          : undefined;
+
+      const result = await saveTreatmentMutation(user.id, {
+        patientId: selectedPatient?.id,
+        createPatient: createPatientPayload,
+        treatment: {
           product_name: selectedBrand,
           total_units: totalUnits,
           dilution: parseFloat(dilution) || null,
@@ -332,29 +304,26 @@ const Calculator: React.FC = () => {
           pathology_title: pathologyTitle || null,
           adjustment_factor: adjustmentFactor !== 1 ? adjustmentFactor : null,
           consultation_id: consultationId || null,
-        })
-        .select()
-        .single();
+        },
+        details: selectedMuscles.map((m) => ({
+          muscle_name: m.name,
+          side: m.side,
+          units: m.customDose || 0,
+        })),
+        completeConsultationId: consultationId || null,
+      });
 
-      if (tError) throw tError;
-
-      // 2. Insert Details for each muscle
-      const details = selectedMuscles.map(m => ({
-        treatment_id: treatment.id,
-        muscle_name: m.name,
-        side: m.side,
-        units: m.customDose || 0
-      }));
-
-      const { error: dError } = await supabase.from('treatment_details').insert(details);
-      if (dError) throw dError;
+      if (createPatientPayload && result.patientId) {
+        updateState({
+          selectedPatient: { id: result.patientId, full_name: patientName.trim() },
+        });
+      }
 
       if (consultationId) {
-        await completeConsultation(consultationId, treatment.id);
         setConsultationId(null);
       }
 
-      setSavedTreatmentId(treatment.id);
+      setSavedTreatmentId(result.treatmentId);
 
       const suggestedFollowUp = new Date();
       suggestedFollowUp.setDate(suggestedFollowUp.getDate() + 84);
@@ -365,6 +334,9 @@ const Calculator: React.FC = () => {
       setShowFollowUpModal(true);
 
       setSaveSuccess(true);
+      if (result.queued) {
+        alert('Tratamiento guardado localmente. Se sincronizará al reconectar.');
+      }
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (error) {
       console.error('Error saving treatment:', error);
@@ -524,7 +496,7 @@ const Calculator: React.FC = () => {
     userPrefsLoaded.current = true;
 
     const loadUserPrefs = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = await getAuthUser();
       if (!user) return;
 
       const { data } = await supabase
@@ -655,7 +627,7 @@ const Calculator: React.FC = () => {
 
 
   return (
-    <div className="flex flex-col min-h-screen bg-background-light dark:bg-background-dark pb-32">
+    <div className="flex flex-col min-h-screen bg-background-light dark:bg-background-dark pb-32 lg:pb-8">
        {/* Header */}
        <header className="px-6 py-4 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-md sticky top-0 z-40 border-b border-slate-200 dark:border-slate-800 shadow-sm">
         <div className="flex items-center justify-between">

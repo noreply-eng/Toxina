@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
+import { getAuthUser } from '../utils/auth';
 import { AppLanguage, LANGUAGE_LABELS } from '../utils/userPreferences';
 
 const LanguageSettings: React.FC = () => {
@@ -21,7 +22,7 @@ const LanguageSettings: React.FC = () => {
   const loadLanguage = async () => {
     setLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = await getAuthUser();
       if (!user) return;
 
       const { data, error } = await supabase
@@ -43,7 +44,7 @@ const LanguageSettings: React.FC = () => {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = await getAuthUser();
       if (!user) {
         alert('Debe iniciar sesión');
         return;

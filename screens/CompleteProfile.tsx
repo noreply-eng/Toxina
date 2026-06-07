@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
+import { getAuthUser } from '../utils/auth';
 
 const CompleteProfile: React.FC = () => {
   const navigate = useNavigate();
@@ -13,7 +14,7 @@ const CompleteProfile: React.FC = () => {
 
   useEffect(() => {
     const fetchProfile = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = await getAuthUser();
       if (!user) {
         navigate('/login');
         return;
@@ -40,7 +41,7 @@ const CompleteProfile: React.FC = () => {
     setLoading(true);
     setError(null);
 
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) {
         setError("No se encontró usuario autenticado.");
         setLoading(false);

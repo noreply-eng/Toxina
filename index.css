@@ -81,3 +81,44 @@ body .text-sm {
 body .text-xs {
   font-size: var(--font-size-xs);
 }
+
+/* Legal document typography */
+.prose-legal .legal-h1 {
+  font-size: var(--font-size-2xl);
+  font-weight: 800;
+  margin-bottom: 0.5rem;
+  color: inherit;
+}
+
+.prose-legal .legal-h2 {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  margin-top: 1.75rem;
+  margin-bottom: 0.75rem;
+  color: inherit;
+}
+
+.prose-legal .legal-h3 {
+  font-size: var(--font-size-base);
+  font-weight: 700;
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.prose-legal .legal-p {
+  margin-bottom: 0.75rem;
+  line-height: 1.7;
+  color: inherit;
+  opacity: 0.9;
+}
+
+.prose-legal .legal-ul {
+  list-style: disc;
+  padding-left: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.prose-legal .legal-ul li {
+  margin-bottom: 0.35rem;
+  line-height: 1.6;
+}

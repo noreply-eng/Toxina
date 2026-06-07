@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
+import { getAuthUser } from '../utils/auth';
 
 const Subscription: React.FC = () => {
   const navigate = useNavigate();
@@ -13,7 +14,7 @@ const Subscription: React.FC = () => {
   useEffect(() => {
     const fetchTier = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const user = await getAuthUser();
         if (!user) return;
 
         const { data } = await supabase

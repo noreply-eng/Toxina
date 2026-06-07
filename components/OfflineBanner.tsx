@@ -28,7 +28,7 @@ const OfflineBanner: React.FC = () => {
           </div>
           <div className="flex flex-col">
             <span className="text-sm font-bold leading-tight">Sin conexión</span>
-            <span className="text-[10px] opacity-90 leading-tight">Usando datos locales (Calculadoras y Guías)</span>
+            <span className="text-[10px] opacity-90 leading-tight">Datos locales: pacientes, citas, calculadoras y guías</span>
           </div>
         </div>
       </div>

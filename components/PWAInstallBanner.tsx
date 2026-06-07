@@ -2,7 +2,7 @@ import React from 'react';
 import { usePWAInstall } from '../hooks/usePWAInstall';
 
 const PWAInstallBanner: React.FC = () => {
-  const { showBanner, isIOS, install, dismiss } = usePWAInstall();
+  const { showBanner, isIOS, isInstallable, install, dismiss } = usePWAInstall();
 
   if (!showBanner) return null;
 
@@ -23,17 +23,21 @@ const PWAInstallBanner: React.FC = () => {
 
         {/* Content */}
         <div className="flex items-start gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center flex-shrink-0 shadow-lg shadow-primary/25">
-            <span className="material-symbols-outlined text-white text-3xl">download</span>
-          </div>
+          <img
+            src="/icons/icon-192.png"
+            alt=""
+            width={56}
+            height={56}
+            className="w-14 h-14 rounded-2xl flex-shrink-0 shadow-lg shadow-primary/25"
+          />
           <div className="flex-1 min-w-0 pr-6">
             <h3 className="font-display font-bold text-lg text-text-main dark:text-white leading-snug">
               Instalar Toxina DLM
             </h3>
             <p className="text-sm text-text-muted dark:text-slate-400 mt-1 leading-relaxed">
               {isIOS
-                ? 'Agrega acceso directo para usarla sin internet'
-                : 'Úsala como una app nativa en tu dispositivo'}
+                ? 'Acceso directo desde tu pantalla de inicio, también sin internet'
+                : 'Úsala como app nativa con acceso offline'}
             </p>
           </div>
         </div>
@@ -47,7 +51,7 @@ const PWAInstallBanner: React.FC = () => {
                   <span className="material-symbols-outlined text-primary text-xl">ios_share</span>
                 </div>
                 <p className="text-sm text-text-main dark:text-slate-200">
-                  1. Toca el botón <strong>Compartir</strong>
+                  1. Toca <strong>Compartir</strong> en Safari
                 </p>
               </div>
               <div className="flex items-center gap-3 bg-primary/5 dark:bg-primary/10 rounded-xl p-3 border border-primary/10">
@@ -55,17 +59,18 @@ const PWAInstallBanner: React.FC = () => {
                   <span className="material-symbols-outlined text-primary text-xl">add_box</span>
                 </div>
                 <p className="text-sm text-text-main dark:text-slate-200">
-                  2. Selecciona <strong>Agregar a inicio</strong>
+                  2. Elige <strong>Agregar a inicio</strong>
                 </p>
               </div>
             </div>
           ) : (
             <button
               onClick={install}
-              className="w-full bg-gradient-to-r from-primary to-primary-dark text-white font-bold text-base py-3.5 rounded-xl shadow-lg shadow-primary/30 hover:shadow-primary/40 active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2 group"
+              disabled={!isInstallable}
+              className="w-full bg-gradient-to-r from-primary to-primary-dark text-white font-bold text-base py-3.5 rounded-xl shadow-lg shadow-primary/30 hover:shadow-primary/40 active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2 group disabled:opacity-60"
             >
               <span className="material-symbols-outlined text-2xl group-hover:animate-bounce-y">install_mobile</span>
-              Instalar Aplicación
+              Instalar aplicación
             </button>
           )}
         </div>

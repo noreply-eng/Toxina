@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../supabaseClient';
+import { getAuthUser } from '../utils/auth';
+import { createPatientMutation } from '../services/clinicalMutations';
 
 const NewPatient: React.FC = () => {
   const navigate = useNavigate();
@@ -31,33 +32,29 @@ const NewPatient: React.FC = () => {
     setLoading(true);
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = await getAuthUser();
       if (!user) {
         alert('Debe iniciar sesión para crear pacientes');
         navigate('/login');
         return;
       }
 
-      // Prepare data: convert empty strings to null for numeric fields
       const patientData = {
-        ...formData,
+        full_name: formData.full_name,
+        email: formData.email || null,
+        phone: formData.phone || null,
+        birth_date: formData.birth_date || null,
+        gender: formData.gender || null,
         weight: formData.weight ? parseFloat(formData.weight) : null,
         height: formData.height ? parseFloat(formData.height) : null,
-        user_id: user.id
+        medical_history: formData.medical_history || null,
+        allergies: formData.allergies || null,
+        current_medications: formData.current_medications || null,
+        notes: formData.notes || null,
       };
 
-      const { data, error } = await supabase
-        .from('patients')
-        .insert([patientData])
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      // Navigate to patient profile
-      if (data) {
-        navigate(`/patient/${data.id}`);
-      }
+      const data = await createPatientMutation(user.id, patientData);
+      navigate(`/patient/${data.id}`);
     } catch (error: any) {
       console.error('Error creating patient:', error);
       alert(error.message || 'Error al crear el paciente');
