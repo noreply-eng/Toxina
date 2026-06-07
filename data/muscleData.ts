@@ -580,7 +580,7 @@ export const musclesData: MuscleData[] = [
       dysport: dosisData.Dysport['Deltoides'],
       xeomin: dosisData.Botox['Deltoides']
     },
-    indications: ['Espasticidad de Miembros Superiores', 'Espasticidad Pediátrica'],
+    indications: ['Espasticidad de Miembros Superiores', 'Espasticidad Pediátrica', 'Hombro Doloroso Espástico (extensión)'],
     relatedMuscles: ['pectoral-mayor', 'triceps-brachii']
   },
   {
@@ -966,8 +966,113 @@ export const musclesData: MuscleData[] = [
       dysport: dosisData.Dysport['Pectoral mayor'],
       xeomin: dosisData.Botox['Pectoral mayor']
     },
-    indications: ['Espasticidad de Miembros Superiores', 'Espasticidad Pediátrica'],
-    relatedMuscles: ['deltoides', 'coracobrachialis']
+    indications: ['Espasticidad de Miembros Superiores', 'Espasticidad Pediátrica', 'Hombro Doloroso Espástico'],
+    relatedMuscles: ['subscapularis', 'deltoides', 'coracobrachialis']
+  },
+  {
+    id: 'subscapularis',
+    name: 'Subescapular',
+    latinName: 'Subscapularis',
+    category: 'upper-limb',
+    region: 'Hombro (fosa subescapular)',
+    anatomy: {
+      function: 'Rotación interna del hombro; estabilizador anterior de la glenohumeral',
+      innervation: 'Nervio subescapular (C5–C6)',
+      origin: 'Fosa subescapular de la escápula',
+      insertion: 'Tubérculo menor del húmero'
+    },
+    motorPoint: {
+      description:
+        'Decúbito prono, brazo en abducción ~90° y codo flexionado 90°: fosa subescapular, 2–3 cm lateral al ángulo inferior de la escápula',
+      techniqueNotes: [
+        'Músculo profundo: USG o EMG casi obligatorios',
+        '2–4 sitios de inyección según volumen',
+        'Objetivo principal en hombro doloroso espástico post-EVC (patrón de rotación interna)',
+        'Riesgo de punción pleural si el abordaje es demasiado caudal o medial sin guía'
+      ]
+    },
+    usgGuidance: {
+      transducerType: 'Lineal 10–12 MHz',
+      view: 'Transversal',
+      landmarks: ['Escápula anterior', 'Subescapular en fosa', 'Cabeza humeral', 'Deltoide anterior superficial'],
+      approach: 'In-plane posterior a anterior (decúbito prono o lateral)',
+      precautions: [
+        'No avanzar aguja hacia pleura sin visualización',
+        'Confirmar contracción con rotación interna activa o EMG'
+      ]
+    },
+    dosing: {
+      botox: dosisData.Botox['Subscapularis'],
+      dysport: dosisData.Dysport['Subscapularis'],
+      xeomin: dosisData.Botox['Subscapularis']
+    },
+    indications: ['Hombro Doloroso Espástico', 'Espasticidad de Miembros Superiores'],
+    relatedMuscles: ['pectoral-mayor', 'redondo-mayor', 'dorsal-ancho']
+  },
+  {
+    id: 'dorsal-ancho',
+    name: 'Dorsal Ancho',
+    latinName: 'Latissimus dorsi',
+    category: 'upper-limb',
+    region: 'Tórax posterolateral / hombro',
+    anatomy: {
+      function: 'Aducción, extensión y rotación interna del hombro',
+      innervation: 'Nervio toracodorsal',
+      origin: 'Apófisis espinosas T7–L5, cresta ilíaca posterior y fascia toracolumbar',
+      insertion: 'Surco intertubercular del húmero (frente al teres major)'
+    },
+    motorPoint: {
+      description:
+        'Región posterolateral del tórax (~nivel 9.ª costilla), 6–8 cm lateral a la línea de apófisis espinosas, con brazo en aducción y ligera RI',
+      techniqueNotes: [
+        '2 sitios habituales en el vientre muscular',
+        'USG recomendado por riesgo de pleura en abordajes altos o profundos',
+        'Confirmar con aducción/extensión de hombro contra resistencia'
+      ]
+    },
+    usgGuidance: {
+      transducerType: 'Lineal 10–12 MHz',
+      view: 'Transversal',
+      landmarks: ['Dorsal ancho superficial', 'Costillas', 'Serrato anterior profundo', 'Pleura (límite profundo)'],
+      approach: 'In-plane',
+      precautions: ['Evitar penetración pleural en región axilar posterior alta']
+    },
+    dosing: {
+      botox: dosisData.Botox['Dorsal ancho'],
+      dysport: dosisData.Dysport['Dorsal ancho'],
+      xeomin: dosisData.Botox['Dorsal ancho']
+    },
+    indications: ['Hombro Doloroso Espástico', 'Espasticidad de Miembros Superiores'],
+    relatedMuscles: ['redondo-mayor', 'pectoral-mayor', 'subscapularis']
+  },
+  {
+    id: 'redondo-mayor',
+    name: 'Redondo Mayor',
+    latinName: 'Teres major',
+    category: 'upper-limb',
+    region: 'Axila posterior',
+    anatomy: {
+      function: 'Aducción, extensión y rotación interna del hombro (sinergia con dorsal ancho)',
+      innervation: 'Nervio subescapular inferior',
+      origin: 'Borde lateral inferior de la escápula',
+      insertion: 'Surco intertubercular del húmero (medial al dorsal ancho)'
+    },
+    motorPoint: {
+      description:
+        'Axila posterior, 5–6 cm distal al ángulo inferior de la escápula, con brazo en aducción y rotación interna',
+      techniqueNotes: [
+        '1–2 puntos de inyección',
+        'Músculo de volumen medio; dosis menor que pectoral o dorsal ancho',
+        'Palpar entre dorsal ancho y borde escapular'
+      ]
+    },
+    dosing: {
+      botox: dosisData.Botox['Redondo mayor'],
+      dysport: dosisData.Dysport['Redondo mayor'],
+      xeomin: dosisData.Botox['Redondo mayor']
+    },
+    indications: ['Hombro Doloroso Espástico', 'Espasticidad de Miembros Superiores'],
+    relatedMuscles: ['dorsal-ancho', 'subscapularis']
   },
 
   // ========== LOWER LIMB MUSCLES ==========

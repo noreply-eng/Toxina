@@ -18,6 +18,12 @@ export interface UserProfile {
   specialty: string | null;
   avatar_url: string | null;
   subscription_tier: string;
+  default_brand?: string;
+  unit_system?: string;
+  default_dose_option?: string;
+  default_dilution?: string;
+  language?: string;
+  dark_mode?: boolean;
 }
 
 export interface BucketListItem {

@@ -9,6 +9,28 @@ interface SettingsProps {
 
 import { supabase } from '../supabaseClient';
 import { UserProfile, BucketListItem } from '../types';
+import {
+  BRAND_LABELS,
+  UNIT_SYSTEM_LABELS,
+  LANGUAGE_LABELS,
+  type ToxinBrand,
+  type UnitSystem,
+  type AppLanguage,
+} from '../utils/userPreferences';
+
+const SETTINGS_ROUTES: Record<string, string> = {
+  profile: '/profile',
+  sub: '/subscription',
+  'motor-points': '/motor-points',
+  units: '/unit-preferences',
+  doses: '/toxin-dose-settings',
+  print: '/print-preferences',
+  colors: '/brand-colors',
+  'font-size': '/font-size',
+  templates: '/templates',
+  data: '/data-management',
+  lang: '/language',
+};
 
 const Settings: React.FC<SettingsProps> = ({ toggleDarkMode, isDarkMode }) => {
   const navigate = useNavigate();
@@ -146,6 +168,16 @@ const Settings: React.FC<SettingsProps> = ({ toggleDarkMode, isDarkMode }) => {
     await supabase.from('bucket_list').update({ status: newStatus }).eq('id', id);
   };
 
+  const unitLabel = profile?.unit_system
+    ? UNIT_SYSTEM_LABELS[profile.unit_system as UnitSystem]
+    : 'Unidades Allergan';
+  const brandLabel = profile?.default_brand
+    ? BRAND_LABELS[profile.default_brand as ToxinBrand]?.split(' (')[0] ?? profile.default_brand
+    : 'Botox';
+  const languageLabel = profile?.language
+    ? LANGUAGE_LABELS[profile.language as AppLanguage]
+    : 'Español';
+
   const sections = [
     {
       title: 'Cuenta',
@@ -171,8 +203,9 @@ const Settings: React.FC<SettingsProps> = ({ toggleDarkMode, isDarkMode }) => {
     {
        title: 'Configuración Médica',
        items: [
-         { id: 'units', name: 'Preferencias de Unidades', val: 'Unidades Allergan', icon: 'straighten', type: 'link' },
-         { id: 'doses', name: 'Dosis de Toxina', icon: 'science', type: 'link' },
+         { id: 'motor-points', name: 'Puntos Motores', icon: 'ads_click', type: 'link' },
+         { id: 'units', name: 'Preferencias de Unidades', val: `${unitLabel} · ${brandLabel}`, icon: 'straighten', type: 'link' },
+         { id: 'doses', name: 'Dosis de Toxina', val: profile?.default_dose_option === 'max' ? 'Dosis máxima' : 'Dosis mínima', icon: 'science', type: 'link' },
          { id: 'print', name: 'Preferencias de Impresión', icon: 'print', type: 'link' }
        ]
     },
@@ -183,7 +216,7 @@ const Settings: React.FC<SettingsProps> = ({ toggleDarkMode, isDarkMode }) => {
          { id: 'font-size', name: 'Tamaño de Fuente', icon: 'text_fields', type: 'link' },
          { id: 'templates', name: 'Plantillas', icon: 'description', type: 'link' },
          { id: 'data', name: 'Gestión de Datos', icon: 'database', type: 'link' },
-         { id: 'lang', name: 'Idioma', val: 'Español', icon: 'language', type: 'link' },
+         { id: 'lang', name: 'Idioma', val: languageLabel, icon: 'language', type: 'link' },
          { id: 'dark', name: 'Modo Oscuro', icon: 'dark_mode', type: 'toggle', active: isDarkMode, action: toggleDarkMode }
        ]
     }
@@ -267,13 +300,8 @@ const Settings: React.FC<SettingsProps> = ({ toggleDarkMode, isDarkMode }) => {
                   <div 
                     onClick={() => {
                       if (item.type !== 'link') return;
-                      if (item.id === 'sub') navigate('/subscription');
-                      else if (item.id === 'profile') navigate('/profile');
-                      else if (item.id === 'print') navigate('/print-preferences');
-                      else if (item.id === 'colors') navigate('/brand-colors');
-                      else if (item.id === 'font-size') navigate('/font-size');
-                      else if (item.id === 'templates') navigate('/templates');
-                      else if (item.id === 'data') navigate('/data-management');
+                      const route = SETTINGS_ROUTES[item.id];
+                      if (route) navigate(route);
                     }}
                     className="flex items-center justify-between p-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
                   >

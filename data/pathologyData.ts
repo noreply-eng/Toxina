@@ -3,12 +3,18 @@
  * Basado en compendios clínicos (2024-2025) y guías de dosificación de marcas líderes.
  */
 
+import { dosisData } from '../constants/toxinData';
+
+export type ProtocolVariant = 'A' | 'B' | 'C';
+
 export interface PathologyProtocol {
   muscle?: string;           // Nombre común del músculo
-  muscleName?: string;       // Identificador interno para cálculos
+  muscleName?: string;       // Identificador interno para cálculos (clave en toxinData)
   dose: string;              // Texto descriptivo de la dosis
   bilateral: boolean;        // Indica si es tratamiento bilateral
   notes?: string;            // Instrucciones específicas
+  /** Variante de protocolo (p. ej. hombro A/B/C). Sin valor = incluido en carga por defecto. */
+  protocolVariant?: ProtocolVariant;
 }
 
 export interface PathologyData {
@@ -107,6 +113,118 @@ export const pathologiesData: PathologyData[] = [
     references: [
       'AbbVie Inc. (2024). Highlights of prescribing information: BOTOX. https://www.rxabbvie.com/pdf/botox_pi.pdf',
       'Allergan, Inc. (2011). BOTOX prescribing information. U.S. FDA. https://www.accessdata.fda.gov/drugsatfda_docs/label/2011/103000s5236lbl.pdf'
+    ],
+    image: `${supabaseUrl}/storage/v1/object/public/PortadasPatologias/espasticidadevc.jpeg`,
+  },
+  {
+    id: 'hombro-doloroso-espastico',
+    title: 'Hombro Doloroso Espástico',
+    subtitle: 'Post-EVC / Hemiplejia',
+    category: 'neurological',
+    description:
+      'Complicación frecuente tras enfermedad vascular cerebral: hombro en aducción y rotación interna con dolor que limita la rehabilitación. La toxina botulínica reduce el tono de los aductores/rotadores internos, alivia el dolor (EVA) y mejora el rango de movimiento pasivo de rotación externa. Abordaje habitualmente off-label en músculos proximales; requiere USG/EMG en músculos profundos.',
+    suggestedToxin: 'Botox, Xeomin o Dysport',
+    conversionNotes:
+      'Botox:Xeomin 1:1. Dysport:Botox ~2,5–3:1 (no usar ratios >3:1). Dosis de hombro se suman al límite del miembro superior (hasta 400 U Botox/Xeomin por extremidad en espasticidad adulta).',
+    protocols: [
+      {
+        muscle: 'Pectoral mayor',
+        muscleName: 'Pectoral mayor',
+        dose: '75-100 U (Botox/Xeomin)',
+        bilateral: false,
+        notes:
+          '[Protocolo A – patrón aducción/RI] 3-4 sitios (fascículos clavicular y esternocostal). Músculo más frecuentemente tratado en encuestas clínicas.',
+        protocolVariant: 'A',
+      },
+      {
+        muscle: 'Subescapular',
+        muscleName: 'Subscapularis',
+        dose: '50-80 U (Botox/Xeomin)',
+        bilateral: false,
+        notes:
+          '[Protocolo A] 2-4 sitios. Rotador interno principal; USG/EMG recomendados. Dosis media ~60 U en práctica clínica.',
+        protocolVariant: 'A',
+      },
+      {
+        muscle: 'Dorsal ancho',
+        muscleName: 'Dorsal ancho',
+        dose: '60-80 U (Botox/Xeomin)',
+        bilateral: false,
+        notes: '[Protocolo A] 2 sitios posterolaterales. Precaución pleural; preferir USG.',
+        protocolVariant: 'A',
+      },
+      {
+        muscle: 'Redondo mayor',
+        muscleName: 'Redondo mayor',
+        dose: '30-50 U (Botox/Xeomin)',
+        bilateral: false,
+        notes: '[Protocolo A] 1-2 sitios en axila posterior.',
+        protocolVariant: 'A',
+      },
+      {
+        muscle: 'Subescapular (enfoque Yelnik)',
+        muscleName: 'Subscapularis',
+        dose: '100 U (Botox/Xeomin)',
+        bilateral: false,
+        notes:
+          '[Protocolo B – subescapular dominante] Dosis fija del ECA de Yelnik et al. para dolor espástico de hombro; no combinar con la dosis completa del Protocolo A en el mismo músculo.',
+        protocolVariant: 'B',
+      },
+      {
+        muscle: 'Pectoral mayor (refuerzo opcional)',
+        muscleName: 'Pectoral mayor',
+        dose: '50-75 U (Botox/Xeomin)',
+        bilateral: false,
+        notes:
+          '[Protocolo B – opcional] Añadir solo si persiste aducción marcada tras enfoque subescapular o en ensayos combinados (p. ej. 100 U subescapular + 50-75 U pectoral).',
+        protocolVariant: 'B',
+      },
+      {
+        muscle: 'Infraespinoso',
+        muscleName: 'Infraespinoso',
+        dose: '50-60 U (Botox/Xeomin)',
+        bilateral: false,
+        notes:
+          '[Protocolo B – variante clínica] Incluido en estudios con subescapular + pectoral para dolor post-ictus (p. ej. Lincoln et al.). Rotador externo; valorar si hay componente de dolor capsular.',
+        protocolVariant: 'B',
+      },
+      {
+        muscle: 'Deltoides (fibras posteriores)',
+        muscleName: 'Deltoides',
+        dose: '40-60 U (Botox/Xeomin)',
+        bilateral: false,
+        notes:
+          '[Protocolo C – extensión patológica] Solo si el patrón incluye extensión espástica del hombro; no usar junto con dosis altas en tríceps sin planificar el total del miembro.',
+        protocolVariant: 'C',
+      },
+      {
+        muscle: 'Tríceps braquial (cabeza larga)',
+        muscleName: 'Triceps brachii',
+        dose: '50-75 U (Botox/Xeomin)',
+        bilateral: false,
+        notes: '[Protocolo C – extensión patológica] 2-3 sitios en vientre posterior del brazo; evitar surco radial.',
+        protocolVariant: 'C',
+      }
+    ],
+    frequency: 'Cada 12-16 semanas (repetir según respuesta clínica)',
+    maxDose:
+      'Hombro aislado: ~220-280 U (Botox/Xeomin) típico Protocolo A. Total miembro superior: máx. 400 U (Botox/Xeomin) / ~1000 U (Dysport) incluyendo codo/mano si se tratan en la misma sesión.',
+    additionalInfo: [
+      'Protocolo A (estándar): pectoral + subescapular + dorsal ancho + redondo mayor — patrón clásico aducción/RI post-EVC (encuesta nacional Pinho et al. y guías de hombro espástico).',
+      'Protocolo B (alternativo): subescapular 100 U (Yelnik) ± pectoral 50-75 U ± infraespinoso 50-60 U — prioriza alivio del dolor y rotación externa pasiva; no duplicar dosis plenas del Protocolo A.',
+      'Protocolo C (complementario): deltoides posterior + tríceps — solo para extensión espástica del hombro (Wissel / práctica clínica).',
+      'Dilución habitual: 100 U en 1-2 mL SSF 0,9% sin preservantes. Anticoagulados: diluir en 1 mL y minimizar puntos.',
+      'Iniciar rehabilitación (estiramiento pasivo lento, posicionamiento, fortalecimiento de antagonistas) en los primeros 3-7 días post-inyección.',
+      'Eficacia en dolor: reducción media ~1,6 puntos EVA a 3-6 meses vs. placebo (Cochrane); mejoría de rotación externa pasiva ~17° al mes 1.',
+      'Considerar bloqueo del nervio supraescapular para analgesia temprana; la toxina intramuscular suele ser superior a medio plazo (4-24 semanas).'
+    ],
+    references: [
+      'Pinho, S., et al. (2023). Shoulder spasticity treatment with botulinum toxin: A nationwide cross-sectional survey. Cureus. https://pmc.ncbi.nlm.nih.gov/articles/PMC10704847/',
+      'Yelnik, A. P., et al. (2007). Treatment of shoulder pain in spastic hemiplegia by reducing spasticity of the subscapular muscle. J Neurol Neurosurg Psychiatry. https://pmc.ncbi.nlm.nih.gov/articles/PMC2117719/',
+      'Cochrane (2019). Botulinum toxin for shoulder pain. https://www.cochrane.org/es/evidence/CD008271_botulinum-toxin-shoulder-pain',
+      'Wissel, J., et al. (2022). A practical guide to botulinum neurotoxin treatment of shoulder spasticity 2. Front Neurol. https://pmc.ncbi.nlm.nih.gov/articles/PMC9768330/',
+      'Lincoln et al. / Stroke (2007). Intramuscular Botulinum Toxin-A Reduces Hemiplegic Shoulder Pain. https://www.ahajournals.org/doi/10.1161/strokeaha.107.484048',
+      'Dressler, D., et al. (2021). Consensus guidelines for botulinum toxin therapy. J Neural Transm. https://pmc.ncbi.nlm.nih.gov/articles/PMC7969540/'
     ],
     image: `${supabaseUrl}/storage/v1/object/public/PortadasPatologias/espasticidadevc.jpeg`,
   },
@@ -333,22 +451,102 @@ export const getPathologyById = (id: string): PathologyData | undefined => {
   return pathologiesData.find(p => p.id === id);
 };
 
-export const getPathologiesByCategory = (category: PathologyData['category']): PathologyData[] => {
-  return pathologiesData.filter(p => p.category === category);
+/** Patologías con protocolos A/B/C (p. ej. hombro doloroso espástico). */
+export const getPathologyProtocolVariants = (pathologyId: string): ProtocolVariant[] => {
+  const pathology = getPathologyById(pathologyId);
+  if (!pathology) return [];
+  const variants = new Set(
+    pathology.protocols.map((p) => p.protocolVariant).filter(Boolean) as ProtocolVariant[]
+  );
+  return Array.from(variants).sort();
 };
 
-export const getPathologyTemplate = (pathologyId: string) => {
+/** Extrae rango o dosis fija en unidades Ona/Xeomin desde texto del protocolo. */
+export const parseProtocolDoseOna = (doseText: string): { min?: number; max?: number; fixed?: number } => {
+  const normalized = doseText.replace(/,/g, '.');
+  const rangeMatch = normalized.match(/(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)/);
+  if (rangeMatch) {
+    return { min: parseFloat(rangeMatch[1]), max: parseFloat(rangeMatch[2]) };
+  }
+  const fixedMatch = normalized.match(/(\d+(?:\.\d+)?)\s*U/i);
+  if (fixedMatch) {
+    return { fixed: parseFloat(fixedMatch[1]) };
+  }
+  return {};
+};
+
+const ONA_TO_DYSPORT_RATIO = 2.5;
+
+export type ToxinBrand = 'Botox' | 'Dysport' | 'Xeomin';
+
+/** Convierte dosis del protocolo (Ona) a U sugeridas para la marca seleccionada. */
+export const resolveProtocolSuggestedDose = (
+  protocol: PathologyProtocol,
+  brand: ToxinBrand
+): { customDose: number; doseOption: 'min' | 'max' } => {
+  const muscleKey = protocol.muscleName || protocol.muscle || '';
+  const parsed = parseProtocolDoseOna(protocol.dose);
+  const onaMin = parsed.min;
+  const onaMax = parsed.max;
+  const onaFixed = parsed.fixed;
+
+  const brandRange = muscleKey ? dosisData[brand]?.[muscleKey] : undefined;
+
+  if (brand === 'Dysport') {
+    if (onaFixed !== undefined) {
+      return { customDose: Math.round(onaFixed * ONA_TO_DYSPORT_RATIO), doseOption: 'min' };
+    }
+    if (onaMin !== undefined && onaMax !== undefined) {
+      const midOna = (onaMin + onaMax) / 2;
+      return { customDose: Math.round(midOna * ONA_TO_DYSPORT_RATIO), doseOption: 'min' };
+    }
+    if (brandRange) {
+      return { customDose: brandRange.min, doseOption: 'min' };
+    }
+    return { customDose: 0, doseOption: 'min' };
+  }
+
+  if (onaFixed !== undefined) {
+    return { customDose: Math.round(onaFixed), doseOption: 'min' };
+  }
+  if (onaMin !== undefined && onaMax !== undefined) {
+    return { customDose: Math.round((onaMin + onaMax) / 2), doseOption: 'min' };
+  }
+  if (brandRange) {
+    return { customDose: brandRange.min, doseOption: 'min' };
+  }
+  return { customDose: 0, doseOption: 'min' };
+};
+
+export const getPathologyTemplate = (
+  pathologyId: string,
+  variant: ProtocolVariant = 'A'
+) => {
   const pathology = getPathologyById(pathologyId);
   if (!pathology) return null;
-  
+
+  const hasVariants = pathology.protocols.some((p) => p.protocolVariant);
+
   return {
     pathology,
+    variant,
     muscles: pathology.protocols
-      .filter(p => p.muscleName || p.muscle)
-      .map(p => ({
+      .filter((p) => p.muscleName || p.muscle)
+      .filter((p) => {
+        if (!hasVariants) return true;
+        return (p.protocolVariant || 'A') === variant;
+      })
+      .map((p) => ({
         muscleName: p.muscleName || p.muscle!,
         bilateral: p.bilateral,
         displayName: p.muscle || p.muscleName!,
-      }))
+        dose: p.dose,
+        notes: p.notes,
+        protocol: p,
+      })),
   };
+};
+
+export const getPathologiesByCategory = (category: PathologyData['category']): PathologyData[] => {
+  return pathologiesData.filter((p) => p.category === category);
 };

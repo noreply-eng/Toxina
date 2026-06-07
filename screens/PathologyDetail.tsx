@@ -188,10 +188,20 @@ const PathologyDetail: React.FC = () => {
         </div>
       </div>
 
-      {/* FAB - Go to Calculator */}
+      {/* FAB - Go to Calculator with protocol preselected */}
       <button 
-        onClick={() => navigate('/calculator')}
+        onClick={() =>
+          navigate('/calculator', {
+            state: {
+              pathologyId: pathology.id,
+              autoLoadTemplate: true,
+              protocolVariant: 'A',
+              defaultBrand: 'Botox',
+            },
+          })
+        }
         className="fixed bottom-24 right-6 bg-primary text-white rounded-full size-14 flex items-center justify-center shadow-lg active:scale-95 transition-transform z-30"
+        title="Abrir calculadora con Protocolo A"
       >
         <span className="material-symbols-outlined text-2xl">calculate</span>
       </button>

@@ -17,6 +17,12 @@ const EditPatient: React.FC = () => {
   const [phone, setPhone] = useState('');
   const [weight, setWeight] = useState('');
   const [height, setHeight] = useState('');
+  const [gender, setGender] = useState('');
+  const [medicalSummary, setMedicalSummary] = useState('');
+  const [medicalHistory, setMedicalHistory] = useState('');
+  const [allergies, setAllergies] = useState('');
+  const [currentMedications, setCurrentMedications] = useState('');
+  const [notes, setNotes] = useState('');
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
 
@@ -46,6 +52,12 @@ const EditPatient: React.FC = () => {
         setPhone(data.phone || '');
         setWeight(data.weight?.toString() || '');
         setHeight(data.height?.toString() || '');
+        setGender(data.gender || '');
+        setMedicalSummary(data.medical_summary || '');
+        setMedicalHistory(data.medical_history || '');
+        setAllergies(data.allergies || '');
+        setCurrentMedications(data.current_medications || '');
+        setNotes(data.notes || '');
         setAvatarUrl(data.avatar_url);
         setImagePreview(data.avatar_url);
       }
@@ -133,6 +145,12 @@ const EditPatient: React.FC = () => {
         phone: phone || null,
         weight: weight ? parseFloat(weight) : null,
         height: height ? parseFloat(height) : null,
+        gender: gender || null,
+        medical_summary: medicalSummary.trim() || null,
+        medical_history: medicalHistory.trim() || null,
+        allergies: allergies.trim() || null,
+        current_medications: currentMedications.trim() || null,
+        notes: notes.trim() || null,
         avatar_url: newAvatarUrl,
       };
 
@@ -241,6 +259,20 @@ const EditPatient: React.FC = () => {
             />
           </div>
 
+          <div>
+            <label className="block text-sm font-bold text-text-muted mb-2">Género</label>
+            <select
+              value={gender}
+              onChange={(e) => setGender(e.target.value)}
+              className="w-full px-4 py-3 rounded-xl bg-white dark:bg-surface-dark border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-primary"
+            >
+              <option value="">Seleccionar...</option>
+              <option value="masculino">Masculino</option>
+              <option value="femenino">Femenino</option>
+              <option value="otro">Otro</option>
+            </select>
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-bold text-text-muted mb-2">Peso (kg)</label>
@@ -264,6 +296,61 @@ const EditPatient: React.FC = () => {
                 className="w-full px-4 py-3 rounded-xl bg-white dark:bg-surface-dark border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-bold text-text-muted mb-2">Resumen Médico del Expediente</label>
+            <textarea
+              value={medicalSummary}
+              onChange={(e) => setMedicalSummary(e.target.value)}
+              rows={4}
+              placeholder="Resumen clínico general del paciente..."
+              className="w-full px-4 py-3 rounded-xl bg-white dark:bg-surface-dark border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-bold text-text-muted mb-2">Historial Médico</label>
+            <textarea
+              value={medicalHistory}
+              onChange={(e) => setMedicalHistory(e.target.value)}
+              rows={3}
+              placeholder="Condiciones previas, cirugías..."
+              className="w-full px-4 py-3 rounded-xl bg-white dark:bg-surface-dark border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-bold text-text-muted mb-2">Alergias</label>
+            <input
+              type="text"
+              value={allergies}
+              onChange={(e) => setAllergies(e.target.value)}
+              placeholder="Medicamentos, alimentos..."
+              className="w-full px-4 py-3 rounded-xl bg-white dark:bg-surface-dark border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-bold text-text-muted mb-2">Medicamentos Actuales</label>
+            <textarea
+              value={currentMedications}
+              onChange={(e) => setCurrentMedications(e.target.value)}
+              rows={2}
+              placeholder="Medicamentos en uso..."
+              className="w-full px-4 py-3 rounded-xl bg-white dark:bg-surface-dark border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-bold text-text-muted mb-2">Notas Adicionales</label>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={3}
+              placeholder="Información adicional..."
+              className="w-full px-4 py-3 rounded-xl bg-white dark:bg-surface-dark border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+            />
           </div>
         </div>
 

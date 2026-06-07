@@ -1,6 +1,16 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
+import { completeConsultation, createConsultation } from '../hooks/useConsultations';
 import { dosisData, puntosMotoresData } from '../constants/toxinData';
-import { pathologiesData, getPathologyTemplate } from '../data/pathologyData';
+import {
+  pathologiesData,
+  getPathologyTemplate,
+  getPathologyProtocolVariants,
+  getPathologyById,
+  resolveProtocolSuggestedDose,
+  type ProtocolVariant,
+  type ToxinBrand,
+} from '../data/pathologyData';
 import { supabase } from '../supabaseClient';
 import { Copy, Save, CheckCircle2, User, Search, UserPlus, Printer, FileText } from 'lucide-react';
 import { usePrintPreferences } from '../hooks/usePrintPreferences';
@@ -11,6 +21,13 @@ import { useCalculatorState, MuscleSelection, Patient } from '../hooks/useCalcul
 
 
 const Calculator: React.FC = () => {
+  const location = useLocation();
+  const pendingAutoLoad = useRef(false);
+  const pendingAutoLoadVariant = useRef<ProtocolVariant>('A');
+  const pathologyNavHandled = useRef(false);
+  const [protocolVariant, setProtocolVariant] = useState<ProtocolVariant>('A');
+  const [templateLoadMessage, setTemplateLoadMessage] = useState<string | null>(null);
+
   // Step 1: Configuration
   // Step 1: Configuration & State
   const { state, updateState, resetState, isLoaded } = useCalculatorState();
@@ -36,6 +53,12 @@ const Calculator: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
+  const [clinicalSummary, setClinicalSummary] = useState('');
+  const [consultationId, setConsultationId] = useState<string | null>(null);
+  const [showFollowUpModal, setShowFollowUpModal] = useState(false);
+  const [savedTreatmentId, setSavedTreatmentId] = useState<string | null>(null);
+  const [followUpDate, setFollowUpDate] = useState('');
+  const [schedulingFollowUp, setSchedulingFollowUp] = useState(false);
 
   // Step 2: Muscles
   // Step 2: Muscles (Local UI)
@@ -44,6 +67,7 @@ const Calculator: React.FC = () => {
 
   // Print Preferences
   const { preferences } = usePrintPreferences();
+  const userPrefsLoaded = useRef(false);
 
   // Calculation Results
   const [isCalculated, setIsCalculated] = useState(false);
@@ -63,6 +87,48 @@ const Calculator: React.FC = () => {
     };
     fetchUser();
   }, []);
+
+  useEffect(() => {
+    const navState = location.state as {
+      patientId?: string;
+      patientName?: string;
+      patientAge?: string;
+      patientWeight?: string;
+      consultationId?: string;
+    } | null;
+
+    if (!navState?.patientId || !isLoaded) return;
+
+    const loadPatient = async () => {
+      const { data } = await supabase
+        .from('patients')
+        .select('id, full_name, age, weight')
+        .eq('id', navState.patientId!)
+        .single();
+
+      if (data) {
+        updateState({
+          selectedPatient: data,
+          patientName: data.full_name,
+          patientAge: data.age ? data.age.toString() : '',
+          patientWeight: data.weight ? data.weight.toString() : '',
+        });
+      } else if (navState.patientName) {
+        updateState({
+          selectedPatient: { id: navState.patientId!, full_name: navState.patientName },
+          patientName: navState.patientName,
+          patientAge: navState.patientAge || '',
+          patientWeight: navState.patientWeight || '',
+        });
+      }
+
+      if (navState.consultationId) {
+        setConsultationId(navState.consultationId);
+      }
+    };
+
+    loadPatient();
+  }, [location.state, isLoaded]);
 
   useEffect(() => {
     if (searchQuery.length > 1) {
@@ -102,11 +168,16 @@ const Calculator: React.FC = () => {
     text += `👤 Paciente: ${patientName || 'No especificado'}\n`;
     text += `💉 Marca: ${selectedBrand}\n`;
     text += `💧 Dilución: ${dilution} ml\n`;
+    if (pathologyTitle) {
+      text += `🏥 Patología: ${pathologyTitle}`;
+      if (protocolVariants.length > 0) text += ` (Protocolo ${protocolVariant})`;
+      text += `\n`;
+    }
     text += `--------------------------\n`;
     text += `*DETALLE DE MÚSCULOS:*\n`;
     
     selectedMuscles.forEach(m => {
-      text += `• ${m.name} (${m.side}): ${m.customDose} U\n`;
+      text += `• ${m.name} (${m.side}): ${m.customDose} U / ${getVolumeToApply(m.customDose ?? 0)}\n`;
     });
     
     text += `--------------------------\n`;
@@ -130,12 +201,14 @@ const Calculator: React.FC = () => {
       ['Paciente', patientName || 'No especificado'],
       ['Marca', selectedBrand],
       ['Dilución', `${dilution} ml`],
+      ...(pathologyTitle
+        ? [['Patología', protocolVariants.length > 0 ? `${pathologyTitle} (Protocolo ${protocolVariant})` : pathologyTitle]]
+        : []),
       [''],
-      ['Músculo', 'Lado', 'Dosis (U)'],
-      ...selectedMuscles.map(m => [m.name, m.side, m.customDose]),
+      ['Músculo', 'Lado', 'Dosis (U)', 'Vol. (ml)'],
+      ...selectedMuscles.map(m => [m.name, m.side, m.customDose, getVolumeToApply(m.customDose ?? 0)]),
       [''],
-      ['TOTAL APLICADO', '', `${totalUnits} U`],
-      ['VOLUMEN TOTAL', '', getVolumeToApply(totalUnits)],
+      ['TOTAL APLICADO', '', `${totalUnits} U`, getVolumeToApply(totalUnits)],
       [''],
       ['Médico', doctorName ? `Dr. ${doctorName}` : '']
     ];
@@ -152,6 +225,28 @@ const Calculator: React.FC = () => {
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const handleScheduleFollowUp = async () => {
+    if (!savedTreatmentId || !selectedPatient?.id || !followUpDate) return;
+    setSchedulingFollowUp(true);
+    try {
+      await createConsultation({
+        patient_id: selectedPatient.id,
+        consultation_date: new Date(followUpDate).toISOString(),
+        visit_type: 'post_application_review',
+        treatment_type: pathologyTitle || null,
+        pathology_id: selectedPathology || null,
+        linked_treatment_id: savedTreatmentId,
+      });
+      setShowFollowUpModal(false);
+      setSavedTreatmentId(null);
+    } catch (err) {
+      console.error(err);
+      alert('Error al agendar la revaloración');
+    } finally {
+      setSchedulingFollowUp(false);
+    }
   };
 
   const handleSaveTreatment = async () => {
@@ -217,7 +312,7 @@ const Calculator: React.FC = () => {
 
       // Build notes with full session info
       const sessionNotes = [
-        selectedPathology ? `Patología: ${selectedPathology}` : '',
+        pathologyTitle ? `Patología: ${pathologyTitle}` : '',
         adjustmentFactor !== 1 ? `Factor pediátrico: ${adjustmentFactor.toFixed(2)}` : '',
         doctorName ? `Médico: Dr. ${doctorName}` : ''
       ].filter(Boolean).join(' | ');
@@ -231,7 +326,12 @@ const Calculator: React.FC = () => {
           product_name: selectedBrand,
           total_units: totalUnits,
           dilution: parseFloat(dilution) || null,
-          notes: sessionNotes || 'Cálculo generado via Calculadora'
+          notes: sessionNotes || 'Cálculo generado via Calculadora',
+          clinical_summary: clinicalSummary.trim() || null,
+          pathology_id: selectedPathology || null,
+          pathology_title: pathologyTitle || null,
+          adjustment_factor: adjustmentFactor !== 1 ? adjustmentFactor : null,
+          consultation_id: consultationId || null,
         })
         .select()
         .single();
@@ -248,6 +348,21 @@ const Calculator: React.FC = () => {
 
       const { error: dError } = await supabase.from('treatment_details').insert(details);
       if (dError) throw dError;
+
+      if (consultationId) {
+        await completeConsultation(consultationId, treatment.id);
+        setConsultationId(null);
+      }
+
+      setSavedTreatmentId(treatment.id);
+
+      const suggestedFollowUp = new Date();
+      suggestedFollowUp.setDate(suggestedFollowUp.getDate() + 84);
+      const pad = (n: number) => String(n).padStart(2, '0');
+      setFollowUpDate(
+        `${suggestedFollowUp.getFullYear()}-${pad(suggestedFollowUp.getMonth() + 1)}-${pad(suggestedFollowUp.getDate())}T09:00`
+      );
+      setShowFollowUpModal(true);
 
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
@@ -275,6 +390,119 @@ const Calculator: React.FC = () => {
     return 1.0;
   }, [patientAge, patientWeight]);
 
+  const pathologyTitle = useMemo(() => {
+    if (!selectedPathology) return '';
+    return getPathologyById(selectedPathology)?.title ?? selectedPathology;
+  }, [selectedPathology]);
+
+  const protocolVariants = useMemo(() => {
+    if (!selectedPathology) return [] as ProtocolVariant[];
+    return getPathologyProtocolVariants(selectedPathology);
+  }, [selectedPathology]);
+
+  const handleLoadPathologyTemplate = useCallback(
+    (options?: { replace?: boolean; variant?: ProtocolVariant }) => {
+      if (!selectedBrand || !selectedPathology) return;
+
+      const brand = selectedBrand as ToxinBrand;
+      const variant = options?.variant ?? protocolVariant;
+      const template = getPathologyTemplate(selectedPathology, variant);
+      if (!template || template.muscles.length === 0) {
+        setTemplateLoadMessage('No hay músculos para esta variante de protocolo.');
+        return;
+      }
+
+      const newMuscles: MuscleSelection[] = [];
+      const timestamp = Date.now();
+      const skippedMuscles: string[] = [];
+
+      template.muscles.forEach((muscle, idx) => {
+        if (!dosisData[brand][muscle.muscleName]) {
+          console.warn(`Muscle ${muscle.muscleName} not found in ${brand}`);
+          skippedMuscles.push(muscle.displayName);
+          return;
+        }
+
+        const { customDose, doseOption } = resolveProtocolSuggestedDose(muscle.protocol, brand);
+        const adjustedDose = Math.round(customDose * adjustmentFactor);
+
+        const addMuscle = (side: MuscleSelection['side'], sideIdx: number) => {
+          newMuscles.push({
+            id: `${muscle.muscleName}_${side}_${timestamp}_${idx}_${sideIdx}`,
+            name: muscle.muscleName,
+            side,
+            doseOption,
+            customDose: adjustedDose,
+          });
+        };
+
+        if (muscle.bilateral) {
+          addMuscle('Izquierdo', 0);
+          addMuscle('Derecho', 1);
+        } else {
+          addMuscle('Ambos', 0);
+        }
+      });
+
+      if (newMuscles.length === 0) {
+        setTemplateLoadMessage(
+          skippedMuscles.length
+            ? `Ningún músculo disponible en ${brand}: ${skippedMuscles.join(', ')}`
+            : 'No se pudo cargar la plantilla.'
+        );
+        return;
+      }
+
+      updateState({
+        selectedMuscles: options?.replace !== false ? newMuscles : [...selectedMuscles, ...newMuscles],
+      });
+      setIsCalculated(false);
+      setTotalUnits(0);
+
+      const loadedNames = newMuscles.map((m) => m.name).join(', ');
+      let msg = `Cargados ${newMuscles.length} músculo(s) — Protocolo ${variant}: ${loadedNames}.`;
+      if (skippedMuscles.length) {
+        msg += ` Omitidos (no en ${brand}): ${skippedMuscles.join(', ')}.`;
+      }
+      setTemplateLoadMessage(msg);
+    },
+    [selectedBrand, selectedPathology, protocolVariant, adjustmentFactor, selectedMuscles, updateState]
+  );
+
+  // Entrada desde detalle de patología (botón calculadora)
+  useEffect(() => {
+    if (!isLoaded) return;
+    const navState = location.state as {
+      pathologyId?: string;
+      autoLoadTemplate?: boolean;
+      protocolVariant?: ProtocolVariant;
+      defaultBrand?: ToxinBrand;
+    } | null;
+
+    if (!navState?.pathologyId || pathologyNavHandled.current) return;
+    pathologyNavHandled.current = true;
+
+    updateState({
+      selectedPathology: navState.pathologyId,
+      ...(navState.defaultBrand && !selectedBrand ? { selectedBrand: navState.defaultBrand } : {}),
+    });
+    if (navState.protocolVariant) {
+      setProtocolVariant(navState.protocolVariant);
+      pendingAutoLoadVariant.current = navState.protocolVariant;
+    }
+    if (navState.autoLoadTemplate) {
+      pendingAutoLoad.current = true;
+    }
+
+    window.history.replaceState({}, document.title);
+  }, [isLoaded, location.state, selectedBrand, updateState]);
+
+  useEffect(() => {
+    if (!pendingAutoLoad.current || !isLoaded || !selectedBrand || !selectedPathology) return;
+    pendingAutoLoad.current = false;
+    handleLoadPathologyTemplate({ replace: true, variant: pendingAutoLoadVariant.current });
+  }, [isLoaded, selectedBrand, selectedPathology, handleLoadPathologyTemplate]);
+
   const limitWarning = useMemo(() => {
     if (!selectedBrand || totalUnits === 0) return null;
     
@@ -290,6 +518,33 @@ const Calculator: React.FC = () => {
     }
     return null;
   }, [selectedBrand, totalUnits]);
+
+  useEffect(() => {
+    if (!isLoaded || userPrefsLoaded.current) return;
+    userPrefsLoaded.current = true;
+
+    const loadUserPrefs = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data } = await supabase
+        .from('user_profiles')
+        .select('default_brand, default_dilution')
+        .eq('id', user.id)
+        .single();
+
+      if (!data) return;
+
+      if (!selectedBrand && data.default_brand) {
+        updateState({ selectedBrand: data.default_brand });
+      }
+      if (!dilution && data.default_dilution) {
+        updateState({ dilution: data.default_dilution });
+      }
+    };
+
+    loadUserPrefs();
+  }, [isLoaded, updateState]);
 
   // Effects
   useEffect(() => {
@@ -362,61 +617,6 @@ const Calculator: React.FC = () => {
             m.id === id ? { ...m, customDose: dose } : m
         )
      });
-  };
-
-  const handleLoadPathologyTemplate = () => {
-    if (!selectedBrand || !selectedPathology) return;
-    
-    const template = getPathologyTemplate(selectedPathology);
-    if (!template) return;
-    
-    const newMuscles: MuscleSelection[] = [];
-    const timestamp = Date.now();
-    let skippedMuscles: string[] = [];
-    
-    template.muscles.forEach((muscle, idx) => {
-      // Verify muscle exists in toxinData for selected brand
-      if (!dosisData[selectedBrand][muscle.muscleName]) {
-        console.warn(`Muscle ${muscle.muscleName} not found in ${selectedBrand}`);
-        skippedMuscles.push(muscle.displayName);
-        return;
-      }
-      
-      if (muscle.bilateral) {
-        // Add left side
-        newMuscles.push({
-          id: `${muscle.muscleName}_Izquierdo_${timestamp}_${idx}`,
-          name: muscle.muscleName,
-          side: 'Izquierdo',
-          doseOption: 'min'
-        });
-        
-        // Add right side
-        newMuscles.push({
-          id: `${muscle.muscleName}_Derecho_${timestamp}_${idx}`,
-          name: muscle.muscleName,
-          side: 'Derecho',
-          doseOption: 'min'
-        });
-      } else {
-        // Add single muscle (no side specified)
-        newMuscles.push({
-          id: `${muscle.muscleName}_Ambos_${timestamp}_${idx}`,
-          name: muscle.muscleName,
-          side: 'Ambos',
-          doseOption: 'min'
-        });
-      }
-    });
-    
-    if (newMuscles.length > 0) {
-      updateState({ selectedMuscles: [...selectedMuscles, ...newMuscles] });
-      setIsCalculated(false);
-    }
-    
-    if (skippedMuscles.length > 0) {
-      console.log(`Skipped muscles not found in ${selectedBrand}:`, skippedMuscles);
-    }
   };
 
   const calculateTotal = () => {
@@ -524,8 +724,8 @@ const Calculator: React.FC = () => {
             {preferences.showProductBrand && <p className="text-lg font-bold">{selectedBrand}</p>}
             <p className="text-sm">
                 {preferences.showDilution ? `Dilución: ${dilution} ml` : ''} 
-                {preferences.showDilution && selectedPathology ? ' | ' : ''}
-                {selectedPathology ? `Patología: ${selectedPathology}` : ''}
+                {preferences.showDilution && pathologyTitle ? ' | ' : ''}
+                {pathologyTitle ? `Patología: ${pathologyTitle}` : ''}
             </p>
           </div>
         </div>
@@ -536,6 +736,7 @@ const Calculator: React.FC = () => {
               <th className="py-2 px-4 text-left font-bold uppercase text-xs">Músculo</th>
               <th className="py-2 px-4 text-left font-bold uppercase text-xs">Lado</th>
               <th className="py-2 px-4 text-right font-bold uppercase text-xs">Dosis (U)</th>
+              <th className="py-2 px-4 text-right font-bold uppercase text-xs">Vol. (ml)</th>
             </tr>
           </thead>
           <tbody>
@@ -544,6 +745,7 @@ const Calculator: React.FC = () => {
                 <td className="py-2 px-4 font-medium">{m.name}</td>
                 <td className="py-2 px-4">{m.side}</td>
                 <td className="py-2 px-4 text-right font-bold">{m.customDose} U</td>
+                <td className="py-2 px-4 text-right font-bold">{getVolumeToApply(m.customDose ?? 0)}</td>
               </tr>
             ))}
           </tbody>
@@ -551,10 +753,7 @@ const Calculator: React.FC = () => {
             <tr className="bg-slate-50">
               <td colSpan={2} className="py-3 px-4 text-right font-bold uppercase">Total Aplicado</td>
               <td className="py-3 px-4 text-right font-bold text-xl">{totalUnits} U</td>
-            </tr>
-            <tr>
-              <td colSpan={2} className="py-1 px-4 text-right text-sm text-slate-500 italic">Volumen aproximado a aplicar</td>
-              <td className="py-1 px-4 text-right text-sm font-medium">{getVolumeToApply(totalUnits)}</td>
+              <td className="py-3 px-4 text-right font-bold text-xl">{getVolumeToApply(totalUnits)}</td>
             </tr>
           </tfoot>
         </table>
@@ -793,10 +992,36 @@ const Calculator: React.FC = () => {
             <h3 className="font-bold text-slate-800 dark:text-white">Cargar Plantilla de Patología</h3>
           </div>
           
-          <div className="flex gap-2">
+          <div className="flex flex-col gap-3">
+            {protocolVariants.length > 0 && (
+              <div>
+                <label className="block text-xs font-bold text-purple-700 dark:text-purple-300 mb-1 uppercase tracking-wide">
+                  Variante de protocolo
+                </label>
+                <select
+                  value={protocolVariant}
+                  onChange={(e) => {
+                    setProtocolVariant(e.target.value as ProtocolVariant);
+                    setTemplateLoadMessage(null);
+                  }}
+                  disabled={!selectedPathology}
+                  className="w-full px-4 py-2.5 bg-white dark:bg-slate-800 rounded-xl border border-purple-200 dark:border-purple-700 text-sm text-slate-800 dark:text-white"
+                >
+                  <option value="A">A — Aducción / rotación interna (estándar)</option>
+                  <option value="B">B — Subescapular dominante (Yelnik)</option>
+                  <option value="C">C — Extensión espástica del hombro</option>
+                </select>
+              </div>
+            )}
+
+            <div className="flex gap-2">
             <select 
-              value={selectedPathology}
-              onChange={(e) => updateState({ selectedPathology: e.target.value })}
+              value={selectedPathology || ''}
+              onChange={(e) => {
+                updateState({ selectedPathology: e.target.value || null });
+                setProtocolVariant('A');
+                setTemplateLoadMessage(null);
+              }}
               disabled={!selectedBrand}
               className="flex-1 px-4 py-3 bg-white dark:bg-slate-800 rounded-xl border border-purple-200 dark:border-purple-700 focus:ring-2 focus:ring-purple-500 text-slate-800 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -807,13 +1032,20 @@ const Calculator: React.FC = () => {
             </select>
             
             <button
-              onClick={handleLoadPathologyTemplate}
+              onClick={() => handleLoadPathologyTemplate()}
               disabled={!selectedBrand || !selectedPathology}
               className="px-6 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-slate-300 dark:disabled:bg-slate-700 text-white rounded-xl font-medium transition-colors active:scale-95 disabled:cursor-not-allowed flex items-center gap-2"
             >
               <span className="material-symbols-outlined text-xl">download</span>
               <span className="hidden sm:inline">Cargar</span>
             </button>
+          </div>
+
+          {templateLoadMessage && (
+            <p className="text-xs text-purple-800 dark:text-purple-200 bg-white/60 dark:bg-slate-900/40 rounded-lg px-3 py-2 leading-relaxed">
+              {templateLoadMessage}
+            </p>
+          )}
           </div>
         </section>
 
@@ -996,6 +1228,7 @@ const Calculator: React.FC = () => {
                      <th className="py-2 px-3 font-bold text-slate-700">Músculo</th>
                      <th className="py-2 px-3 font-bold text-slate-700">Lado</th>
                      <th className="py-2 px-3 font-bold text-slate-700 text-right">Dosis (U)</th>
+                     <th className="py-2 px-3 font-bold text-slate-700 text-right">Vol. (ml)</th>
                   </tr>
                </thead>
                <tbody className="divide-y divide-slate-200">
@@ -1004,11 +1237,13 @@ const Calculator: React.FC = () => {
                         <td className="py-2 px-3">{m.name}</td>
                         <td className="py-2 px-3">{m.side}</td>
                         <td className="py-2 px-3 text-right font-medium">{m.customDose} U</td>
+                        <td className="py-2 px-3 text-right font-medium">{getVolumeToApply(m.customDose ?? 0)}</td>
                      </tr>
                   ))}
                   <tr className="bg-slate-50 font-bold border-t-2 border-slate-300">
                      <td className="py-3 px-3" colSpan={2}>TOTAL</td>
                      <td className="py-3 px-3 text-right">{totalUnits} U</td>
+                     <td className="py-3 px-3 text-right">{getVolumeToApply(totalUnits)}</td>
                   </tr>
                </tbody>
             </table>
@@ -1033,6 +1268,18 @@ const Calculator: React.FC = () => {
         
         {isCalculated && (
           <>
+            <div className="mb-2 animate-in slide-in-from-bottom-4 duration-300">
+              <label className="block text-xs font-bold text-text-muted mb-1">
+                Resumen clínico de la sesión (opcional)
+              </label>
+              <textarea
+                value={clinicalSummary}
+                onChange={(e) => setClinicalSummary(e.target.value)}
+                rows={2}
+                placeholder="Evolución, observaciones, plan de seguimiento..."
+                className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl resize-none"
+              />
+            </div>
             <div className="flex gap-2 mb-1 animate-in slide-in-from-bottom-4 duration-300">
               <button 
                 onClick={copySummaryToClipboard}
@@ -1084,6 +1331,47 @@ const Calculator: React.FC = () => {
           )}
         </button>
       </div>
+
+      {showFollowUpModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white dark:bg-surface-dark w-full max-w-sm rounded-2xl p-6 shadow-xl">
+            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-purple-100 dark:bg-purple-900/30 mx-auto mb-4">
+              <span className="material-symbols-outlined text-2xl text-purple-600">event</span>
+            </div>
+            <h3 className="text-lg font-bold text-center text-slate-900 dark:text-white mb-2">
+              ¿Agendar revaloración post-aplicación?
+            </h3>
+            <p className="text-sm text-center text-slate-500 dark:text-slate-400 mb-4">
+              Se sugiere una cita de seguimiento 12 semanas después de la aplicación.
+            </p>
+            <label className="block text-xs font-bold text-text-muted mb-2">Fecha y hora sugerida</label>
+            <input
+              type="datetime-local"
+              value={followUpDate}
+              onChange={(e) => setFollowUpDate(e.target.value)}
+              className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm mb-4"
+            />
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowFollowUpModal(false);
+                  setSavedTreatmentId(null);
+                }}
+                className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold rounded-xl"
+              >
+                Ahora no
+              </button>
+              <button
+                onClick={handleScheduleFollowUp}
+                disabled={schedulingFollowUp || !followUpDate}
+                className="flex-1 py-3 bg-primary text-white font-bold rounded-xl disabled:opacity-50"
+              >
+                {schedulingFollowUp ? 'Agendando...' : 'Agendar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

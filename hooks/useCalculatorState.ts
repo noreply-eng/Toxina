@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 export interface MuscleSelection {
   id: string;
@@ -65,9 +65,9 @@ export const useCalculatorState = () => {
     }
   }, [state, isLoaded]);
 
-  const updateState = (updates: Partial<CalculatorState>) => {
+  const updateState = useCallback((updates: Partial<CalculatorState>) => {
     setState(prev => ({ ...prev, ...updates }));
-  };
+  }, []);
 
   const resetState = () => {
     setState(DEFAULT_STATE);

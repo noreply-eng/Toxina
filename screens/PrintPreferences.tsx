@@ -7,6 +7,7 @@ const PrintPreferences: React.FC = () => {
   const navigate = useNavigate();
   const { preferences, updatePreferences } = usePrintPreferences();
   const [showSaveSuccess, setShowSaveSuccess] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
   
   const handleToggle = (key: keyof IPrintPreferences) => {
     // @ts-ignore - dynamic key access
@@ -158,11 +159,49 @@ const PrintPreferences: React.FC = () => {
               <p className="text-xs text-text-muted">Personaliza tus documentos médicos</p>
             </div>
           </div>
-          <button className="w-full py-2.5 px-4 bg-primary text-white rounded-xl font-semibold text-sm hover:bg-primary/90 transition-colors flex items-center justify-center gap-2">
+          <button
+            onClick={() => setShowPreview(!showPreview)}
+            className="w-full py-2.5 px-4 bg-primary text-white rounded-xl font-semibold text-sm hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
+          >
             <span className="material-symbols-outlined text-lg">visibility</span>
-            Ver ejemplo de impresión
+            {showPreview ? 'Ocultar ejemplo' : 'Ver ejemplo de impresión'}
           </button>
         </div>
+
+        {showPreview && (
+          <section className="rounded-2xl bg-white dark:bg-surface-dark border border-slate-200 dark:border-slate-700 p-6 shadow-sm">
+            <div className={`border-b-2 border-current pb-2 mb-4 ${
+              preferences.colorScheme === 'green' ? 'text-green-600' :
+              preferences.colorScheme === 'purple' ? 'text-purple-600' :
+              preferences.colorScheme === 'gray' ? 'text-gray-600' : 'text-blue-600'
+            }`}>
+              <h3 className="font-bold text-lg">Informe de Tratamiento — Ejemplo</h3>
+              {preferences.includeDate && (
+                <p className="text-xs text-text-muted mt-1">Fecha: {new Date().toLocaleDateString('es-MX')}</p>
+              )}
+            </div>
+            {preferences.showPatientAge && <p className="text-sm mb-1"><strong>Paciente:</strong> Juan Pérez — 45 años</p>}
+            {preferences.showPatientContact && <p className="text-sm mb-1"><strong>Contacto:</strong> doctor@ejemplo.com</p>}
+            {preferences.showMedicalHistory && <p className="text-sm mb-3 text-text-muted">Historial: Sin alergias conocidas</p>}
+            {preferences.showProductBrand && <p className="text-sm mb-1"><strong>Producto:</strong> Botox</p>}
+            {preferences.showDilution && <p className="text-sm mb-1"><strong>Dilución:</strong> 2.5 ml</p>}
+            {preferences.showTotalUnits && <p className="text-sm mb-1"><strong>Total:</strong> 120 U</p>}
+            {preferences.showMuscleDetails && (
+              <table className="w-full text-xs mt-3 mb-3 border-collapse">
+                <thead><tr className="border-b"><th className="text-left py-1">Músculo</th><th className="text-right py-1">U</th></tr></thead>
+                <tbody>
+                  <tr><td className="py-1">Frontalis</td><td className="text-right">40</td></tr>
+                  <tr><td className="py-1">Corrugator</td><td className="text-right">20</td></tr>
+                </tbody>
+              </table>
+            )}
+            {preferences.showLotNumber && <p className="text-xs text-text-muted">Lote: ABC-12345</p>}
+            {preferences.includeInstructions && <p className="text-xs mt-3 p-2 bg-slate-50 dark:bg-slate-900 rounded">Instrucciones post-tratamiento incluidas.</p>}
+            {preferences.includeDoctorSignature && (
+              <p className="text-sm mt-6 pt-4 border-t border-slate-200 dark:border-slate-700">Firma: Dr. Ejemplo</p>
+            )}
+          </section>
+        )}
 
         {/* Settings Sections */}
         {sections.map((section, idx) => (

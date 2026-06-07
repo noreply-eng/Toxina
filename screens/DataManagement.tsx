@@ -114,6 +114,7 @@ const DataManagement = () => {
           phone,
           email,
           medical_history,
+          medical_summary,
           allergies,
           current_medications,
           notes,
@@ -153,6 +154,10 @@ const DataManagement = () => {
           total_units,
           dilution,
           notes,
+          clinical_summary,
+          pathology_title,
+          pathology_id,
+          adjustment_factor,
           patients (full_name)
         `)
         .order('date', { ascending: false });
@@ -170,6 +175,9 @@ const DataManagement = () => {
         producto: s.product_name,
         dosis_total: s.total_units,
         dilucion: s.dilution,
+        patologia: s.pathology_title || '',
+        resumen_clinico: s.clinical_summary || '',
+        factor_ajuste: s.adjustment_factor || '',
         notas: s.notes || ''
       }));
 
@@ -231,20 +239,19 @@ const DataManagement = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-100 sticky top-0 z-10">
+    <div className="min-h-screen bg-background-light dark:bg-background-dark pb-28">
+      <header className="sticky top-0 z-10 bg-white/90 dark:bg-surface-dark/90 backdrop-blur-md border-b border-gray-100 dark:border-slate-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center gap-4">
             <button 
               onClick={() => navigate('/settings')}
-              className="p-2 hover:bg-gray-100 rounded-full text-gray-500 transition-colors"
+              className="p-2 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-full text-gray-500 dark:text-slate-400 transition-colors"
             >
               <ArrowLeft size={20} />
             </button>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Gestión de Datos</h1>
-              <p className="text-sm text-gray-500">Exporta y respalda tu información clínica</p>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Gestión de Datos</h1>
+              <p className="text-sm text-gray-500 dark:text-slate-400">Exporta y respalda tu información clínica</p>
             </div>
           </div>
         </div>
@@ -266,27 +273,27 @@ const DataManagement = () => {
           
           {/* Stats Section */}
           <section>
-            <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
               <Database size={20} className="text-blue-600" />
               Resumen de Información
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4 transition-all hover:shadow-md">
+              <div className="bg-white dark:bg-surface-dark p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 flex items-center gap-4 transition-all hover:shadow-md">
                 <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600">
                   <Users size={24} />
                 </div>
                 <div>
                   <p className="text-sm text-gray-500 font-medium uppercase tracking-wider">Pacientes</p>
-                  <p className="text-2xl font-bold text-gray-900">{loading ? '...' : stats.patients}</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{loading ? '...' : stats.patients}</p>
                 </div>
               </div>
-              <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4 transition-all hover:shadow-md">
+              <div className="bg-white dark:bg-surface-dark p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 flex items-center gap-4 transition-all hover:shadow-md">
                 <div className="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center text-purple-600">
                   <History size={24} />
                 </div>
                 <div>
                   <p className="text-sm text-gray-500 font-medium uppercase tracking-wider">Tratamientos</p>
-                  <p className="text-2xl font-bold text-gray-900">{loading ? '...' : stats.sessions}</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{loading ? '...' : stats.sessions}</p>
                 </div>
               </div>
             </div>
@@ -294,7 +301,7 @@ const DataManagement = () => {
 
           {/* Export Actions */}
           <section>
-            <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
               <Download size={20} className="text-blue-600" />
               Herramientas de Exportación
             </h2>
@@ -303,7 +310,7 @@ const DataManagement = () => {
               <button
                 onClick={exportPatients}
                 disabled={exporting || loading}
-                className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between group hover:border-blue-200 hover:shadow-md transition-all text-left disabled:opacity-50 disabled:cursor-not-allowed"
+                className="bg-white dark:bg-surface-dark p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 flex items-center justify-between group hover:border-blue-200 hover:shadow-md transition-all text-left disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 bg-green-50 rounded-xl flex items-center justify-center text-green-600 group-hover:bg-green-100 transition-colors">
@@ -322,7 +329,7 @@ const DataManagement = () => {
               <button
                 onClick={exportTreatments}
                 disabled={exporting || loading}
-                className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between group hover:border-blue-200 hover:shadow-md transition-all text-left disabled:opacity-50 disabled:cursor-not-allowed"
+                className="bg-white dark:bg-surface-dark p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 flex items-center justify-between group hover:border-blue-200 hover:shadow-md transition-all text-left disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center text-purple-600 group-hover:bg-purple-100 transition-colors">
@@ -341,7 +348,7 @@ const DataManagement = () => {
               <button
                 onClick={exportTreatmentDetails}
                 disabled={exporting || loading}
-                className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between group hover:border-blue-200 hover:shadow-md transition-all text-left disabled:opacity-50 disabled:cursor-not-allowed"
+                className="bg-white dark:bg-surface-dark p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 flex items-center justify-between group hover:border-blue-200 hover:shadow-md transition-all text-left disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600 group-hover:bg-blue-100 transition-colors">
