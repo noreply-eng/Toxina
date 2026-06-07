@@ -1,18 +1,23 @@
 
 import React from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import { getAuthUser } from '../utils/auth';
 import { fetchAllPatients, fetchPatientById } from '../hooks/usePatients';
 import { updatePatientMutation } from '../services/clinicalMutations';
+import PageContainer from '../components/PageContainer';
+import PatientGasGoals from '../components/PatientGasGoals';
 import ScheduleConsultationModal from '../components/ScheduleConsultationModal';
+import TreatmentDetailModal from '../components/TreatmentDetailModal';
 import VisitTypeBadge from '../components/VisitTypeBadge';
 import {
   fetchByPatient,
   formatRelativeAppointmentDate,
+  markConsultationInProgress,
 } from '../hooks/useConsultations';
 import type { Consultation } from '../types/clinical';
 import { CONSULTATION_STATUS_LABELS } from '../types/clinical';
+import type { TreatmentReportData } from '../utils/treatmentReport';
 
 interface PatientRecord {
   id: string;
@@ -36,6 +41,7 @@ interface TreatmentRecord {
   date: string;
   product_name: string;
   total_units: number;
+  dilution?: number | null;
   notes?: string;
   clinical_summary?: string;
   pathology_title?: string;
@@ -48,6 +54,7 @@ interface TreatmentRecord {
 
 const PatientProfile: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { id } = useParams<{ id: string }>();
   const patientId = id || null;
 
@@ -55,9 +62,11 @@ const PatientProfile: React.FC = () => {
   const [treatments, setTreatments] = React.useState<TreatmentRecord[]>([]);
   const [consultations, setConsultations] = React.useState<Consultation[]>([]);
   const [loading, setLoading] = React.useState(true);
-  const [selectedTreatment, setSelectedTreatment] = React.useState<TreatmentRecord | null>(null);
+  const [treatmentReport, setTreatmentReport] = React.useState<TreatmentReportData | null>(null);
   const [showTreatmentModal, setShowTreatmentModal] = React.useState(false);
   const [showConsultationModal, setShowConsultationModal] = React.useState(false);
+  const [editingConsultation, setEditingConsultation] = React.useState<Consultation | null>(null);
+  const [followUpTreatmentId, setFollowUpTreatmentId] = React.useState<string | undefined>();
   const [showPastConsultations, setShowPastConsultations] = React.useState(false);
   const [editingSummary, setEditingSummary] = React.useState(false);
   const [summaryDraft, setSummaryDraft] = React.useState('');
@@ -123,6 +132,16 @@ const PatientProfile: React.FC = () => {
     fetchPatientData();
   }, [patientId, loadConsultations]);
 
+  React.useEffect(() => {
+    const state = location.state as { scheduleFollowUp?: boolean } | null;
+    if (state?.scheduleFollowUp && patient && treatments.length > 0) {
+      setFollowUpTreatmentId(treatments[0].id);
+      setEditingConsultation(null);
+      setShowConsultationModal(true);
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state, patient, treatments, navigate, location.pathname]);
+
   const parseNotes = (notes: string) => {
     if (!notes) return {};
     const parts = notes.split(' | ');
@@ -140,6 +159,29 @@ const PatientProfile: React.FC = () => {
 
   const getPathologyTitle = (treatment: TreatmentRecord) => {
     return treatment.pathology_title || parseNotes(treatment.notes || '').pathology;
+  };
+
+  const buildTreatmentReport = (treatment: TreatmentRecord): TreatmentReportData => {
+    const { doctor, cleanNotes } = parseNotes(treatment.notes || '');
+    const age = patient?.birth_date
+      ? new Date().getFullYear() - new Date(patient.birth_date).getFullYear()
+      : null;
+
+    return {
+      patientName: patient?.full_name ?? 'Paciente',
+      patientAge: age,
+      patientWeight: patient?.weight ?? null,
+      sessionDate: treatment.date,
+      productName: treatment.product_name,
+      dilution: treatment.dilution ?? null,
+      pathologyTitle: getPathologyTitle(treatment),
+      clinicalSummary: treatment.clinical_summary ?? null,
+      notes: cleanNotes || null,
+      doctorName: doctor,
+      totalUnits: treatment.total_units,
+      details: treatment.treatment_details ?? [],
+      treatmentId: treatment.id,
+    };
   };
 
   const handleSaveSummary = async () => {
@@ -191,43 +233,73 @@ const PatientProfile: React.FC = () => {
     ? new Date().getFullYear() - new Date(patient.birth_date).getFullYear()
     : '--';
 
+  const lastVisitLabel =
+    treatments.length > 0 ? new Date(treatments[0].date).toLocaleDateString('es-MX') : '--';
+
   return (
     <div className="flex flex-col min-h-screen bg-background-light dark:bg-background-dark pb-32">
-      <header className="bg-white dark:bg-surface-dark px-4 pb-4 pt-12 text-center sticky top-0 z-10 shadow-sm border-b border-gray-100 dark:border-gray-800">
-        <div className="flex justify-between items-center relative mb-2">
-          <button
-            onClick={() => navigate(-1)}
-            className="absolute left-0 p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
-          >
-            <span className="material-symbols-outlined">arrow_back</span>
-          </button>
-          <div className="mx-auto flex flex-col items-center pt-2">
+      <header className="bg-white dark:bg-surface-dark pb-4 pt-12 sticky top-0 z-10 shadow-sm border-b border-gray-100 dark:border-gray-800">
+        <PageContainer maxWidth="max-w-5xl">
+          <div className="flex justify-between items-start gap-4 mb-4 lg:mb-0">
+            <button
+              onClick={() => navigate(-1)}
+              className="shrink-0 p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+            >
+              <span className="material-symbols-outlined">arrow_back</span>
+            </button>
+            <button
+              onClick={() => navigate(`/patient/${patientId}/edit`)}
+              className="shrink-0 p-2 text-slate-400 hover:text-primary transition-colors rounded-full hover:bg-slate-50 dark:hover:bg-slate-800 lg:order-last"
+            >
+              <span className="material-symbols-outlined">edit</span>
+            </button>
+          </div>
+
+          <div className="flex flex-col items-center text-center lg:flex-row lg:items-center lg:text-left lg:gap-5 lg:-mt-10">
             {patient.avatar_url ? (
               <div
-                className="w-20 h-20 rounded-full bg-cover bg-center mb-3 shadow-md border-2 border-white dark:border-slate-700"
+                className="w-20 h-20 lg:w-16 lg:h-16 shrink-0 rounded-full bg-cover bg-center mb-3 lg:mb-0 shadow-md border-2 border-white dark:border-slate-700"
                 style={{ backgroundImage: `url('${patient.avatar_url}')` }}
               />
             ) : (
-              <div className="w-20 h-20 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-3 text-slate-300 border-2 border-white dark:border-slate-700 shadow-sm">
-                <span className="material-symbols-outlined text-4xl">person</span>
+              <div className="w-20 h-20 lg:w-16 lg:h-16 shrink-0 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-3 lg:mb-0 text-slate-300 border-2 border-white dark:border-slate-700 shadow-sm">
+                <span className="material-symbols-outlined text-4xl lg:text-3xl">person</span>
               </div>
             )}
-            <h1 className="text-2xl font-bold text-slate-800 dark:text-white leading-none mb-1">
-              {patient.full_name}
-            </h1>
-            <p className="text-sm text-text-muted">{patient.email || 'Paciente Registrado'}</p>
+            <div className="min-w-0 flex-1">
+              <h1 className="text-2xl lg:text-xl font-bold text-slate-800 dark:text-white leading-tight mb-1">
+                {patient.full_name}
+              </h1>
+              <p className="text-sm text-text-muted truncate">{patient.email || 'Paciente Registrado'}</p>
+            </div>
+
+            <div className="hidden lg:grid grid-cols-2 gap-3 w-full max-w-sm shrink-0">
+              <div className="bg-slate-50 dark:bg-slate-800/50 px-4 py-3 rounded-xl border border-slate-100 dark:border-slate-700 flex items-center gap-3">
+                <div className="w-9 h-9 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-600">
+                  <span className="material-symbols-outlined text-lg">history</span>
+                </div>
+                <div>
+                  <p className="text-lg font-bold text-slate-800 dark:text-white leading-none">{treatments.length}</p>
+                  <p className="text-[10px] text-text-muted font-medium uppercase tracking-wide">Sesiones</p>
+                </div>
+              </div>
+              <div className="bg-slate-50 dark:bg-slate-800/50 px-4 py-3 rounded-xl border border-slate-100 dark:border-slate-700 flex items-center gap-3">
+                <div className="w-9 h-9 rounded-full bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center text-purple-600">
+                  <span className="material-symbols-outlined text-lg">calendar_month</span>
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-slate-800 dark:text-white leading-none">{lastVisitLabel}</p>
+                  <p className="text-[10px] text-text-muted font-medium uppercase tracking-wide">Última visita</p>
+                </div>
+              </div>
+            </div>
           </div>
-          <button
-            onClick={() => navigate(`/patient/${patientId}/edit`)}
-            className="absolute right-0 p-2 text-slate-400 hover:text-primary transition-colors rounded-full hover:bg-slate-50 dark:hover:bg-slate-800"
-          >
-            <span className="material-symbols-outlined">edit</span>
-          </button>
-        </div>
+        </PageContainer>
       </header>
 
-      <main className="flex-1 px-4 py-6 space-y-6 pb-24">
-        <div className="grid grid-cols-2 gap-3">
+      <main className="flex-1 py-6 pb-24">
+        <PageContainer maxWidth="max-w-5xl" className="space-y-6">
+        <div className="grid grid-cols-2 gap-3 lg:hidden">
           <div className="bg-white dark:bg-surface-dark p-4 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800">
             <div className="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-600 mb-2">
               <span className="material-symbols-outlined text-lg">history</span>
@@ -239,12 +311,13 @@ const PatientProfile: React.FC = () => {
             <div className="w-8 h-8 rounded-full bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center text-purple-600 mb-2">
               <span className="material-symbols-outlined text-lg">calendar_month</span>
             </div>
-            <p className="text-sm font-bold text-slate-800 dark:text-white mt-1">
-              {treatments.length > 0 ? new Date(treatments[0].date).toLocaleDateString() : '--'}
-            </p>
+            <p className="text-sm font-bold text-slate-800 dark:text-white mt-1">{lastVisitLabel}</p>
             <p className="text-xs text-text-muted font-medium uppercase tracking-wide">Última Visita</p>
           </div>
         </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div className="lg:col-span-7 space-y-6">
 
         {/* Medical summary */}
         <section className="bg-white dark:bg-surface-dark rounded-2xl p-5 shadow-sm border border-slate-100 dark:border-slate-800">
@@ -361,12 +434,20 @@ const PatientProfile: React.FC = () => {
           )}
         </section>
 
+        {patientId && <PatientGasGoals patientId={patientId} />}
+          </div>
+
+          <div className="lg:col-span-5 space-y-6">
         {/* Appointments */}
         <section className="bg-white dark:bg-surface-dark rounded-2xl p-5 shadow-sm border border-slate-100 dark:border-slate-800">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-bold">Citas</h3>
             <button
-              onClick={() => setShowConsultationModal(true)}
+              onClick={() => {
+                setEditingConsultation(null);
+                setFollowUpTreatmentId(undefined);
+                setShowConsultationModal(true);
+              }}
               className="text-xs font-bold text-primary flex items-center gap-1"
             >
               <span className="material-symbols-outlined text-sm">add</span>
@@ -395,6 +476,32 @@ const PatientProfile: React.FC = () => {
                     {c.treatment_type || 'Sin motivo especificado'}
                   </p>
                   <VisitTypeBadge visitType={c.visit_type} />
+                  <div className="flex gap-2 mt-3">
+                    <button
+                      onClick={async () => {
+                        await markConsultationInProgress(c.id);
+                        navigate('/calculator', {
+                          state: {
+                            patientId: patient.id,
+                            patientName: patient.full_name,
+                            consultationId: c.id,
+                          },
+                        });
+                      }}
+                      className="text-[10px] font-bold px-2 py-1 bg-primary text-white rounded-md"
+                    >
+                      {c.status === 'in_progress' ? 'Continuar' : 'Iniciar'}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setEditingConsultation(c);
+                        setShowConsultationModal(true);
+                      }}
+                      className="text-[10px] font-bold px-2 py-1 border border-slate-200 dark:border-slate-700 rounded-md"
+                    >
+                      Editar
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -447,20 +554,19 @@ const PatientProfile: React.FC = () => {
                   <div
                     key={t.id}
                     onClick={() => {
-                      setSelectedTreatment(t);
+                      setTreatmentReport(buildTreatmentReport(t));
                       setShowTreatmentModal(true);
                     }}
-                    className="bg-primary/5 dark:bg-primary/10 p-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center cursor-pointer hover:bg-primary/10 transition-colors"
+                    className="bg-primary/5 dark:bg-primary/10 p-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center cursor-pointer hover:bg-primary/10 transition-colors last:border-b-0"
                   >
-                    <div>
-                      <p className="text-sm font-bold text-primary">{t.product_name}</p>
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-primary truncate">{t.product_name}</p>
                       <div className="flex items-center gap-2 flex-wrap">
-                        <p className="text-xs text-text-muted">{new Date(t.date).toLocaleDateString()}</p>
-                        {pathology && <p className="text-[10px] text-slate-400">• {pathology}</p>}
-                        {doctor && <p className="text-[10px] text-slate-400">• {doctor}</p>}
+                        <p className="text-xs text-text-muted">{new Date(t.date).toLocaleDateString('es-MX')}</p>
+                        {pathology && <p className="text-[10px] text-slate-400 truncate">• {pathology}</p>}
                       </div>
                     </div>
-                    <div className="text-right flex items-center gap-2">
+                    <div className="text-right flex items-center gap-2 shrink-0">
                       <p className="font-bold text-sm">{t.total_units} U</p>
                       <span className="material-symbols-outlined text-slate-400 text-sm">chevron_right</span>
                     </div>
@@ -470,6 +576,9 @@ const PatientProfile: React.FC = () => {
             )}
           </div>
         </section>
+          </div>
+        </div>
+        </PageContainer>
       </main>
 
       <button
@@ -491,141 +600,32 @@ const PatientProfile: React.FC = () => {
 
       <ScheduleConsultationModal
         isOpen={showConsultationModal}
-        onClose={() => setShowConsultationModal(false)}
-        onSaved={() => { if (patientId) loadConsultations(patientId); }}
+        onClose={() => {
+          setShowConsultationModal(false);
+          setEditingConsultation(null);
+          setFollowUpTreatmentId(undefined);
+        }}
+        onSaved={() => {
+          if (patientId) loadConsultations(patientId);
+          setEditingConsultation(null);
+          setFollowUpTreatmentId(undefined);
+        }}
         preselectedPatientId={patient.id}
         preselectedPatientName={patient.full_name}
+        editingConsultation={editingConsultation}
+        defaultVisitType={followUpTreatmentId ? 'post_application_review' : undefined}
+        defaultLinkedTreatmentId={followUpTreatmentId}
+        defaultSource={followUpTreatmentId ? 'calculator_followup' : 'manual'}
       />
 
-      {showTreatmentModal && selectedTreatment && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
-          onClick={() => setShowTreatmentModal(false)}
-        >
-          <div
-            className="bg-white dark:bg-surface-dark w-full max-w-md rounded-2xl shadow-xl overflow-hidden max-h-[90vh] flex flex-col"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="bg-primary/5 p-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-start">
-              <div>
-                <h3 className="text-lg font-bold text-primary">Detalle de Aplicación</h3>
-                <p className="text-xs text-text-muted mt-1 flex items-center gap-1">
-                  <span className="material-symbols-outlined text-[14px]">calendar_today</span>
-                  {new Date(selectedTreatment.date).toLocaleDateString()}
-                  {parseNotes(selectedTreatment.notes || '').doctor && (
-                    <>
-                      <span className="mx-1">•</span>
-                      <span className="material-symbols-outlined text-[14px]">person</span>
-                      {parseNotes(selectedTreatment.notes || '').doctor}
-                    </>
-                  )}
-                </p>
-              </div>
-              <button
-                onClick={() => setShowTreatmentModal(false)}
-                className="text-slate-400 hover:text-slate-600 rounded-full p-1"
-              >
-                <span className="material-symbols-outlined">close</span>
-              </button>
-            </div>
-
-            <div className="p-4 overflow-y-auto">
-              <div className="grid grid-cols-2 gap-3 mb-4">
-                <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-lg text-center border border-slate-100 dark:border-slate-700">
-                  <p className="text-[10px] text-text-muted uppercase font-bold tracking-wider mb-1">Dosis Total</p>
-                  <p className="text-2xl font-bold text-primary">
-                    {selectedTreatment.total_units}{' '}
-                    <span className="text-sm font-medium text-slate-500">U</span>
-                  </p>
-                </div>
-                <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-lg text-center border border-slate-100 dark:border-slate-700">
-                  <p className="text-[10px] text-text-muted uppercase font-bold tracking-wider mb-1">Producto</p>
-                  <p className="text-lg font-bold text-slate-800 dark:text-white">
-                    {selectedTreatment.product_name}
-                  </p>
-                </div>
-              </div>
-
-              {getPathologyTitle(selectedTreatment) && (
-                <div className="mb-4 bg-purple-50 dark:bg-purple-900/10 p-3 rounded-lg border border-purple-100 dark:border-purple-900/30 flex items-start gap-2">
-                  <span className="material-symbols-outlined text-purple-500 mt-0.5">medical_services</span>
-                  <div>
-                    <p className="text-xs font-bold text-purple-700 dark:text-purple-400 uppercase tracking-wide">
-                      Patología
-                    </p>
-                    <p className="text-sm font-medium text-slate-800 dark:text-slate-200">
-                      {getPathologyTitle(selectedTreatment)}
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {selectedTreatment.clinical_summary && (
-                <div className="mb-4 bg-blue-50 dark:bg-blue-900/10 p-3 rounded-lg border border-blue-100 dark:border-blue-900/30">
-                  <p className="text-xs font-bold text-blue-700 dark:text-blue-400 mb-1 flex items-center gap-1">
-                    <span className="material-symbols-outlined text-xs">clinical_notes</span>
-                    Resumen Clínico de la Sesión
-                  </p>
-                  <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">
-                    {selectedTreatment.clinical_summary}
-                  </p>
-                </div>
-              )}
-
-              {parseNotes(selectedTreatment.notes || '').cleanNotes && (
-                <div className="mb-4 bg-yellow-50 dark:bg-yellow-900/10 p-3 rounded-lg border border-yellow-100 dark:border-yellow-900/30">
-                  <p className="text-xs font-bold text-yellow-700 dark:text-yellow-500 mb-1 flex items-center gap-1">
-                    <span className="material-symbols-outlined text-xs">sticky_note_2</span>
-                    Notas Adicionales
-                  </p>
-                  <p className="text-sm text-slate-700 dark:text-slate-300 italic">
-                    "{parseNotes(selectedTreatment.notes || '').cleanNotes}"
-                  </p>
-                </div>
-              )}
-
-              <h4 className="text-sm font-bold mb-2 border-b border-slate-100 dark:border-slate-800 pb-2 mt-2 flex items-center gap-2">
-                <span className="material-symbols-outlined text-primary">fitness_center</span>
-                Detalle por Músculo
-              </h4>
-              <div className="space-y-1 bg-slate-50 dark:bg-slate-900/50 rounded-xl p-2 border border-slate-100 dark:border-slate-800/50">
-                {selectedTreatment.treatment_details && selectedTreatment.treatment_details.length > 0 ? (
-                  selectedTreatment.treatment_details.map((detail, idx) => (
-                    <div
-                      key={idx}
-                      className="flex justify-between items-center text-sm p-2 hover:bg-white dark:hover:bg-slate-800 rounded-lg transition-colors"
-                    >
-                      <div className="flex flex-col">
-                        <span className="text-slate-800 dark:text-slate-200 font-medium capitalize">
-                          {detail.muscle_name}
-                        </span>
-                        <span className="text-[10px] text-slate-500 uppercase tracking-wide">{detail.side}</span>
-                      </div>
-                      <span className="font-bold font-mono bg-white dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 shadow-sm">
-                        {detail.units} U
-                      </span>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center py-6 text-sm text-slate-400 flex flex-col items-center gap-2">
-                    <span className="material-symbols-outlined text-2xl opacity-50">data_info_alert</span>
-                    No hay detalles de músculos registrados para esta sesión.
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="p-3 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/30 flex justify-end">
-              <button
-                onClick={() => setShowTreatmentModal(false)}
-                className="px-5 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold shadow-sm"
-              >
-                Cerrar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <TreatmentDetailModal
+        isOpen={showTreatmentModal}
+        onClose={() => {
+          setShowTreatmentModal(false);
+          setTreatmentReport(null);
+        }}
+        report={treatmentReport}
+      />
     </div>
   );
 };

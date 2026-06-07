@@ -16,21 +16,8 @@ import type {
 import { generateLocalId, isLocalId } from '../types/offlineSync';
 import type { PatientRecord } from '../types/patient';
 
-const CONSULTATION_SELECT = `
-  id,
-  user_id,
-  patient_id,
-  consultation_date,
-  visit_type,
-  status,
-  treatment_type,
-  pathology_id,
-  notes,
-  linked_treatment_id,
-  created_at,
-  updated_at,
-  patients (id, full_name, avatar_url)
-`;
+import { CONSULTATION_SELECT } from '../constants/consultationSelect';
+import { DEFAULT_APPOINTMENT_DURATION } from '../utils/consultationHelpers';
 
 async function getCachedPatient(patientId: string): Promise<PatientRecord | undefined> {
   const db = await getOfflineDb();
@@ -181,6 +168,8 @@ function buildOptimisticConsultation(
     pathology_id: input.pathology_id ?? null,
     notes: input.notes ?? null,
     linked_treatment_id: input.linked_treatment_id ?? null,
+    duration_minutes: input.duration_minutes ?? DEFAULT_APPOINTMENT_DURATION,
+    source: input.source ?? 'manual',
     created_at: now,
     updated_at: now,
     patients: patient
@@ -215,6 +204,8 @@ export async function createConsultationMutation(
         notes: input.notes ?? null,
         linked_treatment_id: input.linked_treatment_id ?? null,
         status: input.status ?? 'scheduled',
+        duration_minutes: input.duration_minutes ?? DEFAULT_APPOINTMENT_DURATION,
+        source: input.source ?? 'manual',
       })
       .select(CONSULTATION_SELECT)
       .single();
@@ -269,9 +260,14 @@ export async function updateConsultationMutation(
     Boolean(input.linked_treatment_id && isLocalId(input.linked_treatment_id));
 
   if (!mustQueue) {
+    const updatePayload = { ...input };
+    if (input.status === 'completed' && !input.completed_at) {
+      updatePayload.completed_at = new Date().toISOString();
+    }
+
     const { data, error } = await supabase
       .from('consultations')
-      .update(input)
+      .update(updatePayload)
       .eq('user_id', userId)
       .eq('id', consultationId)
       .select(CONSULTATION_SELECT)
@@ -289,6 +285,9 @@ export async function updateConsultationMutation(
     ...input,
     updated_at: new Date().toISOString(),
   };
+  if (input.status === 'completed' && !input.completed_at) {
+    optimistic.completed_at = new Date().toISOString();
+  }
 
   await upsertConsultationInCache(optimistic);
   await enqueueOutboxEntry(userId, {

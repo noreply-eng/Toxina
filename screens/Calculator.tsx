@@ -1,6 +1,8 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
-import { completeConsultation, createConsultation } from '../hooks/useConsultations';
+import { completeConsultation } from '../hooks/useConsultations';
+import ScheduleConsultationModal from '../components/ScheduleConsultationModal';
+import { getSuggestedFollowUpDate, toLocalDatetimeValue } from '../utils/followUpIntervals';
 import { dosisData, puntosMotoresData } from '../constants/toxinData';
 import {
   pathologiesData,
@@ -60,8 +62,7 @@ const Calculator: React.FC = () => {
   const [consultationId, setConsultationId] = useState<string | null>(null);
   const [showFollowUpModal, setShowFollowUpModal] = useState(false);
   const [savedTreatmentId, setSavedTreatmentId] = useState<string | null>(null);
-  const [followUpDate, setFollowUpDate] = useState('');
-  const [schedulingFollowUp, setSchedulingFollowUp] = useState(false);
+  const [followUpDefaultDate, setFollowUpDefaultDate] = useState<string | undefined>();
 
   // Step 2: Muscles
   // Step 2: Muscles (Local UI)
@@ -238,28 +239,6 @@ const Calculator: React.FC = () => {
     window.print();
   };
 
-  const handleScheduleFollowUp = async () => {
-    if (!savedTreatmentId || !selectedPatient?.id || !followUpDate) return;
-    setSchedulingFollowUp(true);
-    try {
-      await createConsultation({
-        patient_id: selectedPatient.id,
-        consultation_date: new Date(followUpDate).toISOString(),
-        visit_type: 'post_application_review',
-        treatment_type: pathologyTitle || null,
-        pathology_id: selectedPathology || null,
-        linked_treatment_id: savedTreatmentId,
-      });
-      setShowFollowUpModal(false);
-      setSavedTreatmentId(null);
-    } catch (err) {
-      console.error(err);
-      alert('Error al agendar la revaloración');
-    } finally {
-      setSchedulingFollowUp(false);
-    }
-  };
-
   const handleSaveTreatment = async () => {
     if (!isCalculated || !selectedBrand) return;
     
@@ -325,12 +304,8 @@ const Calculator: React.FC = () => {
 
       setSavedTreatmentId(result.treatmentId);
 
-      const suggestedFollowUp = new Date();
-      suggestedFollowUp.setDate(suggestedFollowUp.getDate() + 84);
-      const pad = (n: number) => String(n).padStart(2, '0');
-      setFollowUpDate(
-        `${suggestedFollowUp.getFullYear()}-${pad(suggestedFollowUp.getMonth() + 1)}-${pad(suggestedFollowUp.getDate())}T09:00`
-      );
+      const suggestedFollowUp = getSuggestedFollowUpDate(new Date(), selectedPathology || null);
+      setFollowUpDefaultDate(toLocalDatetimeValue(suggestedFollowUp));
       setShowFollowUpModal(true);
 
       setSaveSuccess(true);
@@ -1304,45 +1279,28 @@ const Calculator: React.FC = () => {
         </button>
       </div>
 
-      {showFollowUpModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-white dark:bg-surface-dark w-full max-w-sm rounded-2xl p-6 shadow-xl">
-            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-purple-100 dark:bg-purple-900/30 mx-auto mb-4">
-              <span className="material-symbols-outlined text-2xl text-purple-600">event</span>
-            </div>
-            <h3 className="text-lg font-bold text-center text-slate-900 dark:text-white mb-2">
-              ¿Agendar revaloración post-aplicación?
-            </h3>
-            <p className="text-sm text-center text-slate-500 dark:text-slate-400 mb-4">
-              Se sugiere una cita de seguimiento 12 semanas después de la aplicación.
-            </p>
-            <label className="block text-xs font-bold text-text-muted mb-2">Fecha y hora sugerida</label>
-            <input
-              type="datetime-local"
-              value={followUpDate}
-              onChange={(e) => setFollowUpDate(e.target.value)}
-              className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm mb-4"
-            />
-            <div className="flex gap-3">
-              <button
-                onClick={() => {
-                  setShowFollowUpModal(false);
-                  setSavedTreatmentId(null);
-                }}
-                className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold rounded-xl"
-              >
-                Ahora no
-              </button>
-              <button
-                onClick={handleScheduleFollowUp}
-                disabled={schedulingFollowUp || !followUpDate}
-                className="flex-1 py-3 bg-primary text-white font-bold rounded-xl disabled:opacity-50"
-              >
-                {schedulingFollowUp ? 'Agendando...' : 'Agendar'}
-              </button>
-            </div>
-          </div>
-        </div>
+      {showFollowUpModal && savedTreatmentId && selectedPatient?.id && (
+        <ScheduleConsultationModal
+          isOpen={showFollowUpModal}
+          onClose={() => {
+            setShowFollowUpModal(false);
+            setSavedTreatmentId(null);
+            setFollowUpDefaultDate(undefined);
+          }}
+          onSaved={() => {
+            setShowFollowUpModal(false);
+            setSavedTreatmentId(null);
+            setFollowUpDefaultDate(undefined);
+          }}
+          preselectedPatientId={selectedPatient.id}
+          preselectedPatientName={selectedPatient.full_name ?? patientName}
+          defaultVisitType="post_application_review"
+          defaultLinkedTreatmentId={savedTreatmentId}
+          defaultDate={followUpDefaultDate}
+          defaultPathologyId={selectedPathology || undefined}
+          defaultTreatmentType={pathologyTitle || undefined}
+          defaultSource="calculator_followup"
+        />
       )}
     </div>
   );

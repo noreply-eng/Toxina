@@ -35,6 +35,7 @@ const SETTINGS_ROUTES: Record<string, string> = {
   templates: '/templates',
   data: '/data-management',
   lang: '/language',
+  agenda: '/appointment-settings',
 };
 
 const Settings: React.FC<SettingsProps> = ({ toggleDarkMode, isDarkMode }) => {
@@ -215,6 +216,7 @@ const Settings: React.FC<SettingsProps> = ({ toggleDarkMode, isDarkMode }) => {
          { id: 'motor-points', name: 'Puntos Motores', icon: 'ads_click', type: 'link' },
          { id: 'units', name: 'Preferencias de Unidades', val: `${unitLabel} · ${brandLabel}`, icon: 'straighten', type: 'link' },
          { id: 'doses', name: 'Dosis de Toxina', val: profile?.default_dose_option === 'max' ? 'Dosis máxima' : 'Dosis mínima', icon: 'science', type: 'link' },
+         { id: 'agenda', name: 'Preferencias de Agenda', icon: 'event', type: 'link' },
          { id: 'print', name: 'Preferencias de Impresión', icon: 'print', type: 'link' }
        ]
     },

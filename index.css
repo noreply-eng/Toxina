@@ -82,6 +82,232 @@ body .text-xs {
   font-size: var(--font-size-xs);
 }
 
+/* Treatment session reprint (portaled to body) */
+.treatment-print-sheet {
+  display: none !important;
+}
+
+@media print {
+  body.treatment-print-active #root {
+    display: none !important;
+  }
+
+  body.treatment-print-active #treatment-print-root.treatment-print-sheet {
+    display: block !important;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    min-height: 100vh;
+    padding: 32px;
+    background: #fff;
+    color: #0d141b;
+    font-family: Inter, Manrope, sans-serif;
+    font-size: 12px;
+    line-height: 1.5;
+    box-sizing: border-box;
+  }
+}
+
+.treatment-print-sheet * {
+  box-sizing: border-box;
+}
+
+.treatment-print-sheet .tps-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 24px;
+  border-bottom: 2px solid #0d141b;
+  padding-bottom: 16px;
+  margin-bottom: 24px;
+}
+
+.treatment-print-sheet h1 {
+  font-size: 22px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: -0.02em;
+  margin: 0 0 4px;
+}
+
+.treatment-print-sheet .tps-subtitle {
+  margin: 0;
+  color: #64748b;
+  font-size: 11px;
+}
+
+.treatment-print-sheet .tps-header-meta {
+  text-align: right;
+}
+
+.treatment-print-sheet .tps-date {
+  margin: 0;
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.treatment-print-sheet .tps-ref {
+  margin: 4px 0 0;
+  color: #94a3b8;
+  font-size: 10px;
+}
+
+.treatment-print-sheet .tps-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+  margin-bottom: 24px;
+}
+
+.treatment-print-sheet .tps-label {
+  margin: 0 0 4px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #64748b;
+  letter-spacing: 0.04em;
+}
+
+.treatment-print-sheet .tps-value {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.treatment-print-sheet .tps-meta {
+  margin: 4px 0 0;
+  font-size: 11px;
+  color: #334155;
+}
+
+.treatment-print-sheet .tps-box {
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 16px;
+}
+
+.treatment-print-sheet .tps-text {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.treatment-print-sheet .tps-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 24px;
+}
+
+.treatment-print-sheet .tps-table th,
+.treatment-print-sheet .tps-table td {
+  border-bottom: 1px solid #e2e8f0;
+  padding: 8px 12px;
+  text-align: left;
+}
+
+.treatment-print-sheet .tps-table thead tr {
+  background: #f1f5f9;
+  border-bottom: 2px solid #0d141b;
+}
+
+.treatment-print-sheet .tps-table th {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.treatment-print-sheet .tps-num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.treatment-print-sheet .tps-muscle {
+  text-transform: capitalize;
+  font-weight: 600;
+}
+
+.treatment-print-sheet .tps-table tfoot tr {
+  background: #f8fafc;
+}
+
+.treatment-print-sheet .tps-total-label {
+  text-align: right;
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 11px;
+}
+
+.treatment-print-sheet .tps-total {
+  font-weight: 800;
+  font-size: 14px;
+}
+
+.treatment-print-sheet .tps-guide {
+  margin-bottom: 20px;
+  break-inside: avoid;
+}
+
+.treatment-print-sheet .tps-guide h2 {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  border-bottom: 1px solid #0d141b;
+  padding-bottom: 4px;
+  margin: 0 0 8px;
+}
+
+.treatment-print-sheet .tps-guide p {
+  margin: 0 0 8px;
+  font-size: 10px;
+  text-align: justify;
+}
+
+.treatment-print-sheet .tps-footer {
+  margin-top: 48px;
+  padding-top: 24px;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 24px;
+  break-inside: avoid;
+}
+
+.treatment-print-sheet .tps-disclaimer {
+  margin: 0;
+  max-width: 360px;
+  font-size: 10px;
+  color: #94a3b8;
+  font-style: italic;
+}
+
+.treatment-print-sheet .tps-signature {
+  width: 220px;
+  text-align: center;
+}
+
+.treatment-print-sheet .tps-signature-line {
+  height: 1px;
+  background: #0d141b;
+  margin-bottom: 8px;
+}
+
+.treatment-print-sheet .tps-signature p {
+  margin: 0;
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.treatment-print-sheet .tps-signature-caption {
+  font-size: 10px !important;
+  font-weight: 400 !important;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-top: 4px !important;
+}
+
 /* Legal document typography */
 .prose-legal .legal-h1 {
   font-size: var(--font-size-2xl);
@@ -121,4 +347,38 @@ body .text-xs {
 .prose-legal .legal-ul li {
   margin-bottom: 0.35rem;
   line-height: 1.6;
+}
+
+/* ── Landing page (light-only clinical protocol aesthetic) ── */
+.landing-page {
+  --landing-primary: #0891b2;
+  --landing-bg: #f8fafb;
+}
+
+.landing-grid-bg {
+  background-image:
+    linear-gradient(to right, rgba(148, 163, 184, 0.08) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(148, 163, 184, 0.08) 1px, transparent 1px),
+    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(8, 145, 178, 0.06), transparent);
+  background-size: 32px 32px, 32px 32px, 100% 100%;
+}
+
+.landing-spec-panel {
+  background: linear-gradient(180deg, #ffffff 0%, #fafbfc 100%);
+}
+
+.landing-spec-panel img {
+  display: block;
+}
+
+.landing-disclaimer {
+  background: linear-gradient(135deg, #ffffff 0%, #fffbeb 120%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-page * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

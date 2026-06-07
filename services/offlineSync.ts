@@ -18,21 +18,8 @@ import {
 } from '../types/offlineSync';
 import type { PatientRecord } from '../types/patient';
 
-const CONSULTATION_SELECT = `
-  id,
-  user_id,
-  patient_id,
-  consultation_date,
-  visit_type,
-  status,
-  treatment_type,
-  pathology_id,
-  notes,
-  linked_treatment_id,
-  created_at,
-  updated_at,
-  patients (id, full_name, avatar_url)
-`;
+import { CONSULTATION_SELECT } from '../constants/consultationSelect';
+import { DEFAULT_APPOINTMENT_DURATION } from '../utils/consultationHelpers';
 
 let syncInProgress = false;
 
@@ -217,6 +204,8 @@ async function processOutboxEntry(userId: string, entry: OutboxEntry): Promise<v
           notes: payload.notes ?? null,
           linked_treatment_id: linkedTreatmentId,
           status: payload.status ?? 'scheduled',
+          duration_minutes: payload.duration_minutes ?? DEFAULT_APPOINTMENT_DURATION,
+          source: payload.source ?? 'manual',
         })
         .select(CONSULTATION_SELECT)
         .single();

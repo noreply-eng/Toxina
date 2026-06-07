@@ -10,6 +10,8 @@ export interface UserPreferences {
   default_dilution: string;
   language: AppLanguage;
   dark_mode: boolean;
+  appointment_reminders?: boolean;
+  default_appointment_duration?: number;
   font_size?: string;
   primary_color?: string;
   secondary_color?: string;
@@ -22,6 +24,8 @@ export const DEFAULT_USER_PREFERENCES: UserPreferences = {
   default_dilution: '2.5',
   language: 'es',
   dark_mode: false,
+  appointment_reminders: true,
+  default_appointment_duration: 30,
 };
 
 export const BRAND_LABELS: Record<ToxinBrand, string> = {

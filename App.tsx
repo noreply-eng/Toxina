@@ -19,6 +19,7 @@ import CompleteProfile from './screens/CompleteProfile';
 import LegalAcceptance from './screens/LegalAcceptance';
 import LegalDocumentPage from './screens/LegalDocumentPage';
 import PrivacySettings from './screens/PrivacySettings';
+import Landing from './screens/Landing';
 
 import EditProfile from './screens/EditProfile';
 import EditPatient from './screens/EditPatient';
@@ -31,6 +32,7 @@ import FontSize from './screens/FontSize';
 import TemplateManager from './screens/TemplateManager';
 import DataManagement from './screens/DataManagement';
 import Agenda from './screens/Agenda';
+import AppointmentSettings from './screens/AppointmentSettings';
 import Navigation from './components/Navigation';
 import OfflineBanner from './components/OfflineBanner';
 import PendingSyncBanner from './components/PendingSyncBanner';
@@ -231,8 +233,13 @@ const App: React.FC = () => {
       />
       <OfflineBanner />
       <main
-        className={`flex-1 min-w-0 overflow-x-hidden overflow-y-hidden ${
-          effectiveSession && location.pathname !== '/login' && location.pathname !== '/signup'
+        className={`flex-1 min-w-0 overflow-x-hidden ${
+          ['/', '/login', '/signup', '/aviso-privacidad', '/terminos'].includes(location.pathname)
+            ? 'overflow-y-auto'
+            : 'overflow-y-hidden'
+        } ${
+          effectiveSession &&
+          !['/login', '/signup', '/'].includes(location.pathname)
             ? 'lg:pl-64'
             : ''
         }`}
@@ -244,7 +251,7 @@ const App: React.FC = () => {
               <Route path="/email-confirmation" element={<EmailConfirmation />} />
               <Route path="/aviso-privacidad" element={<LegalDocumentPage type="privacy" />} />
               <Route path="/terminos" element={<LegalDocumentPage type="terms" />} />
-              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              <Route path="/" element={<Landing />} />
             </Route>
             
             <Route element={<ProtectedLayout session={effectiveSession} />}>
@@ -256,6 +263,7 @@ const App: React.FC = () => {
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/search" element={<Search />} />
                 <Route path="/agenda" element={<Agenda />} />
+                <Route path="/appointment-settings" element={<AppointmentSettings />} />
                 <Route path="/calculator" element={<Calculator />} />
                 <Route path="/motor-points" element={<MuscleList />} />
                 <Route path="/motor-points/:muscleId" element={<MotorPoints />} />
@@ -283,7 +291,8 @@ const App: React.FC = () => {
         </Routes>
       </main>
       
-      {effectiveSession && location.pathname !== '/login' && location.pathname !== '/signup' && (
+      {effectiveSession &&
+        !['/login', '/signup', '/'].includes(location.pathname) && (
         <Navigation />
       )}
       <PWAInstallBanner />

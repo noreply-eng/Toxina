@@ -7,21 +7,7 @@ import type { PatientRecord } from '../types/patient';
 
 export type { ClinicalCacheMeta };
 
-const CONSULTATION_SELECT = `
-  id,
-  user_id,
-  patient_id,
-  consultation_date,
-  visit_type,
-  status,
-  treatment_type,
-  pathology_id,
-  notes,
-  linked_treatment_id,
-  created_at,
-  updated_at,
-  patients (id, full_name, avatar_url)
-`;
+import { CONSULTATION_SELECT } from '../constants/consultationSelect';
 
 const PREFETCH_CONSULTATION_LIMIT = 500;
 
@@ -45,6 +31,10 @@ function filterConsultations(
   if (options.status) {
     const statuses = Array.isArray(options.status) ? options.status : [options.status];
     result = result.filter((c) => statuses.includes(c.status));
+  }
+
+  if (options.visitType) {
+    result = result.filter((c) => c.visit_type === options.visitType);
   }
 
   result.sort((a, b) => a.consultation_date.localeCompare(b.consultation_date));
@@ -297,6 +287,9 @@ export async function fetchUpcomingCached(
       if (options.status) {
         const statuses = Array.isArray(options.status) ? options.status : [options.status];
         query = query.in('status', statuses);
+      }
+      if (options.visitType) {
+        query = query.eq('visit_type', options.visitType);
       }
       if (options.limit) query = query.limit(options.limit);
 

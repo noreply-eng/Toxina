@@ -7,6 +7,8 @@ export type ConsultationStatus =
   | 'cancelled'
   | 'no_show';
 
+export type ConsultationSource = 'manual' | 'calculator_followup' | 'import';
+
 export const VISIT_TYPE_LABELS: Record<VisitType, string> = {
   new_application: 'Nueva aplicación',
   post_application_review: 'Revaloración post-aplicación',
@@ -18,6 +20,12 @@ export const CONSULTATION_STATUS_LABELS: Record<ConsultationStatus, string> = {
   completed: 'Completada',
   cancelled: 'Cancelada',
   no_show: 'No asistió',
+};
+
+export const CONSULTATION_SOURCE_LABELS: Record<ConsultationSource, string> = {
+  manual: 'Manual',
+  calculator_followup: 'Seguimiento calculadora',
+  import: 'Importada',
 };
 
 export interface ConsultationPatient {
@@ -37,6 +45,10 @@ export interface Consultation {
   pathology_id: string | null;
   notes: string | null;
   linked_treatment_id: string | null;
+  duration_minutes?: number;
+  completed_at?: string | null;
+  cancellation_reason?: string | null;
+  source?: ConsultationSource;
   created_at: string;
   updated_at: string;
   patients?: ConsultationPatient | ConsultationPatient[];
@@ -51,6 +63,8 @@ export interface CreateConsultationInput {
   notes?: string | null;
   linked_treatment_id?: string | null;
   status?: ConsultationStatus;
+  duration_minutes?: number;
+  source?: ConsultationSource;
 }
 
 export interface UpdateConsultationInput {
@@ -61,6 +75,10 @@ export interface UpdateConsultationInput {
   notes?: string | null;
   linked_treatment_id?: string | null;
   status?: ConsultationStatus;
+  duration_minutes?: number;
+  completed_at?: string | null;
+  cancellation_reason?: string | null;
+  source?: ConsultationSource;
 }
 
 export interface FetchUpcomingOptions {
@@ -68,4 +86,5 @@ export interface FetchUpcomingOptions {
   to?: string;
   status?: ConsultationStatus | ConsultationStatus[];
   limit?: number;
+  visitType?: VisitType;
 }

@@ -84,11 +84,15 @@ const Dashboard: React.FC = () => {
         const todayConsultations = todayResult.data;
 
         const completed = todayConsultations.filter((c) => c.status === 'completed').length;
-        const pending = todayConsultations.filter((c) => c.status !== 'completed').length;
+        const pending = todayConsultations.filter(
+          (c) => c.status === 'scheduled' || c.status === 'in_progress'
+        ).length;
         setTodayStats({ completed, pending });
 
         const nextPending = todayConsultations.find(
-          (c) => c.status !== 'completed' && new Date(c.consultation_date) >= now
+          (c) =>
+            (c.status === 'scheduled' || c.status === 'in_progress') &&
+            new Date(c.consultation_date) >= now
         );
 
         if (nextPending) {
@@ -111,7 +115,7 @@ const Dashboard: React.FC = () => {
 
         const upcomingResult = await fetchUpcoming(user.id, {
           from: now.toISOString(),
-          status: 'scheduled',
+          status: ['scheduled', 'in_progress'],
           limit: 15,
         });
         setPendingAppointments(upcomingResult.data);
@@ -239,23 +243,53 @@ const Dashboard: React.FC = () => {
                   return (
                     <div
                       key={consultation.id}
-                      onClick={() => navigate(`/patient/${consultation.patient_id}`)}
-                      className="bg-white dark:bg-surface-dark rounded-xl p-4 border border-slate-100 dark:border-slate-800 shadow-sm cursor-pointer hover:border-primary/30 transition-colors"
+                      className="bg-white dark:bg-surface-dark rounded-xl p-4 border border-slate-100 dark:border-slate-800 shadow-sm"
                     >
-                      <div className="flex justify-between items-start gap-2 mb-2">
-                        <div className="min-w-0">
-                          <p className="text-sm font-bold text-text-main dark:text-white truncate">
-                            {patient?.full_name ?? 'Paciente'}
-                          </p>
-                          <p className="text-xs text-text-muted mt-0.5">
-                            {consultation.treatment_type || 'Sin motivo especificado'}
-                          </p>
+                      <div
+                        className="cursor-pointer"
+                        onClick={() => navigate(`/patient/${consultation.patient_id}`)}
+                      >
+                        <div className="flex justify-between items-start gap-2 mb-2">
+                          <div className="min-w-0">
+                            <p className="text-sm font-bold text-text-main dark:text-white truncate">
+                              {patient?.full_name ?? 'Paciente'}
+                            </p>
+                            <p className="text-xs text-text-muted mt-0.5">
+                              {consultation.treatment_type || 'Sin motivo especificado'}
+                            </p>
+                          </div>
+                          <span className="text-xs font-bold text-primary shrink-0">
+                            {formatRelativeAppointmentDate(consultation.consultation_date)}
+                          </span>
                         </div>
-                        <span className="text-xs font-bold text-primary shrink-0">
-                          {formatRelativeAppointmentDate(consultation.consultation_date)}
-                        </span>
+                        <VisitTypeBadge visitType={consultation.visit_type} />
                       </div>
-                      <VisitTypeBadge visitType={consultation.visit_type} />
+                      <div className="flex gap-2 mt-3">
+                        <button
+                          onClick={() =>
+                            navigate('/calculator', {
+                              state: {
+                                patientId: consultation.patient_id,
+                                patientName: patient?.full_name,
+                                consultationId: consultation.id,
+                              },
+                            })
+                          }
+                          className="text-[10px] font-bold px-2 py-1 bg-primary text-white rounded-md"
+                        >
+                          Iniciar
+                        </button>
+                        <button
+                          onClick={() =>
+                            navigate('/agenda', {
+                              state: { editConsultationId: consultation.id },
+                            })
+                          }
+                          className="text-[10px] font-bold px-2 py-1 border border-slate-200 dark:border-slate-700 rounded-md"
+                        >
+                          Editar
+                        </button>
+                      </div>
                     </div>
                   );
                 })}

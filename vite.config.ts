@@ -31,7 +31,7 @@ export default defineConfig(({ mode }) => {
             background_color: '#f6f7f8',
             display: 'standalone',
             display_override: ['standalone', 'minimal-ui'],
-            orientation: 'portrait-primary',
+            orientation: 'any',
             start_url: '/?source=pwa',
             scope: '/',
             categories: ['medical', 'health'],

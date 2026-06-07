@@ -26,6 +26,8 @@ export interface UserProfile {
   default_dilution?: string;
   language?: string;
   dark_mode?: boolean;
+  appointment_reminders?: boolean;
+  default_appointment_duration?: number;
   terms_accepted_at?: string | null;
   terms_version?: string | null;
   privacy_sensitive_accepted_at?: string | null;

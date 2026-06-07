@@ -10,7 +10,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Toxina DLM" />
     <meta name="format-detection" content="telephone=no" />
-    <meta name="description" content="Calculadora y guía clínica de toxina botulínica. Puntos motores, dosis, patologías y más." />
+    <meta name="description" content="DeepLux Med · Toxina DLM — Plataforma Beta de registro métrico y optimización en protocolos de investigación clínica con toxina botulínica. Desarrollada bajo dirección del Dr. Marcos Yocupicio." />
 
     <link rel="icon" href="/favicon.ico" sizes="48x48" />
     <link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-128.png" />
@@ -26,7 +26,7 @@
 
     <title>Toxina DLM</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,typography,container-queries"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&family=Manrope:wght@200..800&family=Noto+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet" />
     <script>
@@ -46,7 +46,9 @@
                     },
                     fontFamily: {
                         display: ["Manrope", "sans-serif"],
-                        sans: ["Inter", "sans-serif"]
+                        sans: ["Inter", "sans-serif"],
+                        "landing-display": ["Figtree", "Manrope", "sans-serif"],
+                        "landing-body": ["Noto Sans", "Inter", "sans-serif"]
                     },
                     borderRadius: {
                         DEFAULT: "0.25rem",
@@ -62,6 +64,7 @@
     <style>
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        html, body, #root { width: 100%; min-height: 100dvh; }
         body { min-height: 100dvh; }
         .material-symbols-outlined {
             font-family: 'Material Symbols Outlined';
