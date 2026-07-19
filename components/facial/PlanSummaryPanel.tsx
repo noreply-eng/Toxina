@@ -99,11 +99,11 @@ const PlanSummaryPanel: React.FC<PlanSummaryPanelProps> = ({
   ];
 
   return (
-    <div className="flex flex-col h-full bg-surface-dark border-t lg:border-t-0 lg:border-l border-slate-800">
+    <div className="flex flex-col lg:h-full bg-surface-dark border-t lg:border-t-0 lg:border-l border-slate-800">
       {onToggleCollapse && (
         <button
           type="button"
-          className="lg:hidden flex items-center justify-center py-2 text-slate-400 border-b border-slate-800 cursor-pointer"
+          className="lg:hidden flex items-center justify-center py-2 text-slate-400 border-b border-slate-800 cursor-pointer shrink-0"
           onClick={onToggleCollapse}
         >
           <span className="material-symbols-outlined">
@@ -113,7 +113,9 @@ const PlanSummaryPanel: React.FC<PlanSummaryPanelProps> = ({
         </button>
       )}
 
-      <div className={`flex flex-col flex-1 min-h-0 ${collapsed ? 'hidden lg:flex' : ''}`}>
+      <div
+        className={`flex flex-col flex-1 min-h-0 lg:overflow-hidden ${collapsed ? 'hidden lg:flex' : ''}`}
+      >
         {/* Compact config */}
         <div className="p-3 border-b border-slate-800 space-y-3 shrink-0">
           <div className="grid grid-cols-2 gap-2">
@@ -317,8 +319,11 @@ const PlanSummaryPanel: React.FC<PlanSummaryPanelProps> = ({
           ))}
         </div>
 
-        {/* Tab content */}
-        <div className="flex-1 overflow-y-auto p-3 space-y-3 min-h-0" role="tabpanel">
+        {/* Tab content — scroll interno en desktop; en móvil scrollea el modal completo */}
+        <div
+          className="flex-1 overflow-y-auto overscroll-y-contain p-3 space-y-3 min-h-0 touch-pan-y"
+          role="tabpanel"
+        >
           {tab === 'plan' && (
             <>
               <div>

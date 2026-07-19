@@ -1,14 +1,63 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { getMuscleById } from '../data/muscleData';
+import { getMuscleById, MuscleData, USGGuidance } from '../data/muscleData';
+import { fetchMuscleMedia } from '../services/muscleMedia';
+import type { MuscleMedia } from '../types/muscleMedia';
+import { useIsAdmin } from '../hooks/useIsAdmin';
 
 const MotorPoints: React.FC = () => {
   const navigate = useNavigate();
   const { muscleId } = useParams<{ muscleId: string }>();
   const [view, setView] = useState<'Anatomía' | 'USG'>('USG');
+  const { isAdmin } = useIsAdmin();
+  const [media, setMedia] = useState<MuscleMedia | null>(null);
 
-  // Get muscle data
-  const muscle = muscleId ? getMuscleById(muscleId) : null;
+  const baseMuscle = muscleId ? getMuscleById(muscleId) : null;
+
+  useEffect(() => {
+    if (!muscleId) return;
+    let mounted = true;
+    fetchMuscleMedia(muscleId)
+      .then((row) => {
+        if (mounted) setMedia(row);
+      })
+      .catch((err) => console.warn('No se pudo cargar media del músculo:', err));
+    return () => {
+      mounted = false;
+    };
+  }, [muscleId]);
+
+  // Overlay admin-managed DB media over the static muscle data
+  const muscle = useMemo<MuscleData | null>(() => {
+    if (!baseMuscle) return null;
+    if (!media) return baseMuscle;
+
+    const merged: MuscleData = {
+      ...baseMuscle,
+      motorPoint: {
+        ...baseMuscle.motorPoint,
+        imageUrl: media.motor_point_image_url ?? baseMuscle.motorPoint.imageUrl,
+        coordinates:
+          media.motor_point_coord_x != null && media.motor_point_coord_y != null
+            ? { x: media.motor_point_coord_x, y: media.motor_point_coord_y }
+            : baseMuscle.motorPoint.coordinates,
+      },
+    };
+
+    const usgImageUrl = media.usg_image_url ?? baseMuscle.usgGuidance?.imageUrl;
+    if (usgImageUrl || baseMuscle.usgGuidance) {
+      merged.usgGuidance = {
+        transducerType: baseMuscle.usgGuidance?.transducerType ?? 'Lineal de alta frecuencia',
+        approach: baseMuscle.usgGuidance?.approach ?? 'En plano',
+        landmarks: baseMuscle.usgGuidance?.landmarks ?? [],
+        precautions: baseMuscle.usgGuidance?.precautions ?? [],
+        view: (media.usg_view as USGGuidance['view']) ?? baseMuscle.usgGuidance?.view ?? 'Transversal',
+        imageUrl: usgImageUrl,
+      };
+    }
+
+    return merged;
+  }, [baseMuscle, media]);
 
   if (!muscle) {
     return (
@@ -50,9 +99,19 @@ const MotorPoints: React.FC = () => {
         <h1 className="text-base font-bold leading-tight flex-1 text-center truncate px-2 text-text-main dark:text-white">
           {muscle.name}
         </h1>
-        <button className="flex size-10 items-center justify-center rounded-full">
-          <span className="material-symbols-outlined">bookmark_border</span>
-        </button>
+        {isAdmin ? (
+          <button
+            onClick={() => navigate(`/admin/media/${muscle.id}`)}
+            className="flex size-10 items-center justify-center rounded-full text-primary hover:bg-primary/10"
+            title="Editar imágenes (admin)"
+          >
+            <span className="material-symbols-outlined">edit</span>
+          </button>
+        ) : (
+          <button className="flex size-10 items-center justify-center rounded-full">
+            <span className="material-symbols-outlined">bookmark_border</span>
+          </button>
+        )}
       </header>
 
       <main className="flex-1 min-w-0 w-full max-w-full overflow-y-auto overflow-x-hidden no-scrollbar">

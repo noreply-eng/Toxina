@@ -7,6 +7,14 @@ import { dosisData } from '../constants/toxinData';
 
 export type ProtocolVariant = 'A' | 'B' | 'C';
 
+/** Patrón clínico de deformidad (p. ej. espasticidad de miembro superior/inferior). */
+export interface SpasticityPattern {
+  id: string;
+  name: string;
+  region?: 'upper' | 'lower';
+  description?: string;
+}
+
 export interface PathologyProtocol {
   muscle?: string;           // Nombre común del músculo
   muscleName?: string;       // Identificador interno para cálculos (clave en toxinData)
@@ -15,6 +23,15 @@ export interface PathologyProtocol {
   notes?: string;            // Instrucciones específicas
   /** Variante de protocolo (p. ej. hombro A/B/C). Sin valor = incluido en carga por defecto. */
   protocolVariant?: ProtocolVariant;
+  /** Patrón de deformidad al que pertenece el músculo (p. ej. 'pie-equinovaro'). */
+  pattern?: string;
+}
+
+/** Línea de tiempo de acción de la toxina para una indicación. */
+export interface PathologyTimeline {
+  onset?: string;       // Inicio del efecto
+  peak?: string;        // Efecto máximo
+  duration?: string;    // Duración del efecto
 }
 
 export interface PathologyData {
@@ -26,9 +43,14 @@ export interface PathologyData {
   suggestedToxin: string;    // Marca o tipo de toxina recomendada
   conversionNotes?: string;  // Notas sobre ratios de conversión
   protocols: PathologyProtocol[];
+  /** Patrones clínicos de deformidad (espasticidad). Si existen, el detalle agrupa por patrón. */
+  patterns?: SpasticityPattern[];
   frequency?: string;
   maxDose?: string;
+  timeline?: PathologyTimeline;
   additionalInfo?: string[];
+  contraindications?: string[]; // Contraindicaciones específicas (además de las generales)
+  adverseEffects?: string[];    // Efectos adversos frecuentes
   references: string[];      // Bibliografía con links
   image: string;
 }
@@ -49,6 +71,7 @@ export const pathologiesData: PathologyData[] = [
     ],
     frequency: 'Cada 3-4 meses',
     maxDose: '200 U total (Botox) en 30 días',
+    timeline: { onset: '3-4 días', peak: '1-2 semanas', duration: '3-4 meses' },
     additionalInfo: [
       'Iniciar con dosis bajas (1.25 U) en pacientes sin tratamiento previo.',
       'Evitar inyecciones cerca del canto medial para prevenir diplopía.',
@@ -93,26 +116,47 @@ export const pathologiesData: PathologyData[] = [
     title: 'Espasticidad de Miembros Superiores',
     subtitle: 'Post-ACV y Lesiones Neurológicas',
     category: 'neurological',
-    description: 'Manejo de la espasticidad focal del miembro superior (codo, muñeca, dedos) para mejorar la función y reducir el dolor.',
+    description: 'Manejo de la espasticidad focal del miembro superior organizado por patrones de deformidad (codo flexionado, antebrazo pronado, muñeca flexionada, puño cerrado y pulgar en palma) para mejorar la función y reducir el dolor. Dosis expresadas en unidades Ona/IncobotulinumtoxinA.',
     suggestedToxin: 'Botox, Xeomin o Dysport',
-    conversionNotes: 'Dosis total hasta 400 U (OnabotulinumtoxinA o IncobotulinumtoxinA). Dysport ratio 1:3.',
+    conversionNotes: 'Botox:Xeomin 1:1. Dysport:Botox ≈ 2.5-3:1. Dosis total del miembro superior hasta 400 U (Botox/Xeomin) o ~1000 U (Dysport) por sesión.',
+    patterns: [
+      { id: 'codo-flexionado', name: 'Codo flexionado', region: 'upper', description: 'Flexión espástica del codo (braquial, bíceps, braquiorradial).' },
+      { id: 'antebrazo-pronado', name: 'Antebrazo pronado', region: 'upper', description: 'Pronación fija del antebrazo (pronador redondo y cuadrado).' },
+      { id: 'muñeca-flexionada', name: 'Muñeca flexionada', region: 'upper', description: 'Flexión de muñeca (flexores radial y cubital del carpo).' },
+      { id: 'puño-cerrado', name: 'Puño cerrado', region: 'upper', description: 'Flexión de los dedos (flexores superficial y profundo).' },
+      { id: 'pulgar-en-palma', name: 'Pulgar en palma', region: 'upper', description: 'Pulgar aducido/flexionado hacia la palma.' },
+    ],
     protocols: [
-      { muscle: 'Bíceps braquial', muscleName: 'Biceps brachii', dose: '100-200 U', bilateral: false, notes: 'Dividir en 4 sitios' },
-      { muscle: 'Flexor radial del carpo', muscleName: 'Flexor carpi radialis', dose: '12.5-50 U', bilateral: false },
-      { muscle: 'Flexor profundo de los dedos', muscleName: 'Flexor digitorum profundus', dose: '30-50 U', bilateral: false },
-      { muscle: 'Flexor superficial de los dedos', muscleName: 'Flexor digitorum superficialis', dose: '30-50 U', bilateral: false },
+      // Codo flexionado
+      { muscle: 'Braquial anterior', muscleName: 'Brachialis', dose: '50-75 U', bilateral: false, notes: 'Flexor primario del codo; guía USG/EMG recomendada.', pattern: 'codo-flexionado' },
+      { muscle: 'Bíceps braquial', muscleName: 'Biceps brachii', dose: '75-100 U', bilateral: false, notes: 'Dividir en 3-4 sitios.', pattern: 'codo-flexionado' },
+      { muscle: 'Braquiorradial', muscleName: 'Brachioradialis', dose: '50-60 U', bilateral: false, notes: 'Contribuye a la flexión con antebrazo neutro.', pattern: 'codo-flexionado' },
+      // Antebrazo pronado
+      { muscle: 'Pronador redondo', muscleName: 'Pronator teres', dose: '30-40 U', bilateral: false, notes: 'Pronador principal; 1-2 sitios.', pattern: 'antebrazo-pronado' },
+      { muscle: 'Pronador cuadrado', muscleName: 'Pronator quadratus', dose: '20-30 U', bilateral: false, notes: 'Profundo, distal; preferir USG.', pattern: 'antebrazo-pronado' },
+      // Muñeca flexionada
+      { muscle: 'Flexor radial del carpo', muscleName: 'Flexor carpi radialis', dose: '30-40 U', bilateral: false, pattern: 'muñeca-flexionada' },
+      { muscle: 'Flexor cubital del carpo', muscleName: 'Flexor carpi ulnaris', dose: '30-40 U', bilateral: false, pattern: 'muñeca-flexionada' },
+      // Puño cerrado
+      { muscle: 'Flexor superficial de los dedos', muscleName: 'Flexor digitorum superficialis', dose: '25-30 U', bilateral: false, notes: 'Flexión de falanges medias.', pattern: 'puño-cerrado' },
+      { muscle: 'Flexor profundo de los dedos', muscleName: 'Flexor digitorum profundus', dose: '30-40 U', bilateral: false, notes: 'Flexión de falanges distales.', pattern: 'puño-cerrado' },
+      // Pulgar en palma
+      { muscle: 'Flexor largo del pulgar', muscleName: 'Flexor pollicis longus', dose: '20-30 U', bilateral: false, pattern: 'pulgar-en-palma' },
+      { muscle: 'Aductor del pulgar', muscleName: 'Adductor pollicis', dose: '5-20 U', bilateral: false, notes: 'Dosis baja; músculo pequeño de la mano.', pattern: 'pulgar-en-palma' },
     ],
     frequency: 'Cada 12-16 semanas',
-    maxDose: '400 U (Botox/Xeomin) / 1000 U (Dysport)',
+    maxDose: '400 U (Botox/Xeomin) / ~1000 U (Dysport) por miembro superior/sesión',
+    timeline: { onset: '3-7 días', peak: '2-4 semanas', duration: '12-16 semanas' },
     additionalInfo: [
-      'Guía por electroestimulación o ultrasonido mejora precisión.',
-      'IncobotulinumtoxinA: bíceps 50-200 U, flexor radial del carpo 25-100 U.',
-      'Ajustar según escala de Ashworth modificada.',
-      'Combinar con terapia física para mejores resultados.',
+      'Guía por electroestimulación o ultrasonido mejora la precisión, especialmente en músculos profundos (braquial, pronador cuadrado, FDP).',
+      'Seleccionar los patrones presentes en la exploración; se pueden combinar varios en una misma sesión respetando la dosis total.',
+      'Ajustar según escala de Ashworth modificada y objetivos funcionales.',
+      'Combinar con terapia física/ocupacional y férulas para mejores resultados.',
     ],
     references: [
       'AbbVie Inc. (2024). Highlights of prescribing information: BOTOX. https://www.rxabbvie.com/pdf/botox_pi.pdf',
-      'Allergan, Inc. (2011). BOTOX prescribing information. U.S. FDA. https://www.accessdata.fda.gov/drugsatfda_docs/label/2011/103000s5236lbl.pdf'
+      'Allergan, Inc. (2011). BOTOX prescribing information. U.S. FDA. https://www.accessdata.fda.gov/drugsatfda_docs/label/2011/103000s5236lbl.pdf',
+      'Esquenazi, A., et al. (2013). International consensus on upper limb spasticity patterns and botulinum toxin. PM&R / Toxicon.'
     ],
     image: `${supabaseUrl}/storage/v1/object/public/PortadasPatologias/espasticidadevc.jpeg`,
   },
@@ -273,6 +317,7 @@ export const pathologiesData: PathologyData[] = [
     ],
     frequency: 'Cada 12 semanas',
     maxDose: '195 U (incluyendo técnica Follow-the-Pain)',
+    timeline: { onset: '2-4 semanas', peak: '2-3 ciclos', duration: '12 semanas' },
     additionalInfo: [
       'Utilizar aguja 30G de 0.5 pulgadas.',
       'La estrategia "seguir el dolor" permite añadir 40 U en temporales, occipitales o trapecios.',
@@ -301,6 +346,7 @@ export const pathologiesData: PathologyData[] = [
     ],
     frequency: '3-4 meses',
     maxDose: '50-60 U por sesión (zona superior facial)',
+    timeline: { onset: '3-7 días', peak: '2 semanas', duration: '3-4 meses' },
     additionalInfo: [
       'Efectos visibles en 3-7 días',
       'Máximo efecto a las 2 semanas',
@@ -315,27 +361,64 @@ export const pathologiesData: PathologyData[] = [
   },
   {
     id: 'espasticidad-adulta',
-    title: 'Espasticidad (Adultos)',
-    subtitle: 'Manejo de Miembros Inferiores',
+    title: 'Espasticidad de Miembros Inferiores',
+    subtitle: 'Manejo por Patrones (Adultos)',
     category: 'neurological',
-    description: 'Tratamiento de la espasticidad focal en miembros inferiores (pie equinovaro, flexión de dedos) para mejorar la marcha y reducir el dolor.',
-    suggestedToxin: 'Dysport (AbobotulinumtoxinA)',
-    conversionNotes: 'Dysport permite dosis volumétricas mayores. Ratio ONA:ABO 1:3.',
+    description: 'Tratamiento de la espasticidad focal del miembro inferior organizado por patrones de deformidad (pie equinovaro, dedo gordo en extensión, dedos en garra, rodilla flexionada o rígida, muslos aductos y cadera flexionada) para mejorar la marcha y reducir el dolor. Dosis expresadas en unidades Ona; ver equivalencias por marca en cada músculo.',
+    suggestedToxin: 'Botox, Xeomin o Dysport',
+    conversionNotes: 'Botox:Xeomin 1:1. Dysport:Botox ≈ 2.5-3:1 (Dysport permite dosis volumétricas mayores en músculos grandes).',
+    patterns: [
+      { id: 'pie-equinovaro', name: 'Pie equinovaro', region: 'lower', description: 'Flexión plantar + inversión (tríceps sural, tibial posterior, flexores de dedos).' },
+      { id: 'dedo-gordo-extension', name: 'Dedo gordo en extensión', region: 'lower', description: 'Striatal toe / hallux en extensión (extensor largo del hallux).' },
+      { id: 'dedos-en-garra', name: 'Dedos en garra', region: 'lower', description: 'Flexión de los dedos del pie (flexores largo y corto).' },
+      { id: 'rodilla-flexionada', name: 'Rodilla flexionada', region: 'lower', description: 'Flexión espástica de rodilla (isquiotibiales).' },
+      { id: 'rodilla-rigida', name: 'Rodilla rígida (extensión)', region: 'lower', description: 'Rodilla en extensión rígida (recto femoral, vastos).' },
+      { id: 'muslos-aductos', name: 'Muslos aductos', region: 'lower', description: 'Aducción de caderas / marcha en tijera (aductores, grácil).' },
+      { id: 'cadera-flexionada', name: 'Cadera flexionada', region: 'lower', description: 'Flexión de cadera (iliopsoas, recto femoral).' },
+    ],
     protocols: [
-      { muscle: 'Gastrocnemio (Medial)', muscleName: 'Gastrocnemio (cabeza medial)', dose: '100-450 U', bilateral: true, notes: 'Dividir en 2 sitios por cabeza' },
-      { muscle: 'Gastrocnemio (Lateral)', muscleName: 'Gastrocnemio (cabeza lateral)', dose: '100-450 U', bilateral: true },
-      { muscle: 'Sóleo', muscleName: 'Sóleo', dose: '300-550 U', bilateral: true },
-      { muscle: 'Tibial Posterior', muscleName: 'Tibialis posterior', dose: '100-250 U', bilateral: true },
+      // Pie equinovaro
+      { muscle: 'Gastrocnemio (cabeza medial)', muscleName: 'Gastrocnemio (cabeza medial)', dose: '50-100 U', bilateral: false, notes: 'Dividir en 2 sitios.', pattern: 'pie-equinovaro' },
+      { muscle: 'Gastrocnemio (cabeza lateral)', muscleName: 'Gastrocnemio (cabeza lateral)', dose: '50-100 U', bilateral: false, pattern: 'pie-equinovaro' },
+      { muscle: 'Sóleo', muscleName: 'Sóleo', dose: '75-100 U', bilateral: false, notes: 'Flexor plantar profundo.', pattern: 'pie-equinovaro' },
+      { muscle: 'Tibial posterior', muscleName: 'Tibialis posterior', dose: '50-80 U', bilateral: false, notes: 'Inversor principal; profundo, preferir USG.', pattern: 'pie-equinovaro' },
+      { muscle: 'Flexor largo de los dedos', muscleName: 'Flexor digitorum longus', dose: '40-60 U', bilateral: false, notes: 'Añadir si hay componente de garra dinámica.', pattern: 'pie-equinovaro' },
+      { muscle: 'Flexor largo del hallux', muscleName: 'Flexor hallucis longus', dose: '40-60 U', bilateral: false, pattern: 'pie-equinovaro' },
+      // Dedo gordo en extensión (striatal toe)
+      { muscle: 'Extensor largo del hallux', muscleName: 'Extensor hallucis longus', dose: '50-60 U', bilateral: false, notes: 'Causa del hallux en extensión (striatal toe).', pattern: 'dedo-gordo-extension' },
+      // Dedos en garra
+      { muscle: 'Flexor largo de los dedos', muscleName: 'Flexor digitorum longus', dose: '40-60 U', bilateral: false, pattern: 'dedos-en-garra' },
+      { muscle: 'Flexor largo del hallux', muscleName: 'Flexor hallucis longus', dose: '40-60 U', bilateral: false, pattern: 'dedos-en-garra' },
+      { muscle: 'Flexor corto de los dedos', muscleName: 'Flexor digitorum brevis', dose: '10-20 U', bilateral: false, notes: 'Intrínseco plantar; dosis baja.', pattern: 'dedos-en-garra' },
+      // Rodilla flexionada (isquiotibiales)
+      { muscle: 'Bíceps femoral', muscleName: 'Biceps femoris', dose: '100-150 U', bilateral: false, pattern: 'rodilla-flexionada' },
+      { muscle: 'Semitendinoso', muscleName: 'Semitendinosus', dose: '100-150 U', bilateral: false, pattern: 'rodilla-flexionada' },
+      { muscle: 'Semimembranoso', muscleName: 'Semimembranosus', dose: '100-150 U', bilateral: false, pattern: 'rodilla-flexionada' },
+      // Rodilla rígida en extensión
+      { muscle: 'Recto femoral', muscleName: 'Rectus femoris (cuádriceps anterior)', dose: '100-150 U', bilateral: false, notes: 'Principal causa de rodilla rígida en la fase de balanceo.', pattern: 'rodilla-rigida' },
+      { muscle: 'Vastos (cuádriceps)', muscleName: 'Vastus lateralis, intermedius y medialis', dose: '100-150 U', bilateral: false, notes: 'Considerar si persiste extensión rígida.', pattern: 'rodilla-rigida' },
+      // Muslos aductos
+      { muscle: 'Aductor mayor', muscleName: 'Adductor magnus', dose: '100-200 U', bilateral: false, pattern: 'muslos-aductos' },
+      { muscle: 'Aductor largo', muscleName: 'Adductor longus', dose: '50-100 U', bilateral: false, pattern: 'muslos-aductos' },
+      { muscle: 'Grácil', muscleName: 'Gracilis', dose: '80-120 U', bilateral: false, pattern: 'muslos-aductos' },
+      // Cadera flexionada
+      { muscle: 'Psoas mayor', muscleName: 'Psoas mayor', dose: '120-200 U', bilateral: false, notes: 'Profundo; guía USG obligatoria.', pattern: 'cadera-flexionada' },
+      { muscle: 'Ilíaco', muscleName: 'Ilíaco', dose: '50-120 U', bilateral: false, notes: 'Fosa iliaca; guía USG obligatoria.', pattern: 'cadera-flexionada' },
+      { muscle: 'Recto femoral', muscleName: 'Rectus femoris (cuádriceps anterior)', dose: '100-150 U', bilateral: false, notes: 'Contribuye a la flexión de cadera.', pattern: 'cadera-flexionada' },
     ],
     frequency: 'Cada 12-16 semanas',
-    maxDose: '1500 U (Dysport) / 400 U (Botox/Xeomin)',
+    maxDose: '400 U (Botox/Xeomin) / ~1500 U (Dysport) por sesión',
+    timeline: { onset: '3-7 días', peak: '2-4 semanas', duration: '12-16 semanas' },
     additionalInfo: [
-      'Guía por ultrasonido (US) mejora significativamente el alcance de metas (GAS).',
-      'La dosificación debe ajustarse según la escala de Ashworth modificada.'
+      'Guía por ultrasonido (US) mejora significativamente la precisión y el alcance de metas, sobre todo en músculos profundos (tibial posterior, iliopsoas, flexores largos).',
+      'Seleccionar los patrones presentes en la exploración; se pueden combinar varios respetando la dosis total por sesión.',
+      'La dosificación debe ajustarse según la escala de Ashworth modificada y los objetivos de marcha.',
+      'El iliopsoas y los aductores son músculos grandes: valorar Dysport para dosis volumétricas mayores.'
     ],
     references: [
       'Zorowitz, R. D., et al. (2025). Muscle selection and dosing with abobotulinumtoxinA for LLS. JRM. https://pmc.ncbi.nlm.nih.gov/articles/PMC11836465/',
-      'Dressler, D., et al. (2021). Consensus guidelines for botulinum toxin therapy. J Neural Transm. https://pmc.ncbi.nlm.nih.gov/articles/PMC7969540/'
+      'Dressler, D., et al. (2021). Consensus guidelines for botulinum toxin therapy. J Neural Transm. https://pmc.ncbi.nlm.nih.gov/articles/PMC7969540/',
+      'Esquenazi, A., & Mayer, N. (2004). Lower limb spasticity patterns and botulinum toxin. Eura Medicophys.'
     ],
     image: `${supabaseUrl}/storage/v1/object/public/PortadasPatologias/espasticidadinferiores.jpeg`,
   },
@@ -354,6 +437,7 @@ export const pathologiesData: PathologyData[] = [
     ],
     frequency: 'Cada 12 semanas',
     maxDose: '400 U (Botox/Xeomin) / 1000 U (Dysport)',
+    timeline: { onset: '3-7 días', peak: '4-6 semanas', duration: '12 semanas' },
     additionalInfo: [
       'El esplenio de la cabeza es el músculo más comúnmente involucrado.',
       'Evitar dosis altas en esternocleidomastoideo para prevenir disfagia.',
@@ -378,6 +462,7 @@ export const pathologiesData: PathologyData[] = [
     ],
     frequency: 'Cada 4-7 meses (según respuesta individual)',
     maxDose: '100 U total (50 U por axila) - OnabotulinumtoxinA',
+    timeline: { onset: '2-4 días', peak: '1-2 semanas', duration: '4-7 meses' },
     additionalInfo: [
       'Inyecciones intradérmicas separadas por 1-2 cm',
       'Técnica de cuadrícula recomendada',
@@ -405,6 +490,7 @@ export const pathologiesData: PathologyData[] = [
     ],
     frequency: '6 a 9 meses',
     maxDose: '200 U',
+    timeline: { onset: '3-14 días', peak: '2-6 semanas', duration: '6-9 meses' },
     additionalInfo: [
       'Reducir de 20 a 5 sitios mejora el dolor post-procedimiento sin perder eficacia.',
       'Informar sobre el riesgo de infección urinaria (UTI) y retención.'
@@ -430,6 +516,7 @@ export const pathologiesData: PathologyData[] = [
     ],
     frequency: 'Cada 12 semanas',
     maxDose: '3500 U (Myobloc) / 100 U (Xeomin)',
+    timeline: { onset: '3-7 días', peak: '1-2 semanas', duration: '3 meses' },
     additionalInfo: [
       'Myobloc (Tipo B) es preferido sobre Tipo A para glándulas salivales.',
       'Guía por ultrasonido aumenta la precisión y seguridad.',
@@ -443,6 +530,143 @@ export const pathologiesData: PathologyData[] = [
     image: `${supabaseUrl}/storage/v1/object/public/PortadasPatologias/sialorrea.jpeg`,
   }
 ];
+
+/**
+ * Contraindicaciones generales de la toxina botulínica (aplican a todas las indicaciones).
+ * Se muestran como base cuando la patología no define contraindicaciones específicas.
+ */
+export const GENERAL_BONT_CONTRAINDICATIONS: string[] = [
+  'Hipersensibilidad conocida a la toxina botulínica o a cualquiera de sus componentes.',
+  'Infección o inflamación activa en el/los sitio(s) de inyección.',
+  'Enfermedades de la unión neuromuscular (miastenia gravis, síndrome de Lambert-Eaton, ELA): usar con extrema precaución o evitar.',
+  'Embarazo y lactancia: datos insuficientes; valorar riesgo/beneficio.',
+  'Uso concomitante de aminoglucósidos u otros agentes que interfieren con la transmisión neuromuscular (pueden potenciar el efecto).',
+];
+
+/** Efectos adversos comunes a la mayoría de las aplicaciones intramusculares. */
+export const GENERAL_BONT_ADVERSE_EFFECTS: string[] = [
+  'Dolor, eritema o hematoma en el sitio de inyección.',
+  'Síntomas pseudogripales transitorios o cefalea.',
+  'Debilidad muscular local excesiva o difusión a músculos vecinos.',
+];
+
+/**
+ * Seguridad clínica por patología. Centralizada para facilitar su mantenimiento.
+ * `contraindications` (si existe) se muestra ADEMÁS de las generales.
+ */
+export const pathologyClinicalSafety: Record<
+  string,
+  { contraindications?: string[]; adverseEffects: string[] }
+> = {
+  blefaroespasmo: {
+    adverseEffects: [
+      'Ptosis palpebral y diplopía.',
+      'Ojo seco, lagrimeo y visión borrosa transitoria.',
+      'Ectropion/entropion y queratitis por exposición (raro).',
+    ],
+  },
+  'espasticidad-pediatrica': {
+    contraindications: [
+      'No aprobado en menores de 2 años para espasticidad de miembro superior en algunas jurisdicciones.',
+    ],
+    adverseEffects: [
+      'Debilidad muscular local y aumento del riesgo de caídas.',
+      'Infección de vías respiratorias altas.',
+      'Advertencia: posible diseminación del efecto (disfagia, dificultad respiratoria) — buscar atención urgente.',
+    ],
+  },
+  'espasticidad-superior': {
+    adverseEffects: [
+      'Debilidad excesiva del músculo tratado.',
+      'Dolor en la extremidad y hematoma local.',
+      'Fatiga y síntomas pseudogripales.',
+    ],
+  },
+  'hombro-doloroso-espastico': {
+    contraindications: [
+      'Precaución con inyección profunda (subescapular, dorsal ancho): riesgo pleural — preferir guía USG/EMG.',
+    ],
+    adverseEffects: [
+      'Debilidad de la abducción/rotación del hombro.',
+      'Riesgo de neumotórax en abordajes profundos sin guía por imagen.',
+      'Dolor y hematoma en el sitio de inyección.',
+    ],
+  },
+  'sincinesias-faciales': {
+    adverseEffects: [
+      'Asimetría facial temporal.',
+      'Debilidad excesiva del músculo tratado y ptosis.',
+      'Dificultad transitoria para cerrar el ojo del lado tratado.',
+    ],
+  },
+  'migrana-cronica': {
+    adverseEffects: [
+      'Dolor y rigidez cervical.',
+      'Debilidad de la musculatura del cuello.',
+      'Ptosis palpebral y dolor en el sitio de inyección.',
+    ],
+  },
+  'estetica-facial': {
+    adverseEffects: [
+      'Ptosis de párpado o de ceja.',
+      'Asimetría o expresión "congelada".',
+      'Cefalea y hematoma en el sitio de inyección.',
+    ],
+  },
+  'espasticidad-adulta': {
+    adverseEffects: [
+      'Debilidad muscular local y aumento del riesgo de caídas.',
+      'Dolor en la extremidad tratada.',
+      'Fatiga y síntomas pseudogripales.',
+    ],
+  },
+  'distonia-cervical': {
+    adverseEffects: [
+      'Disfagia (dosis-dependiente, sobre todo en esternocleidomastoideo).',
+      'Debilidad cervical y dolor local.',
+      'Boca seca.',
+    ],
+  },
+  hiperhidrosis: {
+    adverseEffects: [
+      'Dolor durante la inyección.',
+      'Sudoración compensatoria en otras zonas.',
+      'Debilidad transitoria de la mano (solo en hiperhidrosis palmar).',
+    ],
+  },
+  'vejiga-hiperactiva': {
+    contraindications: [
+      'Infección urinaria activa (tratar antes del procedimiento).',
+      'Retención urinaria o incapacidad/negativa a realizar autocateterismo intermitente.',
+    ],
+    adverseEffects: [
+      'Infección de vías urinarias (ITU).',
+      'Retención urinaria que puede requerir autocateterismo.',
+      'Hematuria transitoria.',
+    ],
+  },
+  sialorrea: {
+    adverseEffects: [
+      'Boca seca excesiva y espesamiento de la saliva.',
+      'Disfagia.',
+      'Mayor riesgo de caries por reducción del flujo salival.',
+    ],
+  },
+};
+
+/** Devuelve la seguridad clínica combinada (general + específica) de una patología. */
+export const getPathologySafety = (
+  pathologyId: string
+): { contraindications: string[]; adverseEffects: string[] } => {
+  const specific = pathologyClinicalSafety[pathologyId];
+  return {
+    contraindications: [
+      ...GENERAL_BONT_CONTRAINDICATIONS,
+      ...(specific?.contraindications ?? []),
+    ],
+    adverseEffects: specific?.adverseEffects ?? GENERAL_BONT_ADVERSE_EFFECTS,
+  };
+};
 
 /**
  * Funciones auxiliares para la gestión de datos.
@@ -518,23 +742,33 @@ export const resolveProtocolSuggestedDose = (
   return { customDose: 0, doseOption: 'min' };
 };
 
+/** Patrones de deformidad definidos para una patología (p. ej. espasticidad). */
+export const getPathologyPatterns = (pathologyId: string): SpasticityPattern[] => {
+  return getPathologyById(pathologyId)?.patterns ?? [];
+};
+
 export const getPathologyTemplate = (
   pathologyId: string,
-  variant: ProtocolVariant = 'A'
+  variant: ProtocolVariant = 'A',
+  patternId?: string
 ) => {
   const pathology = getPathologyById(pathologyId);
   if (!pathology) return null;
 
   const hasVariants = pathology.protocols.some((p) => p.protocolVariant);
+  const hasPatterns = !!pathology.patterns?.length;
 
   return {
     pathology,
     variant,
+    patternId,
     muscles: pathology.protocols
       .filter((p) => p.muscleName || p.muscle)
       .filter((p) => {
-        if (!hasVariants) return true;
-        return (p.protocolVariant || 'A') === variant;
+        // Pattern-based pathologies: filter by selected pattern when provided
+        if (hasPatterns && patternId) return p.pattern === patternId;
+        if (hasVariants) return (p.protocolVariant || 'A') === variant;
+        return true;
       })
       .map((p) => ({
         muscleName: p.muscleName || p.muscle!,

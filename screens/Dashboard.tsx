@@ -179,7 +179,7 @@ const Dashboard: React.FC = () => {
         {/* Quick actions */}
         <section>
           <h3 className="text-text-main dark:text-white text-lg font-bold mb-4">Acciones Rápidas</h3>
-          <div className="flex overflow-x-auto hide-scrollbar gap-3 pb-2 snap-x md:overflow-visible md:grid md:grid-cols-3 md:gap-4">
+          <div className="flex overflow-x-auto hide-scrollbar gap-3 pb-2 snap-x md:overflow-visible md:grid md:grid-cols-4 md:gap-4">
             <button
               onClick={() => navigate('/calculator')}
               className="snap-start flex flex-col items-center justify-center gap-3 min-w-[120px] md:min-w-0 h-[110px] bg-primary text-white rounded-2xl shadow-md active:scale-95 transition-transform cursor-pointer"
@@ -188,6 +188,17 @@ const Dashboard: React.FC = () => {
                 <span className="material-symbols-outlined text-2xl">calculate</span>
               </div>
               <span className="text-xs font-bold">Nuevo Cálculo</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setFacialPlannerOpen(true)}
+              className="snap-start flex flex-col items-center justify-center gap-3 min-w-[120px] md:min-w-0 h-[110px] bg-white dark:bg-surface-dark border border-slate-100 dark:border-slate-800 text-text-main dark:text-white rounded-2xl shadow-sm active:scale-95 transition-transform group cursor-pointer"
+            >
+              <div className="bg-teal-50 dark:bg-slate-800 p-2 rounded-full group-hover:bg-teal-100 dark:group-hover:bg-slate-700 transition-colors">
+                <span className="material-symbols-outlined text-teal-600 dark:text-teal-400 text-2xl">face</span>
+              </div>
+              <span className="text-xs font-bold">Modo Facial</span>
             </button>
 
             <button
@@ -210,14 +221,6 @@ const Dashboard: React.FC = () => {
               <span className="text-xs font-bold">Agendar Cita</span>
             </button>
           </div>
-          <button
-            type="button"
-            onClick={() => setFacialPlannerOpen(true)}
-            className="mt-2 flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 hover:text-primary transition-colors px-1"
-          >
-            <span className="material-symbols-outlined text-base">face</span>
-            Plan facial estético
-          </button>
         </section>
 
         {/* Two-column layout on desktop */}

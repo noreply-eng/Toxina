@@ -9,6 +9,8 @@ import Search from './screens/Search';
 import Calculator from './screens/Calculator';
 import MotorPoints from './screens/MotorPoints';
 import MuscleList from './screens/MuscleList';
+import AdminMedia from './screens/AdminMedia';
+import AdminMuscleMediaEditor from './screens/AdminMuscleMediaEditor';
 import Settings from './screens/Settings';
 import PatientProfile from './screens/PatientProfile';
 import Subscription from './screens/Subscription';
@@ -267,6 +269,8 @@ const App: React.FC = () => {
                 <Route path="/calculator" element={<Calculator />} />
                 <Route path="/motor-points" element={<MuscleList />} />
                 <Route path="/motor-points/:muscleId" element={<MotorPoints />} />
+                <Route path="/admin/media" element={<AdminMedia />} />
+                <Route path="/admin/media/:muscleId" element={<AdminMuscleMediaEditor />} />
                 <Route path="/settings" element={<Settings toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />} />
                 <Route path="/profile" element={<EditProfile />} />
                 <Route path="/patient/new" element={<NewPatient />} />

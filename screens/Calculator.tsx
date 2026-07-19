@@ -8,20 +8,26 @@ import {
   pathologiesData,
   getPathologyTemplate,
   getPathologyProtocolVariants,
+  getPathologyPatterns,
   getPathologyById,
   resolveProtocolSuggestedDose,
   type ProtocolVariant,
   type ToxinBrand,
 } from '../data/pathologyData';
 import { findMuscleForCalculatorName } from '../data/muscleData';
-import { FACIAL_ANATOMY_IMAGE } from '../constants/facialAestheticMap';
+import {
+  ANATOMY_IMAGE_FRAME,
+  FACIAL_ANATOMY_IMAGE,
+  FACIAL_MUSCLE_BY_ID,
+  FACIAL_VIEWBOX,
+  type FacialMuscleConfig,
+} from '../constants/facialAestheticMap';
 import { supabase } from '../supabaseClient';
 import { getAuthUser } from '../utils/auth';
 import { searchPatients, fetchPatientById } from '../hooks/usePatients';
 import { saveTreatmentMutation } from '../services/clinicalMutations';
 import { Copy, Save, CheckCircle2, User, Search, UserPlus, Printer, FileText } from 'lucide-react';
 import { usePrintPreferences } from '../hooks/usePrintPreferences';
-import { guiaUsgData } from '../constants/usgData';
 
 import { useCalculatorState, MuscleSelection, Patient } from '../hooks/useCalculatorState';
 import FacialPlannerModal from '../components/facial/FacialPlannerModal';
@@ -33,10 +39,12 @@ const Calculator: React.FC = () => {
   const location = useLocation();
   const pendingAutoLoad = useRef(false);
   const pendingAutoLoadVariant = useRef<ProtocolVariant>('A');
+  const pendingAutoLoadPattern = useRef<string | undefined>(undefined);
   const pathologyNavHandled = useRef(false);
   const importPlanHandled = useRef(false);
   const [facialPlannerOpen, setFacialPlannerOpen] = useState(false);
   const [protocolVariant, setProtocolVariant] = useState<ProtocolVariant>('A');
+  const [selectedPatternId, setSelectedPatternId] = useState<string>('');
   const [templateLoadMessage, setTemplateLoadMessage] = useState<string | null>(null);
 
   // Step 1: Configuration
@@ -353,15 +361,21 @@ const Calculator: React.FC = () => {
     return getPathologyProtocolVariants(selectedPathology);
   }, [selectedPathology]);
 
+  const pathologyPatterns = useMemo(() => {
+    if (!selectedPathology) return [];
+    return getPathologyPatterns(selectedPathology);
+  }, [selectedPathology]);
+
   const handleLoadPathologyTemplate = useCallback(
-    (options?: { replace?: boolean; variant?: ProtocolVariant }) => {
+    (options?: { replace?: boolean; variant?: ProtocolVariant; patternId?: string }) => {
       if (!selectedBrand || !selectedPathology) return;
 
       const brand = selectedBrand as ToxinBrand;
       const variant = options?.variant ?? protocolVariant;
-      const template = getPathologyTemplate(selectedPathology, variant);
+      const patternId = options?.patternId ?? (selectedPatternId || undefined);
+      const template = getPathologyTemplate(selectedPathology, variant, patternId);
       if (!template || template.muscles.length === 0) {
-        setTemplateLoadMessage('No hay músculos para esta variante de protocolo.');
+        setTemplateLoadMessage('No hay músculos para el patrón/variante seleccionado.');
         return;
       }
 
@@ -413,13 +427,21 @@ const Calculator: React.FC = () => {
       setTotalUnits(0);
 
       const loadedNames = newMuscles.map((m) => m.name).join(', ');
-      let msg = `Cargados ${newMuscles.length} músculo(s) — Protocolo ${variant}: ${loadedNames}.`;
+      const patternName = patternId
+        ? getPathologyPatterns(selectedPathology).find((p) => p.id === patternId)?.name
+        : null;
+      const contextLabel = patternName
+        ? `Patrón ${patternName}`
+        : getPathologyProtocolVariants(selectedPathology).length > 0
+        ? `Protocolo ${variant}`
+        : 'Plantilla';
+      let msg = `Cargados ${newMuscles.length} músculo(s) — ${contextLabel}: ${loadedNames}.`;
       if (skippedMuscles.length) {
         msg += ` Omitidos (no en ${brand}): ${skippedMuscles.join(', ')}.`;
       }
       setTemplateLoadMessage(msg);
     },
-    [selectedBrand, selectedPathology, protocolVariant, adjustmentFactor, selectedMuscles, updateState]
+    [selectedBrand, selectedPathology, protocolVariant, selectedPatternId, adjustmentFactor, selectedMuscles, updateState]
   );
 
   // Importar plan desde planificador facial
@@ -452,6 +474,7 @@ const Calculator: React.FC = () => {
       pathologyId?: string;
       autoLoadTemplate?: boolean;
       protocolVariant?: ProtocolVariant;
+      patternId?: string;
       defaultBrand?: ToxinBrand;
       importPlan?: FacialPlanExport;
     } | null;
@@ -469,6 +492,10 @@ const Calculator: React.FC = () => {
       setProtocolVariant(navState.protocolVariant);
       pendingAutoLoadVariant.current = navState.protocolVariant;
     }
+    if (navState.patternId) {
+      setSelectedPatternId(navState.patternId);
+      pendingAutoLoadPattern.current = navState.patternId;
+    }
     if (navState.autoLoadTemplate) {
       pendingAutoLoad.current = true;
     }
@@ -479,7 +506,12 @@ const Calculator: React.FC = () => {
   useEffect(() => {
     if (!pendingAutoLoad.current || !isLoaded || !selectedBrand || !selectedPathology) return;
     pendingAutoLoad.current = false;
-    handleLoadPathologyTemplate({ replace: true, variant: pendingAutoLoadVariant.current });
+    handleLoadPathologyTemplate({
+      replace: true,
+      variant: pendingAutoLoadVariant.current,
+      patternId: pendingAutoLoadPattern.current,
+    });
+    pendingAutoLoadPattern.current = undefined;
   }, [isLoaded, selectedBrand, selectedPathology, handleLoadPathologyTemplate]);
 
   const limitWarning = useMemo(() => {
@@ -650,6 +682,9 @@ const Calculator: React.FC = () => {
       })
       .map((name) => {
         const muscle = findMuscleForCalculatorName(name);
+        const facialConfig: FacialMuscleConfig | undefined = muscle
+          ? FACIAL_MUSCLE_BY_ID[muscle.id]
+          : undefined;
         const faceFallback =
           muscle?.category === 'face' && !muscle.motorPoint.imageUrl
             ? FACIAL_ANATOMY_IMAGE
@@ -663,6 +698,7 @@ const Calculator: React.FC = () => {
           techniqueNotes: muscle?.motorPoint.techniqueNotes ?? [],
           imageUrl: muscle?.motorPoint.imageUrl || faceFallback,
           region: muscle?.region,
+          facialConfig,
         };
       });
   }, [selectedMuscles]);
@@ -784,36 +820,6 @@ const Calculator: React.FC = () => {
             </tfoot>
           </table>
 
-          {preferences.includeMotorPoints && uniqueMusclesForPrint.length > 0 && (
-            <div className="mb-8 break-inside-avoid">
-              <h3 className="font-bold uppercase text-sm border-b border-slate-900 mb-3 pb-1">Guía de Puntos Motores</h3>
-              <div className="grid grid-cols-1 gap-3 text-xs">
-                {uniqueMusclesForPrint.map((muscle) => (
-                  <div key={muscle.name} className="text-justify">
-                    <span className="font-bold text-slate-900">{muscle.name}: </span>
-                    <span className="text-slate-700">{muscle.motorDescription}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {preferences.includeUsgGuide && uniqueMusclesForPrint.length > 0 && (
-            <div className="mb-8 break-inside-avoid">
-              <h3 className="font-bold uppercase text-sm border-b border-slate-900 mb-3 pb-1">Guía Ecográfica (USG)</h3>
-              <div className="grid grid-cols-1 gap-3 text-xs">
-                {uniqueMusclesForPrint.map((muscle) =>
-                  guiaUsgData[muscle.name] ? (
-                    <div key={`usg-${muscle.name}`} className="text-justify">
-                      <span className="font-bold text-slate-900">{muscle.name}: </span>
-                      <span className="text-slate-700">{guiaUsgData[muscle.name]}</span>
-                    </div>
-                  ) : null
-                )}
-              </div>
-            </div>
-          )}
-
           <div className="mt-16 pt-8 border-t border-slate-200 flex justify-between items-end">
             <div className="max-w-md italic text-xs text-slate-400">
               Este reporte es una guía técnica basada en las dosis sugeridas por el fabricante y las patologías seleccionadas. El médico tratante es el único responsable de la aplicación final.
@@ -871,7 +877,42 @@ const Calculator: React.FC = () => {
                       )}
                     </div>
                     <div className="border-l border-slate-200 bg-slate-50 flex items-center justify-center p-2 min-h-[9rem]">
-                      {muscle.imageUrl ? (
+                      {muscle.facialConfig ? (
+                        <svg
+                          viewBox={`0 0 ${FACIAL_VIEWBOX.width} ${FACIAL_VIEWBOX.height}`}
+                          className="max-h-40 max-w-full"
+                          style={{ printColorAdjust: 'exact', WebkitPrintColorAdjust: 'exact' }}
+                          aria-label={`Puntos de inyección — ${muscle.displayName}`}
+                        >
+                          <image
+                            href={FACIAL_ANATOMY_IMAGE}
+                            x={ANATOMY_IMAGE_FRAME.x}
+                            y={ANATOMY_IMAGE_FRAME.y}
+                            width={ANATOMY_IMAGE_FRAME.width}
+                            height={ANATOMY_IMAGE_FRAME.height}
+                            preserveAspectRatio="xMidYMid slice"
+                          />
+                          {muscle.facialConfig.defaultPoints.map((point, idx) => (
+                            <g key={`${muscle.name}-pt-${idx}`}>
+                              <circle
+                                cx={point.x}
+                                cy={point.y}
+                                r={10}
+                                fill="#e11d48"
+                                fillOpacity={0.22}
+                              />
+                              <circle
+                                cx={point.x}
+                                cy={point.y}
+                                r={5.5}
+                                fill="#e11d48"
+                                stroke="#ffffff"
+                                strokeWidth={2}
+                              />
+                            </g>
+                          ))}
+                        </svg>
+                      ) : muscle.imageUrl ? (
                         <img
                           src={muscle.imageUrl}
                           alt={`Punto motor anatómico — ${muscle.displayName}`}
@@ -1102,12 +1143,35 @@ const Calculator: React.FC = () => {
               </div>
             )}
 
+            {pathologyPatterns.length > 0 && (
+              <div>
+                <label className="block text-xs font-bold text-purple-700 dark:text-purple-300 mb-1 uppercase tracking-wide">
+                  Patrón de deformidad
+                </label>
+                <select
+                  value={selectedPatternId}
+                  onChange={(e) => {
+                    setSelectedPatternId(e.target.value);
+                    setTemplateLoadMessage(null);
+                  }}
+                  disabled={!selectedPathology}
+                  className="w-full px-4 py-2.5 bg-white dark:bg-slate-800 rounded-xl border border-purple-200 dark:border-purple-700 text-sm text-slate-800 dark:text-white"
+                >
+                  <option value="">Todos los patrones</option>
+                  {pathologyPatterns.map((pat) => (
+                    <option key={pat.id} value={pat.id}>{pat.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             <div className="flex flex-col sm:flex-row gap-2 min-w-0">
             <select 
               value={selectedPathology || ''}
               onChange={(e) => {
                 updateState({ selectedPathology: e.target.value || null });
                 setProtocolVariant('A');
+                setSelectedPatternId('');
                 setTemplateLoadMessage(null);
               }}
               disabled={!selectedBrand}

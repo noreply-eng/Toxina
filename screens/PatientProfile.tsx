@@ -6,6 +6,7 @@ import { getAuthUser } from '../utils/auth';
 import { fetchAllPatients, fetchPatientById } from '../hooks/usePatients';
 import { updatePatientMutation } from '../services/clinicalMutations';
 import PageContainer from '../components/PageContainer';
+import PatientClinicalNotes from '../components/PatientClinicalNotes';
 import PatientGasGoals from '../components/PatientGasGoals';
 import ScheduleConsultationModal from '../components/ScheduleConsultationModal';
 import TreatmentDetailModal from '../components/TreatmentDetailModal';
@@ -428,12 +429,13 @@ const PatientProfile: React.FC = () => {
           )}
           {patient.notes && (
             <div>
-              <p className="text-xs text-text-muted mb-1">Notas</p>
+              <p className="text-xs text-text-muted mb-1">Notas adicionales</p>
               <p className="text-sm text-slate-700 dark:text-slate-300 italic">{patient.notes}</p>
             </div>
           )}
         </section>
 
+        {patientId && <PatientClinicalNotes patientId={patientId} />}
         {patientId && <PatientGasGoals patientId={patientId} />}
           </div>
 

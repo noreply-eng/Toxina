@@ -153,8 +153,9 @@ const FacialPlannerModal: React.FC<FacialPlannerModalProps> = ({
         </div>
       </header>
 
-      <div className="flex-1 flex flex-col lg:flex-row min-h-0 overflow-hidden">
-        <div className="flex-1 min-h-[52vh] lg:min-h-0 p-1 sm:p-2 lg:p-3 flex flex-col overflow-hidden">
+      {/* Móvil: scroll vertical de mapa + panel. Desktop: panel lateral con scroll interno. */}
+      <div className="flex-1 flex flex-col lg:flex-row min-h-0 overflow-y-auto overscroll-y-contain lg:overflow-hidden">
+        <div className="h-[min(52vh,440px)] lg:h-auto lg:flex-1 lg:min-h-0 shrink-0 p-1 sm:p-2 lg:p-3 flex flex-col overflow-hidden">
           <FaceCanvas
             plan={plan}
             highlightedMuscleId={highlightedMuscleId}
@@ -162,7 +163,7 @@ const FacialPlannerModal: React.FC<FacialPlannerModalProps> = ({
           />
         </div>
 
-        <div className="lg:w-[340px] xl:w-[380px] shrink-0 max-h-[42vh] lg:max-h-none flex flex-col min-h-0">
+        <div className="lg:w-[340px] xl:w-[380px] shrink-0 flex flex-col min-h-0 lg:h-full lg:overflow-hidden">
           <PlanSummaryPanel
             plan={plan}
             onExport={handleExport}

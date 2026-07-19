@@ -8,6 +8,11 @@ import {
   updatePatientGoal,
 } from '../services/patientGoals';
 import {
+  deletePatientGoalScore,
+  fetchPatientGoalScores,
+  recordPatientGoalScore,
+} from '../services/patientGoalScores';
+import {
   GAS_DESCRIPTOR_FIELDS,
   GAS_SCORE_LABELS,
   GAS_SCORE_SHORT,
@@ -23,9 +28,34 @@ import {
   type GasGoalTemplate,
 } from '../constants/gasGoalTemplates';
 import type { PatientGoal, PatientGoalInput } from '../types/patientGoals';
+import type { PatientGoalScore } from '../types/patientGoalScores';
 
 interface PatientGasGoalsProps {
   patientId: string;
+}
+
+function todayIsoDate() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function formatScoreDate(isoDate: string) {
+  const [y, m, d] = isoDate.split('-').map(Number);
+  if (!y || !m || !d) return isoDate;
+  return new Date(y, m - 1, d).toLocaleDateString('es-MX', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
+function scoreDotClass(score: GasScore) {
+  if (score <= -1) return 'bg-red-500';
+  if (score === 0) return 'bg-primary';
+  return 'bg-emerald-500';
 }
 
 const EMPTY_FORM: PatientGoalInput = {
@@ -87,6 +117,7 @@ function getGasDescriptor(goal: PatientGoal, score: GasScore): string | null {
 
 const PatientGasGoals: React.FC<PatientGasGoalsProps> = ({ patientId }) => {
   const [goals, setGoals] = React.useState<PatientGoal[]>([]);
+  const [scores, setScores] = React.useState<PatientGoalScore[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [loadError, setLoadError] = React.useState<string | null>(null);
   const [showForm, setShowForm] = React.useState(false);
@@ -94,10 +125,21 @@ const PatientGasGoals: React.FC<PatientGasGoalsProps> = ({ patientId }) => {
   const [form, setForm] = React.useState<PatientGoalInput>(EMPTY_FORM);
   const [saving, setSaving] = React.useState(false);
   const [expandedId, setExpandedId] = React.useState<string | null>(null);
+  const [historyGoalId, setHistoryGoalId] = React.useState<string | null>(null);
   const [updatingScoreId, setUpdatingScoreId] = React.useState<string | null>(null);
   const [showHelp, setShowHelp] = React.useState(false);
   const [templateCategory, setTemplateCategory] = React.useState<string>('Todos');
   const [selectedTemplateId, setSelectedTemplateId] = React.useState<string | null>(null);
+
+  const scoresByGoal = React.useMemo(() => {
+    const map = new Map<string, PatientGoalScore[]>();
+    for (const entry of scores) {
+      const list = map.get(entry.goal_id) ?? [];
+      list.push(entry);
+      map.set(entry.goal_id, list);
+    }
+    return map;
+  }, [scores]);
 
   const loadGoals = React.useCallback(async () => {
     setLoading(true);
@@ -105,8 +147,17 @@ const PatientGasGoals: React.FC<PatientGasGoalsProps> = ({ patientId }) => {
     try {
       const user = await getAuthUser();
       if (!user) return;
-      const data = await fetchPatientGoals(user.id, patientId);
-      setGoals(data);
+      const [goalData, scoreData] = await Promise.all([
+        fetchPatientGoals(user.id, patientId),
+        fetchPatientGoalScores(user.id, patientId).catch((err) => {
+          if (err instanceof Error && err.message.includes('patient_goal_scores')) {
+            return [] as PatientGoalScore[];
+          }
+          throw err;
+        }),
+      ]);
+      setGoals(goalData);
+      setScores(scoreData);
     } catch (err) {
       console.error(err);
       if (err instanceof Error && err.message.includes('patient_goals')) {
@@ -183,12 +234,53 @@ const PatientGasGoals: React.FC<PatientGasGoalsProps> = ({ patientId }) => {
     try {
       const user = await getAuthUser();
       if (!user) return;
-      const updated = await updatePatientGoal(user.id, goalId, { current_score: score });
+      const { score: recorded, goal: updated } = await recordPatientGoalScore(
+        user.id,
+        patientId,
+        goalId,
+        { score, scored_at: todayIsoDate() }
+      );
+      setGoals((prev) => prev.map((g) => (g.id === goalId ? updated : g)));
+      setScores((prev) => {
+        const withoutSameDay = prev.filter(
+          (s) => !(s.goal_id === goalId && s.scored_at === recorded.scored_at)
+        );
+        return [recorded, ...withoutSameDay].sort((a, b) => {
+          const byDate = b.scored_at.localeCompare(a.scored_at);
+          if (byDate !== 0) return byDate;
+          return b.created_at.localeCompare(a.created_at);
+        });
+      });
+      setHistoryGoalId(goalId);
+    } catch (err) {
+      console.error(err);
+      if (err instanceof Error && err.message.includes('patient_goal_scores')) {
+        setLoadError(
+          'Aplica la migración de evolución GAS (patient_goal_scores) en Supabase para guardar el historial.'
+        );
+      }
+    } finally {
+      setUpdatingScoreId(null);
+    }
+  };
+
+  const handleDeleteScore = async (goalId: string, scoreId: string) => {
+    if (!window.confirm('¿Eliminar esta evaluación del historial?')) return;
+    try {
+      const user = await getAuthUser();
+      if (!user) return;
+      await deletePatientGoalScore(user.id, scoreId);
+      const remaining = scores
+        .filter((s) => s.id !== scoreId)
+        .filter((s) => s.goal_id === goalId);
+      setScores((prev) => prev.filter((s) => s.id !== scoreId));
+
+      const latest = remaining[0];
+      const nextScore = latest?.score ?? null;
+      const updated = await updatePatientGoal(user.id, goalId, { current_score: nextScore });
       setGoals((prev) => prev.map((g) => (g.id === goalId ? updated : g)));
     } catch (err) {
       console.error(err);
-    } finally {
-      setUpdatingScoreId(null);
     }
   };
 
@@ -199,7 +291,9 @@ const PatientGasGoals: React.FC<PatientGasGoalsProps> = ({ patientId }) => {
       if (!user) return;
       await deletePatientGoal(user.id, goalId);
       setGoals((prev) => prev.filter((g) => g.id !== goalId));
+      setScores((prev) => prev.filter((s) => s.goal_id !== goalId));
       if (expandedId === goalId) setExpandedId(null);
+      if (historyGoalId === goalId) setHistoryGoalId(null);
     } catch (err) {
       console.error(err);
     }
@@ -269,7 +363,7 @@ const PatientGasGoals: React.FC<PatientGasGoalsProps> = ({ patientId }) => {
             </li>
           </ul>
           <p className="text-text-muted">
-            Tip: usa una plantilla, ajusta con el paciente y guarda. En cada revaloración, selecciona el nivel alcanzado.
+            Tip: usa una plantilla, ajusta con el paciente y guarda. En cada visita, selecciona el nivel: se guarda en el historial de evolución (un registro por día).
           </p>
         </div>
       )}
@@ -420,8 +514,11 @@ const PatientGasGoals: React.FC<PatientGasGoalsProps> = ({ patientId }) => {
         <div className="space-y-4">
           {goals.map((goal) => {
             const isExpanded = expandedId === goal.id;
+            const showHistory = historyGoalId === goal.id;
+            const goalScores = scoresByGoal.get(goal.id) ?? [];
             const activeDescriptor =
               goal.current_score != null ? getGasDescriptor(goal, goal.current_score) : null;
+            const sparkline = [...goalScores].reverse().slice(-8);
 
             return (
               <article
@@ -482,6 +579,81 @@ const PatientGasGoals: React.FC<PatientGasGoalsProps> = ({ patientId }) => {
                       <span className="font-bold">{GAS_SCORE_LABELS[goal.current_score]}</span>
                       {activeDescriptor ? `: ${activeDescriptor}` : ''}
                     </p>
+                  )}
+
+                  {goalScores.length > 0 && (
+                    <div className="mt-3 pt-3 border-t border-slate-200/70 dark:border-slate-700/70">
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                          Evolución · {goalScores.length}{' '}
+                          {goalScores.length === 1 ? 'evaluación' : 'evaluaciones'}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => setHistoryGoalId(showHistory ? null : goal.id)}
+                          className="text-[11px] font-bold text-primary"
+                        >
+                          {showHistory ? 'Ocultar' : 'Ver historial'}
+                        </button>
+                      </div>
+
+                      <div
+                        className="flex items-end gap-1 h-8"
+                        aria-hidden="true"
+                        title="Tendencia de logro"
+                      >
+                        {sparkline.map((entry) => {
+                          const height = ((entry.score + 2) / 4) * 100;
+                          return (
+                            <div
+                              key={entry.id}
+                              className="flex-1 min-w-0 flex flex-col justify-end items-center"
+                            >
+                              <div
+                                className={`w-full max-w-[10px] rounded-sm ${scoreDotClass(entry.score)}`}
+                                style={{ height: `${Math.max(18, height)}%` }}
+                                title={`${formatScoreDate(entry.scored_at)}: ${GAS_SCORE_SHORT[entry.score]}`}
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {showHistory && (
+                        <ul className="mt-3 space-y-1.5">
+                          {goalScores.map((entry) => (
+                            <li
+                              key={entry.id}
+                              className="flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg bg-white/80 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800"
+                            >
+                              <div className="min-w-0 flex items-center gap-2">
+                                <span
+                                  className={`shrink-0 inline-flex items-center justify-center w-8 h-7 rounded-md text-[11px] font-bold text-white ${scoreDotClass(entry.score)}`}
+                                >
+                                  {GAS_SCORE_SHORT[entry.score]}
+                                </span>
+                                <div className="min-w-0">
+                                  <p className="text-xs font-bold text-slate-700 dark:text-slate-200 truncate">
+                                    {GAS_SCORE_LABELS[entry.score]}
+                                  </p>
+                                  <p className="text-[10px] text-text-muted">
+                                    {formatScoreDate(entry.scored_at)}
+                                  </p>
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteScore(goal.id, entry.id)}
+                                className="p-1 text-slate-300 hover:text-red-500 rounded"
+                                aria-label="Eliminar evaluación"
+                              >
+                                <span className="material-symbols-outlined text-base">close</span>
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
                   )}
                 </div>
 

@@ -11,6 +11,7 @@ interface SettingsProps {
 
 import { supabase } from '../supabaseClient';
 import { getAuthUser } from '../utils/auth';
+import { useIsAdmin } from '../hooks/useIsAdmin';
 import { clearClinicalCacheForUser } from '../services/clinicalCache';
 import { UserProfile, BucketListItem } from '../types';
 import {
@@ -36,10 +37,12 @@ const SETTINGS_ROUTES: Record<string, string> = {
   data: '/data-management',
   lang: '/language',
   agenda: '/appointment-settings',
+  'admin-media': '/admin/media',
 };
 
 const Settings: React.FC<SettingsProps> = ({ toggleDarkMode, isDarkMode }) => {
   const navigate = useNavigate();
+  const { isAdmin } = useIsAdmin();
   const [profile, setProfile] = React.useState<UserProfile | null>(null);
   const [bucketList, setBucketList] = React.useState<BucketListItem[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -231,7 +234,15 @@ const Settings: React.FC<SettingsProps> = ({ toggleDarkMode, isDarkMode }) => {
          { id: 'lang', name: 'Idioma', val: languageLabel, icon: 'language', type: 'link' },
          { id: 'dark', name: 'Modo Oscuro', icon: 'dark_mode', type: 'toggle', active: isDarkMode, action: toggleDarkMode }
        ]
-    }
+    },
+    ...(isAdmin
+      ? [{
+          title: 'Administración',
+          items: [
+            { id: 'admin-media', name: 'Gestión de Medios', sub: 'Imágenes de puntos motores y USG', icon: 'photo_library', type: 'link' },
+          ],
+        }]
+      : []),
   ];
 
   return (

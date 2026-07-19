@@ -102,15 +102,23 @@ const Search: React.FC = () => {
     <div className="flex flex-col min-h-screen bg-background-light dark:bg-background-dark pb-32 lg:pb-8">
       <header className="bg-white dark:bg-surface-dark pb-2 pt-12 lg:pt-6 sticky top-0 z-10 shadow-sm border-b border-slate-100 dark:border-slate-800">
         <PageContainer maxWidth="max-w-5xl">
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-2xl font-bold tracking-tight text-text-main dark:text-white">
-            Buscar Pacientes
-          </h1>
-          <div className="flex items-center gap-2">
-            <span className="px-2 py-1 text-[10px] font-bold bg-primary/10 text-primary rounded">
+        <div className="flex items-center justify-between gap-3 mb-4">
+          <div className="flex items-center gap-2 min-w-0">
+            <h1 className="text-2xl font-bold tracking-tight text-text-main dark:text-white truncate">
+              Buscar Pacientes
+            </h1>
+            <span className="px-2 py-1 text-[10px] font-bold bg-primary/10 text-primary rounded shrink-0">
               {filteredPatients.length} {filteredPatients.length === 1 ? 'paciente' : 'pacientes'}
             </span>
           </div>
+          <button
+            type="button"
+            onClick={() => navigate('/patient/new')}
+            className="inline-flex items-center gap-1.5 shrink-0 px-3 py-2 rounded-xl bg-primary text-white text-xs font-bold shadow-sm hover:bg-primary/90 active:scale-95 transition-transform cursor-pointer min-h-[40px]"
+          >
+            <span className="material-symbols-outlined text-[18px]">person_add</span>
+            <span className="hidden sm:inline">Nuevo paciente</span>
+          </button>
         </div>
 
         <div className="relative w-full">
