@@ -50,7 +50,18 @@ export default defineConfig(({ mode }) => {
           workbox: {
             cleanupOutdatedCaches: true,
             globPatterns: ['**/*.{js,css,html,ico,png,svg,jpeg,jpg,webp,woff,woff2}'],
+            // Atlas facial (~2.5 MB): fuera del precache para no romper el build ni alargar la instalación del SW
+            globIgnores: ['**/facial/**'],
             runtimeCaching: [
+              {
+                urlPattern: /\/facial\/.*/i,
+                handler: 'CacheFirst',
+                options: {
+                  cacheName: 'facial-atlas',
+                  expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 30 },
+                  cacheableResponse: { statuses: [0, 200] },
+                },
+              },
               {
                 urlPattern: /^https:\/\/cdn\.tailwindcss\.com\/.*/i,
                 handler: 'CacheFirst',
