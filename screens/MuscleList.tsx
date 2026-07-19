@@ -7,13 +7,14 @@ const MuscleList: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState('Todos');
 
-  const categories = ['Todos', 'Cara', 'Cuello', 'Miembro Superior', 'Miembro Inferior'];
+  const categories = ['Todos', 'Cara', 'Cuello', 'Tronco', 'Miembro Superior', 'Miembro Inferior'];
 
   // Category to internal category mapping
   const categoryMap: Record<string, MuscleData['category'] | 'all'> = {
     'Todos': 'all',
     'Cara': 'face',
     'Cuello': 'neck',
+    'Tronco': 'trunk',
     'Miembro Superior': 'upper-limb',
     'Miembro Inferior': 'lower-limb'
   };

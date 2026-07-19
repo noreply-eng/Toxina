@@ -200,7 +200,511 @@ export const musclesData: MuscleData[] = [
       xeomin: dosisData.Botox['Temporalis']
     },
     indications: ['Migraña Crónica', 'Bruxismo'],
-    relatedMuscles: ['occipitalis']
+    relatedMuscles: ['occipitalis', 'masseter', 'medial-pterygoid', 'lateral-pterygoid']
+  },
+  {
+    id: 'occipitalis',
+    name: 'Occipital',
+    latinName: 'Occipitalis',
+    category: 'face',
+    region: 'Occipucio',
+    anatomy: {
+      function: 'Retrae el cuero cabelludo hacia atrás y tensa la galea aponeurótica',
+      innervation: 'Nervio facial (rama auricular posterior)',
+      origin: 'Línea nucal superior del occipital',
+      insertion: 'Galea aponeurótica'
+    },
+    motorPoint: {
+      description: 'Región occipital, aproximadamente a la altura de la línea nucal superior, a 1–2 cm lateral a la línea media',
+      techniqueNotes: [
+        'Inyecciones subcutáneas/superficiales en puntos bilaterales (protocolo PREEMPT)',
+        'Evitar inyección demasiado profunda hacia la nuca',
+        'Distribuir en varios sitios por lado'
+      ]
+    },
+    dosing: {
+      botox: dosisData.Botox['Occipitalis'],
+      dysport: dosisData.Dysport['Occipitalis'],
+      xeomin: dosisData.Botox['Occipitalis']
+    },
+    indications: ['Migraña Crónica'],
+    relatedMuscles: ['temporalis', 'trapezius', 'cervical-paraspinals']
+  },
+  {
+    id: 'masseter',
+    name: 'Masetero',
+    latinName: 'Masseter',
+    category: 'face',
+    region: 'Mandíbula',
+    anatomy: {
+      function: 'Elevación de la mandíbula (masticación); contribuye a la protrusión mandibular',
+      innervation: 'Nervio mandibular (rama del trigémino)',
+      origin: 'Arco cigomático',
+      insertion: 'Ángulo y rama de la mandíbula (tuberosidad maseterina)'
+    },
+    motorPoint: {
+      description: 'Vientre más prominente del masetero, ~1–1.5 cm por delante del ángulo mandibular',
+      techniqueNotes: [
+        'Inyectar en el tercio inferior del músculo (zona más segura)',
+        'Profundidad intramuscular; evitar inyección demasiado anterior (riesgo de sonrisa asimétrica)',
+        'Distribuir en 2–3 puntos por lado según hipertrofia'
+      ]
+    },
+    dosing: {
+      botox: dosisData.Botox['Masseter'],
+      dysport: dosisData.Dysport['Masseter'],
+      xeomin: dosisData.Botox['Masseter']
+    },
+    indications: ['Bruxismo', 'Hipertrofia Maseterina', 'Disfunción ATM'],
+    relatedMuscles: ['temporalis', 'medial-pterygoid', 'lateral-pterygoid']
+  },
+  {
+    id: 'medial-pterygoid',
+    name: 'Pterigoideo Medial',
+    latinName: 'Medial pterygoid',
+    category: 'face',
+    region: 'Mandíbula',
+    anatomy: {
+      function: 'Elevación y protrusión de la mandíbula; contribuye a la masticación',
+      innervation: 'Nervio mandibular (rama del trigémino)',
+      origin: 'Fosa pterigoidea y tuberosidad maxilar',
+      insertion: 'Cara medial del ángulo y rama de la mandíbula'
+    },
+    motorPoint: {
+      description: 'Ángulo mandibular interno (abordaje intraoral) o extraoral guiado hacia el vientre medial',
+      techniqueNotes: [
+        'Preferir guía por USG o EMG',
+        '1–2 puntos; evitar vasos y glándula parótida',
+        'Complementa masetero y temporal en bruxismo/ATM'
+      ]
+    },
+    dosing: {
+      botox: dosisData.Botox['Medial pterygoid'],
+      dysport: dosisData.Dysport['Medial pterygoid'],
+      xeomin: dosisData.Botox['Medial pterygoid']
+    },
+    indications: ['Bruxismo', 'Disfunción ATM', 'Distonía Oroomandibular'],
+    relatedMuscles: ['masseter', 'temporalis', 'lateral-pterygoid']
+  },
+  {
+    id: 'lateral-pterygoid',
+    name: 'Pterigoideo Lateral',
+    latinName: 'Lateral pterygoid',
+    category: 'face',
+    region: 'Mandíbula',
+    anatomy: {
+      function: 'Protrusión y apertura de la mandíbula; estabiliza el disco articular',
+      innervation: 'Nervio mandibular (rama del trigémino)',
+      origin: 'Ala mayor del esfenoides y lámina lateral de la pterigoides',
+      insertion: 'Cuello del cóndilo mandibular y disco de la ATM'
+    },
+    motorPoint: {
+      description: 'Fosa infratemporal: ~1–1.5 cm por delante del trago y ~1 cm bajo el arco cigomático (extraoral guiado)',
+      techniqueNotes: [
+        'Solo con guía (USG/EMG); dosis bajas',
+        'Riesgo de hemorragia y alteración de la ATM',
+        'Confirmar con protrusión mandibular'
+      ]
+    },
+    dosing: {
+      botox: dosisData.Botox['Lateral pterygoid'],
+      dysport: dosisData.Dysport['Lateral pterygoid'],
+      xeomin: dosisData.Botox['Lateral pterygoid']
+    },
+    indications: ['Disfunción ATM', 'Distonía Oroomandibular', 'Bruxismo'],
+    relatedMuscles: ['medial-pterygoid', 'masseter', 'temporalis']
+  },
+  {
+    id: 'platysma',
+    name: 'Platisma',
+    latinName: 'Platysma',
+    category: 'face',
+    region: 'Cuello / tercio inferior',
+    anatomy: {
+      function: 'Tensa la piel del cuello, deprime la mandíbula y tira hacia abajo de la comisura labial',
+      innervation: 'Nervio facial (rama cervical)',
+      origin: 'Fascia del tórax superior y deltoides',
+      insertion: 'Mandíbula, piel y tejido subcutáneo de la cara inferior'
+    },
+    motorPoint: {
+      description: 'Bandas platismales verticales visibles en contracción; puntos a lo largo de cada banda',
+      techniqueNotes: [
+        'Inyección superficial subcutánea en puntos múltiples',
+        'Técnica Nefertiti: puntos a lo largo del borde mandibular y bandas',
+        'Dosis bajas por punto para evitar debilidad de deglución'
+      ]
+    },
+    dosing: {
+      botox: dosisData.Botox['Platysma'],
+      dysport: dosisData.Dysport['Platysma'],
+      xeomin: dosisData.Botox['Platysma']
+    },
+    indications: ['Estética Facial (bandas platismales)', 'Sincinesias Faciales'],
+    relatedMuscles: ['depressor-anguli-oris', 'mentalis']
+  },
+  {
+    id: 'orbicularis-oris',
+    name: 'Orbicular de los Labios',
+    latinName: 'Orbicularis oris',
+    category: 'face',
+    region: 'Perioral',
+    anatomy: {
+      function: 'Cierre y protrusión de los labios; forma el esfínter oral',
+      innervation: 'Nervio facial (ramas bucales)',
+      origin: 'Fibras de músculos faciales adyacentes y maxilar/mandíbula',
+      insertion: 'Piel y mucosa de los labios'
+    },
+    motorPoint: {
+      description: 'Puntos superficiales a 1–2 mm del borde bermellón, en labio superior e inferior',
+      techniqueNotes: [
+        'Inyección muy superficial; dosis bajas',
+        'Evitar exceso (riesgo de incompetencia labial y dificultad para silbar/beber)',
+        'Útil para líneas verticales periorales (“código de barras”)'
+      ]
+    },
+    dosing: {
+      botox: dosisData.Botox['Orbicularis oris'],
+      dysport: dosisData.Dysport['Orbicularis oris'],
+      xeomin: dosisData.Botox['Orbicularis oris']
+    },
+    indications: ['Estética Facial (líneas periorales)', 'Sincinesias Faciales'],
+    relatedMuscles: ['mentalis', 'depressor-anguli-oris']
+  },
+  {
+    id: 'mentalis',
+    name: 'Mentoniano',
+    latinName: 'Mentalis',
+    category: 'face',
+    region: 'Mentón',
+    anatomy: {
+      function: 'Eleva y protruye el labio inferior; arruga la piel del mentón',
+      innervation: 'Nervio facial (rama marginal mandibular)',
+      origin: 'Fosa del mentón (mandíbula)',
+      insertion: 'Piel del mentón'
+    },
+    motorPoint: {
+      description: 'Línea media del mentón, ~1 cm por encima del borde inferior mandibular',
+      techniqueNotes: [
+        'Inyección intramuscular profunda en el vientre del mentoniano',
+        '1–2 puntos en línea media o ligeramente paramedianos',
+        'Útil en mentón “adoquinado” o pechin'
+      ]
+    },
+    dosing: {
+      botox: dosisData.Botox['Mentalis'],
+      dysport: dosisData.Dysport['Mentalis'],
+      xeomin: dosisData.Botox['Mentalis']
+    },
+    indications: ['Estética Facial (mentón adoquinado)', 'Sincinesias Faciales'],
+    relatedMuscles: ['orbicularis-oris', 'depressor-anguli-oris']
+  },
+  {
+    id: 'depressor-anguli-oris',
+    name: 'Depresor del Ángulo de la Boca',
+    latinName: 'Depressor anguli oris',
+    category: 'face',
+    region: 'Perioral',
+    anatomy: {
+      function: 'Deprime la comisura labial (gesto de tristeza)',
+      innervation: 'Nervio facial (rama marginal mandibular)',
+      origin: 'Línea oblicua de la mandíbula',
+      insertion: 'Modiolo (ángulo de la boca)'
+    },
+    motorPoint: {
+      description: 'Aproximadamente 1 cm lateral y 1 cm inferior a la comisura labial',
+      techniqueNotes: [
+        'Inyección superficial a moderada',
+        'Evitar inyección demasiado medial (riesgo de afectar depresor del labio inferior)',
+        'Útil para comisuras caídas y líneas de marioneta'
+      ]
+    },
+    dosing: {
+      botox: dosisData.Botox['Depressor anguli oris'],
+      dysport: dosisData.Dysport['Depressor anguli oris'],
+      xeomin: dosisData.Botox['Depressor anguli oris']
+    },
+    indications: ['Estética Facial (comisuras caídas)', 'Sincinesias Faciales'],
+    relatedMuscles: ['platysma', 'mentalis', 'risorius']
+  },
+  {
+    id: 'nasalis',
+    name: 'Nasal',
+    latinName: 'Nasalis',
+    category: 'face',
+    region: 'Nariz',
+    anatomy: {
+      function: 'Comprime y dilata las narinas; forma arrugas transversales en el dorso nasal',
+      innervation: 'Nervio facial (rama bucal)',
+      origin: 'Maxilar',
+      insertion: 'Aponeurosis nasal y cartílago alar'
+    },
+    motorPoint: {
+      description: 'Puntos laterales al dorso nasal sobre el vientre transversal del nasal',
+      techniqueNotes: [
+        'Inyección superficial bilateral',
+        'Indicación clásica: bunny lines',
+        'Dosis bajas; evitar exceso que altere dinámica nasal'
+      ]
+    },
+    dosing: {
+      botox: dosisData.Botox['Nasalis'],
+      dysport: dosisData.Dysport['Nasalis'],
+      xeomin: dosisData.Botox['Nasalis']
+    },
+    indications: ['Estética Facial (bunny lines)'],
+    relatedMuscles: ['procerus', 'levator-labii-superioris-alaeque-nasi']
+  },
+  {
+    id: 'levator-labii-superioris-alaeque-nasi',
+    name: 'Elevador del Labio Superior y del Ala Nasal',
+    latinName: 'Levator labii superioris alaeque nasi',
+    category: 'face',
+    region: 'Tercio medio',
+    anatomy: {
+      function: 'Eleva el labio superior y dilata el ala nasal; contribuye a la sonrisa gingival',
+      innervation: 'Nervio facial (rama cigomática/bucal)',
+      origin: 'Proceso frontal del maxilar',
+      insertion: 'Piel del labio superior y cartílago alar'
+    },
+    motorPoint: {
+      description: 'Surco nasogeniano superior, cerca del ala nasal',
+      techniqueNotes: [
+        'Inyección superficial; dosis muy bajas',
+        'Indicación principal: sonrisa gingival',
+        'Evitar exceso (puede aplanar el labio superior)'
+      ]
+    },
+    dosing: {
+      botox: dosisData.Botox['Levator labii superioris alaeque nasi'],
+      dysport: dosisData.Dysport['Levator labii superioris alaeque nasi'],
+      xeomin: dosisData.Botox['Levator labii superioris alaeque nasi']
+    },
+    indications: ['Estética Facial (sonrisa gingival)'],
+    relatedMuscles: ['levator-labii-superioris', 'nasalis']
+  },
+  {
+    id: 'levator-labii-superioris',
+    name: 'Elevador del Labio Superior',
+    latinName: 'Levator labii superioris',
+    category: 'face',
+    region: 'Tercio medio',
+    anatomy: {
+      function: 'Eleva el labio superior y contribuye a la exposición gingival al sonreír',
+      innervation: 'Nervio facial (rama cigomática/bucal)',
+      origin: 'Maxilar, por encima del foramen infraorbitario',
+      insertion: 'Piel del labio superior'
+    },
+    motorPoint: {
+      description: 'Punto en el tercio medio del surco nasogeniano, sobre el vientre muscular',
+      techniqueNotes: [
+        'Inyección superficial a moderada',
+        'Combinar con LLSAN según patrón de sonrisa gingival',
+        'Dosis conservadoras para preservar sonrisa natural'
+      ]
+    },
+    dosing: {
+      botox: dosisData.Botox['Levator labii superioris'],
+      dysport: dosisData.Dysport['Levator labii superioris'],
+      xeomin: dosisData.Botox['Levator labii superioris']
+    },
+    indications: ['Estética Facial (sonrisa gingival)', 'Sincinesias Faciales'],
+    relatedMuscles: ['levator-labii-superioris-alaeque-nasi', 'zygomaticus-minor']
+  },
+  {
+    id: 'depressor-labii-inferioris',
+    name: 'Depresor del Labio Inferior',
+    latinName: 'Depressor labii inferioris',
+    category: 'face',
+    region: 'Perioral',
+    anatomy: {
+      function: 'Deprime y eversión del labio inferior',
+      innervation: 'Nervio facial (rama marginal mandibular)',
+      origin: 'Línea oblicua de la mandíbula',
+      insertion: 'Piel y mucosa del labio inferior'
+    },
+    motorPoint: {
+      description: 'Punto paramediano del labio inferior, ~1 cm lateral a la línea media',
+      techniqueNotes: [
+        'Inyección superficial; dosis bajas',
+        'Útil en asimetrías y sincinesias postparálisis facial',
+        'Evitar bilateral simétrico excesivo (puede dificultar el habla)'
+      ]
+    },
+    dosing: {
+      botox: dosisData.Botox['Depressor labii inferioris'],
+      dysport: dosisData.Dysport['Depressor labii inferioris'],
+      xeomin: dosisData.Botox['Depressor labii inferioris']
+    },
+    indications: ['Sincinesias Faciales', 'Asimetrías Faciales'],
+    relatedMuscles: ['depressor-anguli-oris', 'mentalis']
+  },
+  {
+    id: 'zygomaticus-major',
+    name: 'Cigomático Mayor',
+    latinName: 'Zygomaticus major',
+    category: 'face',
+    region: 'Tercio medio',
+    anatomy: {
+      function: 'Eleva y lateraliza la comisura labial (sonrisa)',
+      innervation: 'Nervio facial (rama cigomática)',
+      origin: 'Hueso cigomático',
+      insertion: 'Modiolo (ángulo de la boca)'
+    },
+    motorPoint: {
+      description: 'Trayecto desde el cigoma hacia la comisura; punto a mitad del vientre muscular',
+      techniqueNotes: [
+        'Dosis muy bajas; alto impacto en la sonrisa',
+        'Principalmente para asimetrías o sincinesias, no estética rutinaria',
+        'Confirmar lado hiperactivo antes de inyectar'
+      ]
+    },
+    dosing: {
+      botox: dosisData.Botox['Zygomaticus major'],
+      dysport: dosisData.Dysport['Zygomaticus major'],
+      xeomin: dosisData.Botox['Zygomaticus major']
+    },
+    indications: ['Sincinesias Faciales', 'Asimetrías Faciales'],
+    relatedMuscles: ['zygomaticus-minor', 'risorius', 'levator-anguli-oris']
+  },
+  {
+    id: 'zygomaticus-minor',
+    name: 'Cigomático Menor',
+    latinName: 'Zygomaticus minor',
+    category: 'face',
+    region: 'Tercio medio',
+    anatomy: {
+      function: 'Eleva el labio superior y profundiza el surco nasogeniano',
+      innervation: 'Nervio facial (rama cigomática)',
+      origin: 'Hueso cigomático',
+      insertion: 'Piel del labio superior'
+    },
+    motorPoint: {
+      description: 'Entre el cigoma y el labio superior, medial al cigomático mayor',
+      techniqueNotes: [
+        'Inyección superficial; dosis mínimas',
+        'Usar con precaución por efecto en sonrisa y surco nasogeniano',
+        'Más frecuente en protocolos de sincinesias'
+      ]
+    },
+    dosing: {
+      botox: dosisData.Botox['Zygomaticus minor'],
+      dysport: dosisData.Dysport['Zygomaticus minor'],
+      xeomin: dosisData.Botox['Zygomaticus minor']
+    },
+    indications: ['Sincinesias Faciales', 'Asimetrías Faciales'],
+    relatedMuscles: ['zygomaticus-major', 'levator-labii-superioris']
+  },
+  {
+    id: 'risorius',
+    name: 'Risorio',
+    latinName: 'Risorius',
+    category: 'face',
+    region: 'Perioral',
+    anatomy: {
+      function: 'Retrae lateralmente la comisura labial (sonrisa amplia)',
+      innervation: 'Nervio facial (rama bucal)',
+      origin: 'Fascia parotídea / tejido subcutáneo',
+      insertion: 'Modiolo (ángulo de la boca)'
+    },
+    motorPoint: {
+      description: 'Lateral a la comisura, en el trayecto horizontal hacia la mejilla',
+      techniqueNotes: [
+        'Inyección superficial; dosis muy bajas',
+        'Útil en asimetrías laterales de sonrisa',
+        'Evitar difusión hacia masetero o DAO'
+      ]
+    },
+    dosing: {
+      botox: dosisData.Botox['Risorius'],
+      dysport: dosisData.Dysport['Risorius'],
+      xeomin: dosisData.Botox['Risorius']
+    },
+    indications: ['Sincinesias Faciales', 'Asimetrías Faciales'],
+    relatedMuscles: ['zygomaticus-major', 'depressor-anguli-oris']
+  },
+  {
+    id: 'depressor-supercilii',
+    name: 'Depresor de la Ceja',
+    latinName: 'Depressor supercilii',
+    category: 'face',
+    region: 'Glabela',
+    anatomy: {
+      function: 'Deprime la porción medial de la ceja; contribuye al ceño fruncido',
+      innervation: 'Nervio facial (rama temporal)',
+      origin: 'Hueso frontal / región medial orbitaria',
+      insertion: 'Piel de la ceja medial'
+    },
+    motorPoint: {
+      description: 'Porción medial de la ceja, ligeramente inferior al corrugador',
+      techniqueNotes: [
+        'A menudo tratado junto con corrugador y prócer',
+        'Inyección intramuscular medial',
+        'Evitar exceso lateral (riesgo de ptosis)'
+      ]
+    },
+    dosing: {
+      botox: dosisData.Botox['Depressor supercilii'],
+      dysport: dosisData.Dysport['Depressor supercilii'],
+      xeomin: dosisData.Botox['Depressor supercilii']
+    },
+    indications: ['Estética Facial (líneas glabelares)', 'Migraña Crónica'],
+    relatedMuscles: ['corrugator', 'procerus']
+  },
+  {
+    id: 'buccinator',
+    name: 'Buccinador',
+    latinName: 'Buccinator',
+    category: 'face',
+    region: 'Mejilla',
+    anatomy: {
+      function: 'Comprime la mejilla contra los dientes; ayuda a la masticación y soplido',
+      innervation: 'Nervio facial (rama bucal)',
+      origin: 'Procesos alveolares de maxilar y mandíbula; rafe pterigomandibular',
+      insertion: 'Modiolo y fibras del orbicular de los labios'
+    },
+    motorPoint: {
+      description: 'Mejilla, lateral a la comisura, a nivel del plano oclusal',
+      techniqueNotes: [
+        'Usado principalmente en sincinesias faciales',
+        'Inyección intramuscular con dosis moderadas',
+        'Evitar exceso (puede afectar competencia oral)'
+      ]
+    },
+    dosing: {
+      botox: dosisData.Botox['Buccinator'],
+      dysport: dosisData.Dysport['Buccinator'],
+      xeomin: dosisData.Botox['Buccinator']
+    },
+    indications: ['Sincinesias Faciales'],
+    relatedMuscles: ['orbicularis-oris', 'risorius']
+  },
+  {
+    id: 'levator-anguli-oris',
+    name: 'Elevador del Ángulo de la Boca',
+    latinName: 'Levator anguli oris',
+    category: 'face',
+    region: 'Tercio medio',
+    anatomy: {
+      function: 'Eleva la comisura labial',
+      innervation: 'Nervio facial (rama bucal)',
+      origin: 'Fosa canina del maxilar',
+      insertion: 'Modiolo (ángulo de la boca)'
+    },
+    motorPoint: {
+      description: 'Sobre la fosa canina, superior a la comisura labial',
+      techniqueNotes: [
+        'Inyección superficial a moderada; dosis bajas',
+        'Indicación principal: asimetrías de comisura',
+        'Valorar impacto en la sonrisa antes de tratar'
+      ]
+    },
+    dosing: {
+      botox: dosisData.Botox['Levator anguli oris'],
+      dysport: dosisData.Dysport['Levator anguli oris'],
+      xeomin: dosisData.Botox['Levator anguli oris']
+    },
+    indications: ['Sincinesias Faciales', 'Asimetrías Faciales'],
+    relatedMuscles: ['zygomaticus-major', 'depressor-anguli-oris']
   },
 
   // ========== NECK MUSCLES ==========
@@ -237,7 +741,7 @@ export const musclesData: MuscleData[] = [
       xeomin: dosisData.Botox['Trapezius']
     },
     indications: ['Migraña Crónica', 'Distonía Cervical', 'Espasticidad'],
-    relatedMuscles: ['cervical-paraspinals']
+    relatedMuscles: ['cervical-paraspinals', 'splenius-capitis', 'levator-scapulae']
   },
   {
     id: 'cervical-paraspinals',
@@ -265,7 +769,105 @@ export const musclesData: MuscleData[] = [
       xeomin: dosisData.Botox['Cervical Paraspinals']
     },
     indications: ['Migraña Crónica', 'Distonía Cervical'],
-    relatedMuscles: ['trapezius', 'occipitalis']
+    relatedMuscles: ['trapezius', 'occipitalis', 'splenius-capitis']
+  },
+  {
+    id: 'sternocleidomastoid',
+    name: 'Esternocleidomastoideo',
+    latinName: 'Sternocleidomastoid',
+    category: 'neck',
+    region: 'Cuello anterolateral',
+    anatomy: {
+      function: 'Rotación contralateral y flexión ipsilateral de la cabeza; flexión cervical bilateral',
+      innervation: 'Nervio accesorio (XI) y ramas de C2–C3',
+      origin: 'Manubrio esternal y tercio medial de la clavícula',
+      insertion: 'Apófisis mastoides y línea nucal superior'
+    },
+    motorPoint: {
+      description: 'Tercio medio del vientre muscular (porciones esternal y/o clavicular según patrón)',
+      techniqueNotes: [
+        'Limitar dosis por lado; evitar dosis altas bilaterales (disfagia)',
+        '2–3 puntos a lo largo del vientre',
+        'EMG o USG útiles en tortícolis complejas'
+      ]
+    },
+    usgGuidance: {
+      transducerType: 'Lineal 10–12 MHz',
+      view: 'Transversal',
+      landmarks: ['Vientre del ECM', 'Vasos carotídeos medialmente', 'Escalenos profundos'],
+      approach: 'In-plane, superficial a vasos',
+      precautions: ['No inyectar medial profundo hacia carótida', 'Riesgo de disfagia con difusión']
+    },
+    dosing: {
+      botox: dosisData.Botox['Esternocleidomastoideo'],
+      dysport: dosisData.Dysport['Esternocleidomastoideo'],
+      xeomin: dosisData.Botox['Esternocleidomastoideo']
+    },
+    indications: ['Distonía Cervical', 'Tortícolis'],
+    relatedMuscles: ['splenius-capitis', 'levator-scapulae', 'trapezius', 'platysma']
+  },
+  {
+    id: 'splenius-capitis',
+    name: 'Esplenio de la Cabeza',
+    latinName: 'Splenius capitis',
+    category: 'neck',
+    region: 'Cuello posterior',
+    anatomy: {
+      function: 'Extensión, flexión lateral y rotación ipsilateral de la cabeza',
+      innervation: 'Ramas dorsales de nervios espinales cervicales medios',
+      origin: 'Ligamento nucal y procesos espinosos C7–T3',
+      insertion: 'Apófisis mastoides y línea nucal superior'
+    },
+    motorPoint: {
+      description: 'Cuello posterolateral a nivel C2–C4, ~2–4 cm lateral a la línea media, bajo el trapecio superior',
+      techniqueNotes: [
+        'Músculo más frecuentemente tratado en distonía cervical',
+        '2–3 puntos por lado según hipertrofia',
+        'Evitar inyección excesivamente profunda'
+      ]
+    },
+    dosing: {
+      botox: dosisData.Botox['Esplenio de la cabeza'],
+      dysport: dosisData.Dysport['Esplenio de la cabeza'],
+      xeomin: dosisData.Botox['Esplenio de la cabeza']
+    },
+    indications: ['Distonía Cervical', 'Migraña Crónica'],
+    relatedMuscles: ['sternocleidomastoid', 'trapezius', 'cervical-paraspinals', 'levator-scapulae']
+  },
+  {
+    id: 'levator-scapulae',
+    name: 'Elevador de la Escápula',
+    latinName: 'Levator scapulae',
+    category: 'neck',
+    region: 'Cuello y hombro',
+    anatomy: {
+      function: 'Elevación y rotación inferior de la escápula; contribuye a la inclinación ipsilateral del cuello',
+      innervation: 'Nervio dorsal de la escápula (C4–C5) y ramas de C3–C4',
+      origin: 'Apófisis transversas de C1–C4',
+      insertion: 'Ángulo superior y borde medial de la escápula'
+    },
+    motorPoint: {
+      description: '2–3 cm medial al ángulo superior de la escápula, en el vientre bajo el trapecio superior',
+      techniqueNotes: [
+        'USG o EMG recomendados (proximidad a plexo)',
+        '1–3 puntos según patrón de elevación escapular',
+        'Frecuente en tortícolis con hombro elevado'
+      ]
+    },
+    usgGuidance: {
+      transducerType: 'Lineal 10–12 MHz',
+      view: 'Transversal',
+      landmarks: ['Ángulo superior escapular', 'Trapecio superficial', 'Elevador profundo'],
+      approach: 'In-plane de superficial a profundo',
+      precautions: ['Evitar plexo braquial y vasos cervicales transversos']
+    },
+    dosing: {
+      botox: dosisData.Botox['Elevador de la escápula'],
+      dysport: dosisData.Dysport['Elevador de la escápula'],
+      xeomin: dosisData.Botox['Elevador de la escápula']
+    },
+    indications: ['Distonía Cervical', 'Espasticidad', 'Hombro Elevado Espástico'],
+    relatedMuscles: ['trapezius', 'sternocleidomastoid', 'splenius-capitis', 'romboides']
   },
 
   // ========== UPPER LIMB MUSCLES ==========
@@ -908,12 +1510,40 @@ export const musclesData: MuscleData[] = [
       techniqueNotes: ['2 puntos', 'Confundible con extensores del pulgar sin USG']
     },
     dosing: {
-      botox: dosisData.Botox['Adductor pollicis longus'],
-      dysport: dosisData.Dysport['Adductor pollicis longus'],
-      xeomin: dosisData.Botox['Adductor pollicis longus']
+      botox: dosisData.Botox['Abductor pollicis longus'],
+      dysport: dosisData.Dysport['Abductor pollicis longus'],
+      xeomin: dosisData.Botox['Abductor pollicis longus']
     },
     indications: ['Espasticidad de Miembros Superiores'],
-    relatedMuscles: ['extensor-pollicis-brevis', 'extensor-pollicis-longus']
+    relatedMuscles: ['extensor-pollicis-brevis', 'extensor-pollicis-longus', 'adductor-pollicis']
+  },
+  {
+    id: 'adductor-pollicis',
+    name: 'Aductor del Pulgar',
+    latinName: 'Adductor pollicis',
+    category: 'upper-limb',
+    region: 'Mano',
+    anatomy: {
+      function: 'Aducción del pulgar hacia el índice (patrón thumb-in-palm)',
+      innervation: 'Nervio cubital (rama profunda)',
+      origin: 'Cabeza oblicua: base del 2.º–3.er metacarpiano y hueso grande; cabeza transversa: 3.er metacarpiano',
+      insertion: 'Base de la falange proximal del pulgar (lado cubital)'
+    },
+    motorPoint: {
+      description: 'Espacio intermetacarpiano I–II, profundo al primer interóseo dorsal / eminencia tenar profunda',
+      techniqueNotes: [
+        'Clave en patrón thumb-in-palm',
+        '1–2 puntos; profundizar bajo el primer interóseo dorsal',
+        'USG útil para separar de intrínsecos vecinos'
+      ]
+    },
+    dosing: {
+      botox: dosisData.Botox['Adductor pollicis'],
+      dysport: dosisData.Dysport['Adductor pollicis'],
+      xeomin: dosisData.Botox['Adductor pollicis']
+    },
+    indications: ['Espasticidad de Miembros Superiores', 'Pulgar en Palma'],
+    relatedMuscles: ['flexor-pollicis-longus', 'abductor-pollicis-longus']
   },
   {
     id: 'coracobrachialis',
@@ -1072,7 +1702,275 @@ export const musclesData: MuscleData[] = [
       xeomin: dosisData.Botox['Redondo mayor']
     },
     indications: ['Hombro Doloroso Espástico', 'Espasticidad de Miembros Superiores'],
-    relatedMuscles: ['dorsal-ancho', 'subscapularis']
+    relatedMuscles: ['dorsal-ancho', 'subscapularis', 'redondo-menor']
+  },
+  {
+    id: 'redondo-menor',
+    name: 'Redondo Menor',
+    latinName: 'Teres minor',
+    category: 'upper-limb',
+    region: 'Hombro posterior',
+    anatomy: {
+      function: 'Rotación externa del hombro; estabilizador de la glenohumeral',
+      innervation: 'Nervio axilar',
+      origin: 'Borde lateral superior de la escápula',
+      insertion: 'Tubérculo mayor del húmero (faceta inferior)'
+    },
+    motorPoint: {
+      description: '2–3 cm inferior al borde lateral de la espina escapular, lateral a la fosa infraespinosa',
+      techniqueNotes: [
+        '1–2 puntos; sinergia con infraespinoso',
+        'Confirmar con rotación externa de hombro',
+        'USG útil para separar de infraespinoso'
+      ]
+    },
+    dosing: {
+      botox: dosisData.Botox['Redondo menor'],
+      dysport: dosisData.Dysport['Redondo menor'],
+      xeomin: dosisData.Botox['Redondo menor']
+    },
+    indications: ['Hombro Doloroso Espástico', 'Espasticidad de Miembros Superiores'],
+    relatedMuscles: ['infraespinoso', 'subscapularis', 'redondo-mayor']
+  },
+  {
+    id: 'supraespinoso',
+    name: 'Supraespinoso',
+    latinName: 'Supraspinatus',
+    category: 'upper-limb',
+    region: 'Hombro (fosa supraespinosa)',
+    anatomy: {
+      function: 'Inicia la abducción del hombro (primeros ~15°) y estabiliza la cabeza humeral',
+      innervation: 'Nervio supraescapular',
+      origin: 'Fosa supraespinosa de la escápula',
+      insertion: 'Tubérculo mayor del húmero (faceta superior)'
+    },
+    motorPoint: {
+      description: 'Punto medio de la fosa supraespinosa, entre acromion y ángulo superior escapular',
+      techniqueNotes: [
+        'Abordaje posterior; profundidad moderada',
+        '1–2 puntos',
+        'Evitar nervio supraescapular en la escotadura'
+      ]
+    },
+    dosing: {
+      botox: dosisData.Botox['Supraespinoso'],
+      dysport: dosisData.Dysport['Supraespinoso'],
+      xeomin: dosisData.Botox['Supraespinoso']
+    },
+    indications: ['Hombro Doloroso Espástico', 'Espasticidad de Miembros Superiores'],
+    relatedMuscles: ['infraespinoso', 'deltoides', 'subscapularis']
+  },
+  {
+    id: 'infraespinoso',
+    name: 'Infraespinoso',
+    latinName: 'Infraspinatus',
+    category: 'upper-limb',
+    region: 'Hombro (fosa infraespinosa)',
+    anatomy: {
+      function: 'Rotación externa del hombro; estabilizador posterior de la glenohumeral',
+      innervation: 'Nervio supraescapular',
+      origin: 'Fosa infraespinosa de la escápula',
+      insertion: 'Tubérculo mayor del húmero (faceta media)'
+    },
+    motorPoint: {
+      description: 'Fosa infraespinosa, 2–3 cm inferior al borde lateral de la espina escapular',
+      techniqueNotes: [
+        '2 puntos habituales en el vientre',
+        'Confirmar con rotación externa (codo pegado al tronco)',
+        'Útil en patrones de rotación interna espástica como sinergista a tratar selectivamente'
+      ]
+    },
+    dosing: {
+      botox: dosisData.Botox['Infraespinoso'],
+      dysport: dosisData.Dysport['Infraespinoso'],
+      xeomin: dosisData.Botox['Infraespinoso']
+    },
+    indications: ['Hombro Doloroso Espástico', 'Espasticidad de Miembros Superiores'],
+    relatedMuscles: ['supraespinoso', 'redondo-menor', 'subscapularis']
+  },
+  {
+    id: 'romboides',
+    name: 'Romboides',
+    latinName: 'Rhomboids',
+    category: 'upper-limb',
+    region: 'Espalda medial / escápula',
+    anatomy: {
+      function: 'Retracción y rotación inferior de la escápula; estabiliza el borde medial',
+      innervation: 'Nervio dorsal de la escápula',
+      origin: 'Procesos espinosos C7–T5 (menor y mayor)',
+      insertion: 'Borde medial de la escápula'
+    },
+    motorPoint: {
+      description: 'Entre apófisis espinosas T2–T5 y borde medial de la escápula',
+      techniqueNotes: [
+        '2–3 puntos a lo largo del vientre',
+        'Profundidad moderada bajo el trapecio',
+        'Confirmar con retracción escapular'
+      ]
+    },
+    dosing: {
+      botox: dosisData.Botox['Romboides'],
+      dysport: dosisData.Dysport['Romboides'],
+      xeomin: dosisData.Botox['Romboides']
+    },
+    indications: ['Espasticidad de Miembros Superiores', 'Distonía Cervical'],
+    relatedMuscles: ['trapezius', 'levator-scapulae', 'serrato-anterior']
+  },
+  {
+    id: 'serrato-anterior',
+    name: 'Serrato Anterior',
+    latinName: 'Serratus anterior',
+    category: 'upper-limb',
+    region: 'Tórax lateral',
+    anatomy: {
+      function: 'Protracción y rotación superior de la escápula; mantiene la escápula contra el tórax',
+      innervation: 'Nervio torácico largo',
+      origin: 'Caras laterales de las costillas 1–8/9',
+      insertion: 'Borde medial de la escápula (cara anterior)'
+    },
+    motorPoint: {
+      description: 'Cara lateral del tórax a nivel axilar, sobre costillas 2–5',
+      techniqueNotes: [
+        'USG recomendado (proximidad a pleura)',
+        '2–3 puntos en digitaciones medias',
+        'Confirmar con protracción escapular'
+      ]
+    },
+    usgGuidance: {
+      transducerType: 'Lineal 10–12 MHz',
+      view: 'Transversal',
+      landmarks: ['Digitaciones del serrato', 'Costillas', 'Pleura profunda'],
+      approach: 'In-plane superficial a pleura',
+      precautions: ['Riesgo de neumotórax si se profundiza entre costillas']
+    },
+    dosing: {
+      botox: dosisData.Botox['Serrato anterior'],
+      dysport: dosisData.Dysport['Serrato anterior'],
+      xeomin: dosisData.Botox['Serrato anterior']
+    },
+    indications: ['Espasticidad de Miembros Superiores', 'Hombro Doloroso Espástico'],
+    relatedMuscles: ['pectoral-mayor', 'pectoral-menor', 'romboides']
+  },
+  {
+    id: 'pectoral-menor',
+    name: 'Pectoral Menor',
+    latinName: 'Pectoralis minor',
+    category: 'upper-limb',
+    region: 'Tórax anterior',
+    anatomy: {
+      function: 'Depresión, protracción y rotación inferior de la escápula; eleva las costillas en inspiración forzada',
+      innervation: 'Nervio pectoral medial',
+      origin: 'Costillas 3–5 cerca de los cartílagos',
+      insertion: 'Apófisis coracoides de la escápula'
+    },
+    motorPoint: {
+      description: 'Región infraclavicular, 2–3 cm medial a la coracoides, entre 2.ª–3.ª costilla',
+      techniqueNotes: [
+        'USG casi obligatorio (plexo braquial y vasos)',
+        '1–2 puntos',
+        'Útil en patrón de hombro anteriorizado'
+      ]
+    },
+    dosing: {
+      botox: dosisData.Botox['Pectoralis minor'],
+      dysport: dosisData.Dysport['Pectoralis minor'],
+      xeomin: dosisData.Botox['Pectoralis minor']
+    },
+    indications: ['Hombro Doloroso Espástico', 'Espasticidad de Miembros Superiores'],
+    relatedMuscles: ['pectoral-mayor', 'serrato-anterior', 'subscapularis']
+  },
+  {
+    id: 'supinador',
+    name: 'Supinador',
+    latinName: 'Supinator',
+    category: 'upper-limb',
+    region: 'Antebrazo',
+    anatomy: {
+      function: 'Supinación del antebrazo',
+      innervation: 'Nervio radial (rama profunda / interóseo posterior)',
+      origin: 'Epicóndilo lateral, ligamento anular y cresta del supinador del cúbito',
+      insertion: 'Cara proximal lateral del radio'
+    },
+    motorPoint: {
+      description: 'Antebrazo proximal-lateral, 5–6 cm distal al epicóndilo lateral, anterior al ECRL',
+      techniqueNotes: [
+        'USG o EMG recomendados (nervio interóseo posterior atraviesa el músculo)',
+        '1–2 puntos',
+        'Confirmar con supinación contra resistencia'
+      ]
+    },
+    dosing: {
+      botox: dosisData.Botox['Supinador'],
+      dysport: dosisData.Dysport['Supinador'],
+      xeomin: dosisData.Botox['Supinador']
+    },
+    indications: ['Espasticidad de Miembros Superiores'],
+    relatedMuscles: ['biceps-brachii', 'pronator-teres', 'brachioradialis']
+  },
+  {
+    id: 'extensor-digiti-minimi',
+    name: 'Extensor del Meñique',
+    latinName: 'Extensor digiti minimi',
+    category: 'upper-limb',
+    region: 'Antebrazo',
+    anatomy: {
+      function: 'Extensión del 5.º dedo; contribuye a la extensión de muñeca',
+      innervation: 'Nervio radial (rama profunda)',
+      origin: 'Epicóndilo lateral del húmero (origen común de extensores)',
+      insertion: 'Expansión extensora del 5.º dedo'
+    },
+    motorPoint: {
+      description: 'Compartimento posterior, ~6–7 cm distal al epicóndilo lateral, en línea con el meñique',
+      techniqueNotes: [
+        '1–2 puntos',
+        'Separar de EDC con USG si es posible',
+        'Confirmar con extensión aislada del 5.º dedo'
+      ]
+    },
+    dosing: {
+      botox: dosisData.Botox['Extensor digiti minimi'],
+      dysport: dosisData.Dysport['Extensor digiti minimi'],
+      xeomin: dosisData.Botox['Extensor digiti minimi']
+    },
+    indications: ['Espasticidad de Miembros Superiores'],
+    relatedMuscles: ['extensor-digitorum-communis', 'extensor-carpi-ulnar']
+  },
+
+  // ========== TRUNK MUSCLES ==========
+  {
+    id: 'cuadrado-lumbar',
+    name: 'Cuadrado Lumbar',
+    latinName: 'Quadratus lumborum',
+    category: 'trunk',
+    region: 'Lumbar',
+    anatomy: {
+      function: 'Flexión lateral de la columna lumbar e hiperextensión; fija la 12.ª costilla',
+      innervation: 'Nervios espinales T12–L4',
+      origin: 'Cresta ilíaca y ligamento iliolumbar',
+      insertion: '12.ª costilla y procesos transversos L1–L4'
+    },
+    motorPoint: {
+      description: 'Región lumbar posterior, entre cresta ilíaca y 12.ª costilla, ~3–4 cm lateral a L4',
+      techniqueNotes: [
+        'USG o fluoroscopia recomendados',
+        '2–3 puntos a lo largo del vientre',
+        'Riesgo renal/pleural en abordajes altos'
+      ]
+    },
+    usgGuidance: {
+      transducerType: 'Curvo 2–5 MHz o lineal según complexión',
+      view: 'Transversal',
+      landmarks: ['Apófisis transversas', 'Cuadrado lumbar', 'Psoas medial', 'Riñón'],
+      approach: 'In-plane lateral a medial',
+      precautions: ['Evitar riñón y peritoneo']
+    },
+    dosing: {
+      botox: dosisData.Botox['Cuadrado lumbar'],
+      dysport: dosisData.Dysport['Cuadrado lumbar'],
+      xeomin: dosisData.Botox['Cuadrado lumbar']
+    },
+    indications: ['Espasticidad', 'Dolor Lumbar Miofascial'],
+    relatedMuscles: ['psoas-mayor', 'iliaco']
   },
 
   // ========== LOWER LIMB MUSCLES ==========
@@ -1751,7 +2649,63 @@ export const musclesData: MuscleData[] = [
       xeomin: dosisData.Botox['Psoas mayor']
     },
     indications: ['Espasticidad de Miembros Inferiores', 'Flexión de Cadera Espástica'],
-    relatedMuscles: ['rectus-femoris', 'gluteo-medio']
+    relatedMuscles: ['iliaco', 'rectus-femoris', 'gluteo-medio', 'pectineus']
+  },
+  {
+    id: 'iliaco',
+    name: 'Ilíaco',
+    latinName: 'Iliacus',
+    category: 'lower-limb',
+    region: 'Pelvis y muslo proximal',
+    anatomy: {
+      function: 'Flexión de cadera (componente del iliopsoas)',
+      innervation: 'Nervio femoral',
+      origin: 'Fosa ilíaca',
+      insertion: 'Trocánter menor del fémur (tendón común con psoas)'
+    },
+    motorPoint: {
+      description: 'Fosa ilíaca / región inguinal profunda, entre cresta ilíaca y EIAS',
+      techniqueNotes: [
+        'Solo con guía (USG); riesgo vascular y de nervio femoral',
+        'Complementa al psoas en flexión de cadera espástica',
+        '1–2 puntos profundos'
+      ]
+    },
+    dosing: {
+      botox: dosisData.Botox['Ilíaco'],
+      dysport: dosisData.Dysport['Ilíaco'],
+      xeomin: dosisData.Botox['Ilíaco']
+    },
+    indications: ['Espasticidad de Miembros Inferiores', 'Flexión de Cadera Espástica'],
+    relatedMuscles: ['psoas-mayor', 'rectus-femoris', 'pectineus']
+  },
+  {
+    id: 'pectineus',
+    name: 'Pectíneo',
+    latinName: 'Pectineus',
+    category: 'lower-limb',
+    region: 'Muslo medial proximal',
+    anatomy: {
+      function: 'Aducción y flexión de cadera; rotación medial ligera',
+      innervation: 'Nervio femoral (a veces obturador)',
+      origin: 'Pecten del pubis',
+      insertion: 'Línea pectínea del fémur'
+    },
+    motorPoint: {
+      description: 'Muslo proximal-medial, 5–6 cm distal a la sínfisis púbica, inferior al pecten del pubis',
+      techniqueNotes: [
+        '1–2 puntos',
+        'USG útil cerca del triángulo femoral',
+        'Confirmar con flexión-aducción de cadera'
+      ]
+    },
+    dosing: {
+      botox: dosisData.Botox['Pectineus'],
+      dysport: dosisData.Dysport['Pectineus'],
+      xeomin: dosisData.Botox['Pectineus']
+    },
+    indications: ['Espasticidad de Miembros Inferiores', 'Marcha en Tijera'],
+    relatedMuscles: ['adductor-longus', 'adductor-magnus', 'iliaco', 'psoas-mayor']
   },
   {
     id: 'abductor-hallucis',
@@ -1779,7 +2733,91 @@ export const musclesData: MuscleData[] = [
       xeomin: dosisData.Botox['Abductor hallucis']
     },
     indications: ['Espasticidad de Miembros Inferiores', 'Pie Equinovaro', 'Garra del Hallux'],
-    relatedMuscles: ['flexor-hallucis-longus']
+    relatedMuscles: ['flexor-hallucis-longus', 'flexor-hallucis-brevis', 'flexor-digitorum-brevis']
+  },
+  {
+    id: 'flexor-digitorum-brevis',
+    name: 'Flexor Corto de los Dedos',
+    latinName: 'Flexor digitorum brevis',
+    category: 'lower-limb',
+    region: 'Pie plantar',
+    anatomy: {
+      function: 'Flexión de las falanges medias de los dedos 2–5',
+      innervation: 'Nervio medial plantar',
+      origin: 'Tuberosidad del calcáneo y aponeurosis plantar',
+      insertion: 'Falanges medias de los dedos 2–5'
+    },
+    motorPoint: {
+      description: 'Planta media del pie, bajo los metatarsos centrales (2–4)',
+      techniqueNotes: [
+        '1–2 puntos superficiales-moderados',
+        'Útil en garra de dedos',
+        'Evitar pedículos vasculares plantares'
+      ]
+    },
+    dosing: {
+      botox: dosisData.Botox['Flexor digitorum brevis'],
+      dysport: dosisData.Dysport['Flexor digitorum brevis'],
+      xeomin: dosisData.Botox['Flexor digitorum brevis']
+    },
+    indications: ['Espasticidad de Miembros Inferiores', 'Garra de Dedos'],
+    relatedMuscles: ['flexor-digitorum-longus', 'abductor-hallucis', 'flexor-hallucis-brevis']
+  },
+  {
+    id: 'flexor-hallucis-brevis',
+    name: 'Flexor Corto del Hallux',
+    latinName: 'Flexor hallucis brevis',
+    category: 'lower-limb',
+    region: 'Pie medial',
+    anatomy: {
+      function: 'Flexión de la articulación metatarsofalángica del hallux',
+      innervation: 'Nervio medial plantar',
+      origin: 'Cuboides y cuneiformes laterales',
+      insertion: 'Base de la falange proximal del hallux (ambos lados)'
+    },
+    motorPoint: {
+      description: 'Planta medial del antepié, distal a la MTF del hallux / eminencia tenar del hallux',
+      techniqueNotes: [
+        '1–2 puntos',
+        'Complementa FHL en garra del hallux',
+        'Evitar sesamoideos y pedículo medial'
+      ]
+    },
+    dosing: {
+      botox: dosisData.Botox['Flexor hallucis brevis'],
+      dysport: dosisData.Dysport['Flexor hallucis brevis'],
+      xeomin: dosisData.Botox['Flexor hallucis brevis']
+    },
+    indications: ['Espasticidad de Miembros Inferiores', 'Garra del Hallux'],
+    relatedMuscles: ['flexor-hallucis-longus', 'abductor-hallucis']
+  },
+  {
+    id: 'popliteus',
+    name: 'Poplíteo',
+    latinName: 'Popliteus',
+    category: 'lower-limb',
+    region: 'Rodilla posterior',
+    anatomy: {
+      function: 'Desbloquea la rodilla en extensión (rotación interna de la tibia); flexión inicial de rodilla',
+      innervation: 'Nervio tibial',
+      origin: 'Cóndilo femoral lateral y menisco lateral',
+      insertion: 'Cara posterior proximal de la tibia'
+    },
+    motorPoint: {
+      description: 'Fosa poplítea, posterior al epicóndilo femoral lateral, entre gastrocnemio lateral y bíceps femoral',
+      techniqueNotes: [
+        'USG obligatorio (proximidad a vasos poplíteos)',
+        '1 punto; dosis bajas-moderadas',
+        'Confirmar con rotación interna tibial'
+      ]
+    },
+    dosing: {
+      botox: dosisData.Botox['Popliteus'],
+      dysport: dosisData.Dysport['Popliteus'],
+      xeomin: dosisData.Botox['Popliteus']
+    },
+    indications: ['Espasticidad de Miembros Inferiores'],
+    relatedMuscles: ['gastrocnemio-lateral', 'biceps-femoris']
   },
   {
     id: 'rectus-femoris',
@@ -1807,7 +2845,7 @@ export const musclesData: MuscleData[] = [
       xeomin: dosisData.Botox['Rectus femoris (cuádriceps anterior)']
     },
     indications: ['Espasticidad en Extensión (Rodilla Rígida)', 'Espasticidad Pediátrica'],
-    relatedMuscles: ['vastos-cuadriceps', 'tibialis-anterior']
+    relatedMuscles: ['vastos-cuadriceps', 'tibialis-anterior', 'iliaco']
   }
 ];
 
@@ -1816,6 +2854,67 @@ export const musclesData: MuscleData[] = [
  */
 export const getMuscleById = (id: string): MuscleData | undefined => {
   return musclesData.find(m => m.id === id);
+};
+
+/** Resolve calculator / dosisData muscle names to MuscleData (latin or Spanish). */
+export const findMuscleForCalculatorName = (calculatorName: string): MuscleData | undefined => {
+  const n = calculatorName.trim().toLowerCase();
+  if (!n) return undefined;
+
+  const exact =
+    musclesData.find((m) => m.latinName.toLowerCase() === n) ||
+    musclesData.find((m) => m.name.toLowerCase() === n) ||
+    musclesData.find((m) => m.id === n || m.id === n.replace(/\s+/g, '-'));
+  if (exact) return exact;
+
+  const aliases: Record<string, string> = {
+    'gastrocnemio (cabeza medial)': 'gastrocnemio-medial',
+    'gastrocnemio (cabeza lateral)': 'gastrocnemio-lateral',
+    deltoides: 'deltoides',
+    'dorsal ancho': 'dorsal-ancho',
+    'glúteo medio': 'gluteo-medio',
+    'gluteo medio': 'gluteo-medio',
+    'pectoral mayor': 'pectoral-mayor',
+    'pectoral menor': 'pectoral-menor',
+    'pectoralis minor': 'pectoral-menor',
+    'psoas mayor': 'psoas-mayor',
+    sóleo: 'soleus',
+    soleo: 'soleus',
+    esternocleidomastoideo: 'sternocleidomastoid',
+    sternocleidomastoid: 'sternocleidomastoid',
+    'esplenio de la cabeza': 'splenius-capitis',
+    'elevador de la escápula': 'levator-scapulae',
+    'elevador de la escapula': 'levator-scapulae',
+    'pterigoideo medial': 'medial-pterygoid',
+    'pterigoideo lateral': 'lateral-pterygoid',
+    'aductor del pulgar': 'adductor-pollicis',
+    'adductor pollicis': 'adductor-pollicis',
+    'cuadrado lumbar': 'cuadrado-lumbar',
+    ilíaco: 'iliaco',
+    iliaco: 'iliaco',
+    pectíneo: 'pectineus',
+    pectineo: 'pectineus',
+    poplíteo: 'popliteus',
+    popliteo: 'popliteus',
+    supraespinoso: 'supraespinoso',
+    infraespinoso: 'infraespinoso',
+    romboides: 'romboides',
+    'serrato anterior': 'serrato-anterior',
+    'redondo menor': 'redondo-menor',
+    'redondo mayor': 'redondo-mayor',
+  };
+  const aliasId = aliases[n];
+  if (aliasId) {
+    const byAlias = getMuscleById(aliasId);
+    if (byAlias) return byAlias;
+  }
+
+  return musclesData.find(
+    (m) =>
+      m.latinName.toLowerCase().includes(n) ||
+      n.includes(m.latinName.toLowerCase()) ||
+      m.name.toLowerCase().includes(n)
+  );
 };
 
 export const getMusclesByCategory = (category: MuscleData['category']): MuscleData[] => {

@@ -25,7 +25,7 @@ const Navigation: React.FC = () => {
   return (
     <>
       {/* Desktop sidebar */}
-      <aside className="hidden lg:flex fixed left-0 top-0 h-full w-64 flex-col bg-white/95 dark:bg-surface-dark/95 backdrop-blur-xl border-r border-slate-200/50 dark:border-slate-800/50 z-50 shadow-sm">
+      <aside className="hidden lg:flex print:hidden fixed left-0 top-0 h-full w-64 flex-col bg-white/95 dark:bg-surface-dark/95 backdrop-blur-xl border-r border-slate-200/50 dark:border-slate-800/50 z-50 shadow-sm">
         <div className="px-5 py-6 border-b border-slate-100 dark:border-slate-800">
           <p className="text-lg font-bold text-text-main dark:text-white tracking-tight">Toxina</p>
           <p className="text-xs text-text-muted dark:text-slate-400 mt-0.5">Asistente clínico</p>
@@ -79,7 +79,7 @@ const Navigation: React.FC = () => {
       </aside>
 
       {/* Mobile bottom navigation */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white/95 dark:bg-surface-dark/95 backdrop-blur-xl border-t border-slate-200/50 dark:border-slate-800/50 pb-safe pt-2 min-h-[85px] z-50 px-2 shadow-[0_-8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_-8px_30px_rgb(0,0,0,0.2)]">
+      <nav className="lg:hidden print:hidden fixed bottom-0 left-0 right-0 bg-white/95 dark:bg-surface-dark/95 backdrop-blur-xl border-t border-slate-200/50 dark:border-slate-800/50 pb-safe pt-2 min-h-[85px] z-50 px-2 shadow-[0_-8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_-8px_30px_rgb(0,0,0,0.2)]">
         <div className="flex justify-between items-end max-w-lg mx-auto h-full relative">
           {NAV_ITEMS.map((item) => {
             const isActive = isNavActive(location.pathname, item.path);

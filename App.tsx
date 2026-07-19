@@ -240,7 +240,7 @@ const App: React.FC = () => {
         } ${
           effectiveSession &&
           !['/login', '/signup', '/'].includes(location.pathname)
-            ? 'lg:pl-64'
+            ? 'lg:pl-64 print:pl-0'
             : ''
         }`}
       >

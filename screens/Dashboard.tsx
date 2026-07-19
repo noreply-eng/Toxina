@@ -6,6 +6,7 @@ import { getAuthUser } from '../utils/auth';
 import { pathologiesData, PathologyData } from '../data/pathologyData';
 import VisitTypeBadge from '../components/VisitTypeBadge';
 import PageContainer from '../components/PageContainer';
+import FacialPlannerModal from '../components/facial/FacialPlannerModal';
 import {
   fetchUpcoming,
   getPatientFromConsultation,
@@ -32,6 +33,7 @@ const Dashboard: React.FC = () => {
   const [todayDate, setTodayDate] = useState('');
   const [usingCachedData, setUsingCachedData] = useState(false);
   const [cacheUserId, setCacheUserId] = useState<string | undefined>();
+  const [facialPlannerOpen, setFacialPlannerOpen] = useState(false);
   const { lastSyncedAt } = useClinicalCacheMeta(cacheUserId);
 
   useEffect(() => {
@@ -208,6 +210,14 @@ const Dashboard: React.FC = () => {
               <span className="text-xs font-bold">Agendar Cita</span>
             </button>
           </div>
+          <button
+            type="button"
+            onClick={() => setFacialPlannerOpen(true)}
+            className="mt-2 flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 hover:text-primary transition-colors px-1"
+          >
+            <span className="material-symbols-outlined text-base">face</span>
+            Plan facial estético
+          </button>
         </section>
 
         {/* Two-column layout on desktop */}
@@ -398,6 +408,13 @@ const Dashboard: React.FC = () => {
           </section>
         </div>
       </PageContainer>
+
+      <FacialPlannerModal
+        isOpen={facialPlannerOpen}
+        onClose={() => setFacialPlannerOpen(false)}
+        pathologyId="estetica-facial"
+        mode="aesthetic"
+      />
     </div>
   );
 };

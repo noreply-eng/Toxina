@@ -382,3 +382,26 @@ body .text-xs {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Calculator / clinical print: clean page breaks, hide chrome */
+@media print {
+  @page {
+    margin: 12mm;
+  }
+
+  body {
+    background: #fff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .break-before-page {
+    break-before: page;
+    page-break-before: always;
+  }
+
+  .break-inside-avoid {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}

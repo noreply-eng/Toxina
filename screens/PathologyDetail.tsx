@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getPathologyById } from '../data/pathologyData';
+import FacialPlannerModal from '../components/facial/FacialPlannerModal';
 
 const PathologyDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [referencesExpanded, setReferencesExpanded] = useState(false);
+  const [facialPlannerOpen, setFacialPlannerOpen] = useState(false);
 
   const pathology = getPathologyById(id || '');
 
@@ -188,23 +190,43 @@ const PathologyDetail: React.FC = () => {
         </div>
       </div>
 
-      {/* FAB - Go to Calculator with protocol preselected */}
-      <button 
-        onClick={() =>
-          navigate('/calculator', {
-            state: {
-              pathologyId: pathology.id,
-              autoLoadTemplate: true,
-              protocolVariant: 'A',
-              defaultBrand: 'Botox',
-            },
-          })
-        }
-        className="fixed bottom-24 right-6 bg-primary text-white rounded-full size-14 flex items-center justify-center shadow-lg active:scale-95 transition-transform z-30"
-        title="Abrir calculadora con Protocolo A"
-      >
-        <span className="material-symbols-outlined text-2xl">calculate</span>
-      </button>
+      {/* FAB - Calculadora / Planificador facial */}
+      <div className="fixed bottom-24 right-6 flex flex-col gap-3 items-end z-30">
+        {(pathology.id === 'estetica-facial' || pathology.id === 'sincinesias-faciales') && (
+          <button
+            onClick={() => setFacialPlannerOpen(true)}
+            className="bg-pink-600 hover:bg-pink-500 text-white rounded-full px-4 h-12 flex items-center gap-2 shadow-lg active:scale-95 transition-transform"
+            title="Planificador facial estético"
+          >
+            <span className="material-symbols-outlined text-xl">face</span>
+            <span className="text-xs font-bold hidden sm:inline">Plan facial</span>
+          </button>
+        )}
+        <button
+          onClick={() =>
+            navigate('/calculator', {
+              state: {
+                pathologyId: pathology.id,
+                autoLoadTemplate: true,
+                protocolVariant: 'A',
+                defaultBrand: 'Botox',
+              },
+            })
+          }
+          className="bg-primary text-white rounded-full size-14 flex items-center justify-center shadow-lg active:scale-95 transition-transform"
+          title="Abrir calculadora con Protocolo A"
+        >
+          <span className="material-symbols-outlined text-2xl">calculate</span>
+        </button>
+      </div>
+
+      <FacialPlannerModal
+        isOpen={facialPlannerOpen}
+        onClose={() => setFacialPlannerOpen(false)}
+        mode={pathology.id === 'sincinesias-faciales' ? 'asymmetric' : 'aesthetic'}
+        pathologyId={pathology.id}
+        loadPresetOnOpen
+      />
     </div>
   );
 };

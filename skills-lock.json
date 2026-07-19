@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "pwa-expert": {
+      "source": "erichowens/some_claude_skills",
+      "sourceType": "github",
+      "skillPath": ".claude/skills/pwa-expert/SKILL.md",
+      "computedHash": "cbd7e8e72e82504420ece0cb1dd8994cd5909f60d21c9082afccbddf7c528b8b"
+    }
+  }
+}
