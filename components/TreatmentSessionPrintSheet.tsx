@@ -25,7 +25,7 @@ const TreatmentSessionPrintSheet: React.FC<TreatmentSessionPrintSheetProps> = ({
       <header className="tps-header">
         <div>
           <h1>Reporte de Aplicación de Toxina</h1>
-          <p className="tps-subtitle">Sesión archivada — Toxina DLM</p>
+          <p className="tps-subtitle">Sesión archivada — SONOTOX</p>
         </div>
         <div className="tps-header-meta">
           {preferences.includeDate && (

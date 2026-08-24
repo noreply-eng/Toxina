@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import LegalFooterLinks from '../components/LegalFooterLinks';
+import { APP_NAME } from '../constants/brand';
 
 const Signup: React.FC = () => {
   const navigate = useNavigate();
@@ -50,13 +51,21 @@ const Signup: React.FC = () => {
         <span className="material-symbols-outlined absolute -bottom-10 -left-10 text-[350px]">hub</span>
       </div>
 
+      <Link
+        to="/"
+        className="absolute left-4 top-4 z-10 inline-flex min-h-[44px] items-center gap-1 rounded-xl px-2 text-sm font-bold text-slate-500 transition-colors hover:text-primary cursor-pointer focus:outline-none focus-visible:ring-4 focus-visible:ring-primary/30 sm:left-6 sm:top-6"
+      >
+        <span className="material-symbols-outlined text-[18px]" aria-hidden="true">arrow_back</span>
+        Inicio
+      </Link>
+
       <div className="flex flex-col items-center justify-center w-full max-w-sm flex-1 z-10 gap-12">
         <div className="flex flex-col items-center text-center">
           <div className="w-20 h-20 bg-white dark:bg-surface-dark rounded-3xl shadow-xl flex items-center justify-center mb-6 ring-1 ring-slate-100 dark:ring-slate-800">
             <span className="material-symbols-outlined text-primary text-[42px] font-bold">person_add</span>
           </div>
           <h1 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white">Crear Cuenta</h1>
-          <p className="text-text-muted font-bold text-sm mt-1 uppercase tracking-widest">Toxina DLM</p>
+          <p className="text-text-muted font-bold text-sm mt-1 uppercase tracking-widest">{APP_NAME}</p>
         </div>
 
         <form className="w-full space-y-5" onSubmit={handleSignup}>

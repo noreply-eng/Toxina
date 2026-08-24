@@ -1,16 +1,25 @@
 
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import BrandLogo from './BrandLogo';
+import { APP_NAME, APP_TAGLINE } from '../constants/brand';
 
-const NAV_ITEMS = [
+interface NavItem {
+  path: string;
+  icon: string;
+  label: string;
+  isPrimary?: boolean;
+}
+
+const NAV_ITEMS: NavItem[] = [
   { path: '/dashboard', icon: 'home', label: 'Inicio' },
   { path: '/search', icon: 'search', label: 'Pacientes' },
   { path: '/pathologies', icon: 'medical_information', label: 'Patologías' },
   { path: '/calculator', icon: 'calculate', label: 'Calculadora', isPrimary: true },
   { path: '/agenda', icon: 'event', label: 'Agenda' },
-  { path: '/motor-points', icon: 'ads_click', label: 'P. Motor' },
+  { path: '/motor-points', icon: 'accessibility_new', label: 'Músculos' },
   { path: '/settings', icon: 'settings', label: 'Ajustes' },
-] as const;
+];
 
 function isNavActive(pathname: string, path: string): boolean {
   if (pathname === path) return true;
@@ -26,9 +35,12 @@ const Navigation: React.FC = () => {
     <>
       {/* Desktop sidebar */}
       <aside className="hidden lg:flex print:hidden fixed left-0 top-0 h-full w-64 flex-col bg-white/95 dark:bg-surface-dark/95 backdrop-blur-xl border-r border-slate-200/50 dark:border-slate-800/50 z-50 shadow-sm">
-        <div className="px-5 py-6 border-b border-slate-100 dark:border-slate-800">
-          <p className="text-lg font-bold text-text-main dark:text-white tracking-tight">Toxina</p>
-          <p className="text-xs text-text-muted dark:text-slate-400 mt-0.5">Asistente clínico</p>
+        <div className="px-5 py-6 border-b border-slate-100 dark:border-slate-800 flex items-center gap-3">
+          <BrandLogo size={40} rounded="xl" className="shadow-md shrink-0" />
+          <div>
+            <p className="text-lg font-bold text-text-main dark:text-white tracking-tight">{APP_NAME}</p>
+            <p className="text-xs text-text-muted dark:text-slate-400 mt-0.5">{APP_TAGLINE}</p>
+          </div>
         </div>
 
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">

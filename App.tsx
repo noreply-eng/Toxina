@@ -22,6 +22,7 @@ import LegalAcceptance from './screens/LegalAcceptance';
 import LegalDocumentPage from './screens/LegalDocumentPage';
 import PrivacySettings from './screens/PrivacySettings';
 import Landing from './screens/Landing';
+import QuickStart from './screens/QuickStart';
 
 import EditProfile from './screens/EditProfile';
 import EditPatient from './screens/EditPatient';
@@ -61,11 +62,12 @@ const ProtectedLayout = ({ session }: { session: Session | null }) => {
   return <Outlet />;
 };
 
-const PUBLIC_LEGAL_PATHS = ['/aviso-privacidad', '/terminos'];
+const PUBLIC_ALWAYS_PATHS = ['/aviso-privacidad', '/terminos', '/landing'];
+const PUBLIC_SHELL_PATHS = ['/', '/login', '/signup', '/landing', '/aviso-privacidad', '/terminos'];
 
 const PublicLayout = ({ session }: { session: Session | null }) => {
   const location = useLocation();
-  if (session && !PUBLIC_LEGAL_PATHS.includes(location.pathname)) {
+  if (session && !PUBLIC_ALWAYS_PATHS.includes(location.pathname)) {
     return <Navigate to="/dashboard" replace />;
   }
   return <Outlet />;
@@ -236,12 +238,12 @@ const App: React.FC = () => {
       <OfflineBanner />
       <main
         className={`flex-1 min-w-0 overflow-x-hidden ${
-          ['/', '/login', '/signup', '/aviso-privacidad', '/terminos'].includes(location.pathname)
+          PUBLIC_SHELL_PATHS.includes(location.pathname)
             ? 'overflow-y-auto'
             : 'overflow-y-hidden'
         } ${
           effectiveSession &&
-          !['/login', '/signup', '/'].includes(location.pathname)
+          !PUBLIC_SHELL_PATHS.includes(location.pathname)
             ? 'lg:pl-64 print:pl-0'
             : ''
         }`}
@@ -253,7 +255,8 @@ const App: React.FC = () => {
               <Route path="/email-confirmation" element={<EmailConfirmation />} />
               <Route path="/aviso-privacidad" element={<LegalDocumentPage type="privacy" />} />
               <Route path="/terminos" element={<LegalDocumentPage type="terms" />} />
-              <Route path="/" element={<Landing />} />
+              <Route path="/" element={<QuickStart />} />
+              <Route path="/landing" element={<Landing />} />
             </Route>
             
             <Route element={<ProtectedLayout session={effectiveSession} />}>
@@ -296,7 +299,7 @@ const App: React.FC = () => {
       </main>
       
       {effectiveSession &&
-        !['/login', '/signup', '/'].includes(location.pathname) && (
+        !PUBLIC_SHELL_PATHS.includes(location.pathname) && (
         <Navigation />
       )}
       <PWAInstallBanner />

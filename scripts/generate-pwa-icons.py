@@ -7,12 +7,12 @@ from pathlib import Path
 from PIL import Image
 
 ROOT = Path(__file__).resolve().parent.parent
-SRC = ROOT / "public" / "icons" / "icon-source.png"
+SRC = ROOT / "public" / "icons" / "icono-app-sonotox.png"
 ICONS_DIR = ROOT / "public" / "icons"
 SPLASH_DIR = ROOT / "public" / "splash"
 
 THEME_COLOR = "#137fec"
-BACKGROUND_COLOR = "#f6f7f8"
+BACKGROUND_COLOR = "#070b12"
 
 
 def hex_to_rgb(value: str) -> tuple[int, int, int]:
@@ -103,10 +103,9 @@ def main() -> None:
         create_splash(src, width, height).save(out, "PNG", optimize=True)
         print(f"Wrote {out} ({width}x{height})")
 
-    if not SRC.exists():
-        backup = ICONS_DIR / "icon-source.png"
-        src.save(backup, "PNG", optimize=True)
-        print(f"Saved source backup to {backup}")
+    backup = ICONS_DIR / "icon-source.png"
+    src.save(backup, "PNG", optimize=True)
+    print(f"Saved source backup to {backup}")
 
 
 if __name__ == "__main__":

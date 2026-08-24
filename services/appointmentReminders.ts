@@ -60,7 +60,7 @@ function showAppointmentNotification(consultation: Consultation, type: '24h' | '
   });
   const when = type === '24h' ? 'mañana' : 'en 1 hora';
 
-  new Notification('Recordatorio de cita — Toxina DLM', {
+  new Notification('Recordatorio de cita — SONOTOX', {
     body: `${patientName ?? 'Paciente'} — ${consultation.treatment_type ?? 'Consulta'} a las ${time} (${when})`,
     icon: '/icons/icon-192.png',
     tag: `appointment-${consultation.id}-${type}`,

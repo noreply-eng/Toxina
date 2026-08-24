@@ -1,5 +1,6 @@
 import React from 'react';
 import { usePWAInstall } from '../hooks/usePWAInstall';
+import { APP_ICON_SRC, APP_NAME } from '../constants/brand';
 
 const PWAInstallBanner: React.FC = () => {
   const { showBanner, isIOS, isInstallable, install, dismiss } = usePWAInstall();
@@ -24,7 +25,7 @@ const PWAInstallBanner: React.FC = () => {
         {/* Content */}
         <div className="flex items-start gap-4">
           <img
-            src="/icons/icon-192.png"
+            src={APP_ICON_SRC}
             alt=""
             width={56}
             height={56}
@@ -32,7 +33,7 @@ const PWAInstallBanner: React.FC = () => {
           />
           <div className="flex-1 min-w-0 pr-6">
             <h3 className="font-display font-bold text-lg text-text-main dark:text-white leading-snug">
-              Instalar Toxina DLM
+              Instalar {APP_NAME}
             </h3>
             <p className="text-sm text-text-muted dark:text-slate-400 mt-1 leading-relaxed">
               {isIOS

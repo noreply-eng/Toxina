@@ -611,7 +611,7 @@
       <!-- Nota de descargo -->
       <p style="font-size: 12px; color: #777;">
         Nota: Esta herramienta es de apoyo y no sustituye la evaluación clínica ni la revisión de la Drug Label Information de cada producto.
-        Creada por el Dr. Marcos Yocupicio para DeepLuxMed.mx
+        Creada por el Dr. Marcos Yocupicio para SONOTOX
       </p>
     </form>
   </div>
@@ -729,7 +729,7 @@
   <script>
    // ========================================
 // CALCULADORA DE DOSIS DE TOXINA BOTULÍNICA
-// Dr. Marcos Yocupicio - DeepLuxMed.mx
+// Dr. Marcos Yocupicio - SONOTOX
 // Versión 2.0.0 - Script Completo
 // ========================================
 
@@ -1250,7 +1250,7 @@ function generarReporte() {
   // Actualizar nombre del médico en el reporte
   const infoMedicoDiv = document.getElementById('infoMedicoReporte');
   if (infoMedicoDiv) {
-    infoMedicoDiv.innerHTML = `<strong>${medicoInput.value.trim()}</strong><br>DeepLuxMed.mx - Herramienta para cálculo de dosis de toxina botulinica`;
+    infoMedicoDiv.innerHTML = `<strong>${medicoInput.value.trim()}</strong><br>SONOTOX - Herramienta para cálculo de dosis de toxina botulinica`;
   }
   // Actualizar nombre en la firma
   const firmaMedico = document.getElementById('firmaMedicoReporte');
@@ -1430,7 +1430,7 @@ function exportarDatosJSON() {
     },
     medico: {
       nombre: 'Dr. Marcos Yocupicio',
-      clinica: 'DeepLuxMed.mx'
+      clinica: 'SONOTOX'
     }
   };
 
@@ -1919,7 +1919,7 @@ const infoAplicacion = {
   nombre: 'Calculadora de Dosis de Toxina Botulínica',
   version: '2.0.0',
   autor: 'Dr. Marcos Yocupicio',
-  clinica: 'DeepLuxMed.mx',
+  clinica: 'SONOTOX',
   fechaCreacion: '2024',
   fechaActualizacion: new Date().toISOString().split('T')[0],
   caracteristicas: [
@@ -2003,7 +2003,7 @@ ${infoAplicacion.caracteristicas.map(f => `   • ${f}`).join('\n')}
    • Ctrl+Enter: Calcular    • Ctrl+P: Imprimir
    • Ctrl+R: Reiniciar       • Escape: Cerrar mensajes
 
-Para soporte técnico o actualizaciones, contacte: DeepLuxMed.mx
+Para soporte técnico o actualizaciones, contacte: SONOTOX
 `);
   </script>
  </body>

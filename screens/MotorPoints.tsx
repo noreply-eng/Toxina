@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { getMuscleById, MuscleData, USGGuidance } from '../data/muscleData';
+import { getMuscleById, getMuscleIcon, MuscleData, USGGuidance } from '../data/muscleData';
+import MuscleIcon from '../components/MuscleIcon';
 import { fetchMuscleMedia } from '../services/muscleMedia';
 import type { MuscleMedia } from '../types/muscleMedia';
 import { useIsAdmin } from '../hooks/useIsAdmin';
@@ -116,9 +117,12 @@ const MotorPoints: React.FC = () => {
 
       <main className="flex-1 min-w-0 w-full max-w-full overflow-y-auto overflow-x-hidden no-scrollbar">
         <div className="px-5 pt-6 pb-2 min-w-0 max-w-full break-words">
-          <span className="inline-block px-2 py-1 mb-2 text-[10px] font-bold tracking-widest text-primary bg-primary/10 rounded uppercase">
-            {categoryNames[muscle.category]}
-          </span>
+          <div className="flex items-center gap-2 mb-2">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-bold tracking-wider text-primary bg-primary/10 rounded-lg uppercase">
+              <MuscleIcon icon={getMuscleIcon(muscle)} className="text-[15px]" />
+              {categoryNames[muscle.category]}
+            </span>
+          </div>
           <h2 className="text-3xl font-black tracking-tight leading-none mb-1 text-text-main dark:text-white">{muscle.latinName}</h2>
           <h3 className="text-xl font-medium text-text-muted">{muscle.region}</h3>
           <p className="mt-4 text-base font-normal leading-relaxed text-text-muted">

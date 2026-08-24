@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title description">
+  <title id="title">Icono de la aplicacion SONOTOX</title>
+  <desc id="description">Transductor de ultrasonido dorado y nombre SONOTOX sobre fondo oscuro.</desc>
+
+  <rect width="1024" height="1024" fill="#070b12"/>
+
+  <g transform="translate(143 -30) scale(.72)">
+    <g fill="none" stroke="#d4af37" stroke-linecap="round">
+      <path d="M350 230 Q512 96 674 230" stroke-width="28"/>
+      <path d="M389 274 Q512 173 635 274" stroke-width="27"/>
+      <path d="M430 318 Q512 250 594 318" stroke-width="26"/>
+      <circle cx="512" cy="528" r="196" stroke-width="42"/>
+      <path d="M430 778 Q512 846 594 778" stroke-width="26"/>
+      <path d="M389 822 Q512 923 635 822" stroke-width="27"/>
+      <path d="M350 866 Q512 1000 674 866" stroke-width="28"/>
+    </g>
+
+    <path fill="#d4af37" d="M419 354
+      Q512 321 605 354
+      L605 409
+      Q605 445 568 460
+      Q540 472 540 510
+      L540 676
+      Q540 714 524 736
+      L524 790
+      Q524 806 512 806
+      Q500 806 500 790
+      L500 736
+      Q484 714 484 676
+      L484 510
+      Q484 472 456 460
+      Q419 445 419 409
+      Z"/>
+
+    <rect x="495" y="493" width="34" height="78" rx="17" fill="#070b12"/>
+  </g>
+
+  <text x="512" y="900"
+    fill="#2e4f88"
+    font-family="Arial, Helvetica, sans-serif"
+    font-size="128"
+    font-weight="800"
+    letter-spacing="8"
+    text-anchor="middle">SONOTOX</text>
+</svg>

@@ -31,9 +31,9 @@ import { usePrintPreferences } from '../hooks/usePrintPreferences';
 
 import { useCalculatorState, MuscleSelection, Patient } from '../hooks/useCalculatorState';
 import FacialPlannerModal from '../components/facial/FacialPlannerModal';
+import BodyAnatomySelectorModal from '../components/anatomy/BodyAnatomySelectorModal';
 import type { FacialPlanExport } from '../hooks/useFacialPlan';
-
-
+import { MuscleData } from '../data/muscleData';
 
 const Calculator: React.FC = () => {
   const location = useLocation();
@@ -43,6 +43,7 @@ const Calculator: React.FC = () => {
   const pathologyNavHandled = useRef(false);
   const importPlanHandled = useRef(false);
   const [facialPlannerOpen, setFacialPlannerOpen] = useState(false);
+  const [bodyAnatomyModalOpen, setBodyAnatomyModalOpen] = useState(false);
   const [protocolVariant, setProtocolVariant] = useState<ProtocolVariant>('A');
   const [selectedPatternId, setSelectedPatternId] = useState<string>('');
   const [templateLoadMessage, setTemplateLoadMessage] = useState<string | null>(null);
@@ -763,7 +764,7 @@ const Calculator: React.FC = () => {
           <div className="border-b-2 border-slate-900 pb-4 mb-6 flex justify-between items-start">
             <div>
               <h1 className="text-2xl font-bold uppercase tracking-tight">Reporte de Aplicación de Toxina</h1>
-              <p className="text-sm text-slate-500">Documento Clínico - Generado por Toxina App</p>
+              <p className="text-sm text-slate-500">Documento Clínico - Generado por SONOTOX</p>
             </div>
             <div className="text-right">
               <p className="font-bold">{new Date().toLocaleDateString()}</p>
@@ -1209,6 +1210,18 @@ const Calculator: React.FC = () => {
               <div className="w-6 h-6 rounded-full bg-blue-400 text-white flex items-center justify-center text-xs font-bold">3</div>
               <h3 className="font-bold text-slate-800 dark:text-slate-100">Dosis por Músculo</h3>
             </div>
+
+            {/* Quick Anatomical Body Map Button */}
+            <button
+              type="button"
+              onClick={() => setBodyAnatomyModalOpen(true)}
+              disabled={!selectedBrand}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-sky-500/10 hover:bg-sky-500/20 text-sky-600 dark:text-sky-400 border border-sky-500/30 rounded-xl font-bold text-xs transition-all disabled:opacity-50 active:scale-95 cursor-pointer shadow-sm"
+              title="Abrir mapa corporal SVG para seleccionar músculos"
+            >
+              <span className="material-symbols-outlined text-[17px]">accessibility_new</span>
+              <span>Mapa SVG</span>
+            </button>
           </div>
 
           <div className="space-y-4 min-w-0">
@@ -1464,6 +1477,53 @@ const Calculator: React.FC = () => {
         pathologyId={selectedPathology || 'estetica-facial'}
         initialBrand={(selectedBrand as 'Botox' | 'Dysport' | 'Xeomin') || 'Botox'}
         initialDilution={dilution || '2.5'}
+      />
+
+      <BodyAnatomySelectorModal
+        isOpen={bodyAnatomyModalOpen}
+        onClose={() => setBodyAnatomyModalOpen(false)}
+        selectionMode="multi"
+        title="Seleccionar Músculos para Dosificación"
+        onSelectMuscles={(selectedList) => {
+          if (!selectedBrand || selectedList.length === 0) return;
+          const currentBrandDosis = dosisData[selectedBrand] || {};
+          const currentBrandKeys = Object.keys(currentBrandDosis);
+          const timestamp = Date.now();
+          const newMusclesToAdd: MuscleSelection[] = [];
+
+          selectedList.forEach((muscle, idx) => {
+            let matchedName = currentBrandKeys.find(
+              (k) =>
+                k.toLowerCase() === muscle.name.toLowerCase() ||
+                k.toLowerCase() === muscle.latinName.toLowerCase()
+            );
+
+            if (!matchedName) {
+              matchedName = currentBrandKeys.find(
+                (k) =>
+                  k.toLowerCase().includes(muscle.latinName.toLowerCase()) ||
+                  muscle.latinName.toLowerCase().includes(k.toLowerCase())
+              );
+            }
+
+            const finalName = matchedName || muscle.name;
+            const alreadyExists = selectedMuscles.some((m) => m.name === finalName);
+
+            if (!alreadyExists) {
+              newMusclesToAdd.push({
+                id: `${finalName}_Ambos_${timestamp}_${idx}`,
+                name: finalName,
+                side: 'Ambos',
+                doseOption: 'min',
+              });
+            }
+          });
+
+          if (newMusclesToAdd.length > 0) {
+            updateState({ selectedMuscles: [...selectedMuscles, ...newMusclesToAdd] });
+            setIsCalculated(false);
+          }
+        }}
       />
     </div>
   );

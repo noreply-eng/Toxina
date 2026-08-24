@@ -1,5 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { APP_NAME } from '../constants/brand';
 
 const EmailConfirmation: React.FC = () => {
   const navigate = useNavigate();
@@ -45,7 +46,7 @@ const EmailConfirmation: React.FC = () => {
       </div>
       
       <div className="w-full text-center py-6 z-10">
-        <p className="text-text-muted font-bold text-xs uppercase tracking-widest opacity-50">Toxina DLM</p>
+        <p className="text-text-muted font-bold text-xs uppercase tracking-widest opacity-50">{APP_NAME}</p>
       </div>
     </div>
   );

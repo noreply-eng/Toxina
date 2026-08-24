@@ -2940,3 +2940,268 @@ export const getMusclesByIndication = (indication: string): MuscleData[] => {
     m.indications.some(ind => ind.toLowerCase().includes(lowerIndication))
   );
 };
+
+/**
+ * Retorna el ícono Material Symbols representativo de una categoría anatómica.
+ */
+export const getCategoryIcon = (category: MuscleData['category']): string => {
+  const iconMap: Record<MuscleData['category'], string> = {
+    'face': 'face',
+    'neck': 'accessibility',
+    'upper-limb': 'back_hand',
+    'lower-limb': 'directions_walk',
+    'trunk': 'accessibility_new'
+  };
+  return iconMap[category] || 'accessibility_new';
+};
+
+/**
+ * Determina el ícono Material Symbols más específico e intuitivo para cada músculo
+ * según su región anatómica precisa (mano, pie, periocular, brazo, hombro, muslo, etc.).
+ */
+export const getMuscleIcon = (muscle: Pick<MuscleData, 'id' | 'name' | 'category' | 'region'>): string => {
+  const name = (muscle.name || '').toLowerCase();
+  const id = (muscle.id || '').toLowerCase();
+  const reg = (muscle.region || '').toLowerCase();
+  const cat = muscle.category;
+
+  // 1. MANO Y DEDOS DE LA MANO (Mano / Pulgar / Meñique / Lumbricales / Interóseos)
+  if (
+    reg.includes('mano') ||
+    name.includes('pulgar') ||
+    name.includes('meñique') ||
+    name.includes('palmar corto') ||
+    name.includes('oponente') ||
+    name.includes('interóseo dorsal') ||
+    name.includes('interoseo dorsal') ||
+    name.includes('interóseo palmar') ||
+    name.includes('interoseo palmar') ||
+    id.includes('pollicis') ||
+    id.includes('digiti-minimi') ||
+    id.includes('palmaris-brevis') ||
+    (cat === 'upper-limb' && (name.includes('lumbrical') || name.includes('interóseo') || name.includes('interoseo')))
+  ) {
+    return 'back_hand';
+  }
+
+  // 2. PIE, DEDOS DEL PIE Y PLANTA (Foot, toes, plantar, hallux)
+  if (
+    /\bpie\b|\bplanta\b|\bpedio\b|\bhallux\b/i.test(reg) ||
+    name.includes('hallux') ||
+    name.includes('pedio') ||
+    name.includes('dedo gordo') ||
+    name.includes('dedos del pie') ||
+    id.includes('hallucis') ||
+    id.includes('pedis') ||
+    id.includes('plantaris') ||
+    (cat === 'lower-limb' && (name.includes('hallux') || name.includes('plantar')))
+  ) {
+    return 'footprint';
+  }
+
+  // 3. ANTEBRAZO Y MUÑECA (Pronadores, Supinadores, Flexores y Extensores de muñeca)
+  if (
+    reg.includes('antebrazo') ||
+    name.includes('pronador') ||
+    name.includes('supinador') ||
+    name.includes('radial') ||
+    name.includes('cubital') ||
+    name.includes('ulnar') ||
+    name.includes('braquiorradial') ||
+    name.includes('flexor digital') ||
+    name.includes('extensor digital') ||
+    name.includes('flexor profundo') ||
+    name.includes('flexor superficial') ||
+    name.includes('flexor de los dedos') ||
+    name.includes('extensor de los dedos') ||
+    name.includes('extensor del índice') ||
+    id.includes('pronator') ||
+    id.includes('supinator') ||
+    id.includes('carpi') ||
+    id.includes('brachioradialis') ||
+    id.includes('digitorum-profundus') ||
+    id.includes('digitorum-superficialis') ||
+    id.includes('indicis')
+  ) {
+    return 'front_hand';
+  }
+
+  // 4. BRAZO Y CODO (Bíceps, Tríceps, Braquial anterior, Coracobraquial)
+  if (
+    reg.includes('brazo') ||
+    name.includes('bíceps braquial') ||
+    name.includes('biceps braquial') ||
+    name.includes('tríceps braquial') ||
+    name.includes('triceps braquial') ||
+    name.includes('braquial') ||
+    name.includes('coracobraquial') ||
+    name.includes('ancóneo') ||
+    id.includes('biceps-brachii') ||
+    id.includes('triceps-brachii') ||
+    id.includes('brachialis') ||
+    id.includes('coracobrachialis') ||
+    id.includes('anconeus')
+  ) {
+    return 'arm_flex';
+  }
+
+  // 5. HOMBRO Y CINTURA ESCAPULAR (Deltoides, Supraespinoso, Infraespinoso, Subescapular, Redondos, Romboides)
+  if (
+    reg.includes('hombro') ||
+    reg.includes('escapul') ||
+    reg.includes('axila') ||
+    name.includes('deltoides') ||
+    name.includes('supraespinoso') ||
+    name.includes('infraespinoso') ||
+    name.includes('subescapular') ||
+    name.includes('redondo mayor') ||
+    name.includes('redondo menor') ||
+    name.includes('pectoral mayor') ||
+    name.includes('romboides') ||
+    name.includes('elevador de la escápula') ||
+    id.includes('deltoid') ||
+    id.includes('supraspinatus') ||
+    id.includes('infraspinatus') ||
+    id.includes('subscapularis') ||
+    id.includes('teres-') ||
+    id.includes('rhomboideus')
+  ) {
+    return 'sports_gymnastics';
+  }
+
+  // 6. MUSLO, ISQUIOTIBIALES, CUÁDRICEPS, CADERA Y GLÚTEOS (Cuádriceps, Isquiotibiales, Aductores, Psoas, Glúteos)
+  if (
+    reg.includes('muslo') ||
+    reg.includes('cadera') ||
+    reg.includes('pelvis') ||
+    reg.includes('rodilla') ||
+    name.includes('cuádriceps') ||
+    name.includes('cuadriceps') ||
+    name.includes('vasto') ||
+    name.includes('recto femoral') ||
+    name.includes('bíceps femoral') ||
+    name.includes('biceps femoral') ||
+    name.includes('semitendinoso') ||
+    name.includes('semimembranoso') ||
+    name.includes('glúteo') ||
+    name.includes('gluteo') ||
+    name.includes('aductor') ||
+    name.includes('psoas') ||
+    name.includes('ilíaco') ||
+    name.includes('iliaco') ||
+    name.includes('tensor de la fascia') ||
+    name.includes('grácil') ||
+    name.includes('gracil') ||
+    name.includes('sartorio') ||
+    name.includes('piriforme') ||
+    name.includes('poplíteo') ||
+    name.includes('pectíneo') ||
+    id.includes('femur') ||
+    id.includes('femoris') ||
+    id.includes('gluteus') ||
+    id.includes('adductor') ||
+    id.includes('vastus') ||
+    id.includes('semitendinosus') ||
+    id.includes('semimembranosus') ||
+    id.includes('popliteus')
+  ) {
+    return 'directions_run';
+  }
+
+  // 7. PIERNA, PANTORRILLA Y TOBILLO (Gastrocnemios, Sóleo, Tibiales, Peroneos)
+  if (
+    reg.includes('pierna') ||
+    name.includes('gastrocnemio') ||
+    name.includes('gemelos') ||
+    name.includes('sóleo') ||
+    name.includes('soleo') ||
+    name.includes('tibial') ||
+    name.includes('peroneo') ||
+    name.includes('fibular') ||
+    id.includes('gastrocnemius') ||
+    id.includes('soleus') ||
+    id.includes('tibialis') ||
+    id.includes('peroneus') ||
+    id.includes('fibularis')
+  ) {
+    return 'directions_walk';
+  }
+
+  // 8. CARA - OJOS / PERIOCULAR / FRENTE / GLABELA (Orbicular de los ojos, Corrugador, Prócer, Frontal)
+  if (
+    reg.includes('periocular') ||
+    reg.includes('frente') ||
+    reg.includes('glabela') ||
+    name.includes('orbicular de los ojos') ||
+    name.includes('corrugador') ||
+    name.includes('prócer') ||
+    name.includes('procer') ||
+    name.includes('frontal') ||
+    name.includes('ceja') ||
+    id.includes('oculi') ||
+    id.includes('frontalis') ||
+    id.includes('corrugator') ||
+    id.includes('procerus')
+  ) {
+    return 'visibility';
+  }
+
+  // 9. CARA - BOCA / MANDÍBULA / MASTICACIÓN / MEJILLA / NARIZ
+  if (
+    cat === 'face' ||
+    reg.includes('mandíbula') ||
+    reg.includes('perioral') ||
+    reg.includes('mentón') ||
+    reg.includes('mejilla') ||
+    reg.includes('sien') ||
+    reg.includes('nariz') ||
+    reg.includes('tercio medio') ||
+    name.includes('masetero') ||
+    name.includes('temporal') ||
+    name.includes('pterigoideo') ||
+    name.includes('buccinador') ||
+    name.includes('orbicular de los labios') ||
+    name.includes('mentoniano') ||
+    name.includes('cigomático') ||
+    name.includes('risorio') ||
+    name.includes('depresor') ||
+    name.includes('elevador') ||
+    name.includes('nasal')
+  ) {
+    return 'face';
+  }
+
+  // 10. CUELLO (ECM, Esplenio, Escalenos, Trapecio superior, Semiespinoso, Paraespinales)
+  if (
+    cat === 'neck' ||
+    reg.includes('cuello') ||
+    name.includes('esternocleidomastoideo') ||
+    name.includes('ecm') ||
+    name.includes('esplenio') ||
+    name.includes('escaleno') ||
+    name.includes('trapecio') ||
+    name.includes('semiespinoso') ||
+    name.includes('platisma')
+  ) {
+    return 'accessibility';
+  }
+
+  // 11. TRONCO / ESPALDA / TÓRAX (Pectoral, Dorsal, Abdominales, Lumbar, Serrato)
+  if (
+    cat === 'trunk' ||
+    reg.includes('tórax') ||
+    reg.includes('lumbar') ||
+    reg.includes('espalda') ||
+    name.includes('pectoral') ||
+    name.includes('recto abdominal') ||
+    name.includes('oblicuo') ||
+    name.includes('serrato') ||
+    name.includes('paravertebral') ||
+    name.includes('cuadrado lumbar') ||
+    name.includes('dorsal ancho')
+  ) {
+    return 'accessibility_new';
+  }
+
+  return 'accessibility_new';
+};

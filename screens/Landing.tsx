@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import BrandLogo from '../components/BrandLogo';
 import ConsentCheckbox from '../components/ConsentCheckbox';
+import { APP_NAME, APP_TAGLINE } from '../constants/brand';
 import { LEGAL_DOCUMENT_META, ARCO_CONTACT_EMAIL } from '../constants/legalVersions';
 
 const MODULES = [
@@ -77,20 +79,24 @@ const Landing: React.FC = () => {
       >
         <nav className="flex items-center justify-between gap-4 px-5 py-3.5">
           <a href="#inicio" className="flex items-center gap-2.5 group cursor-pointer">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#0891B2] text-white shadow-md shadow-[#0891B2]/25 transition-colors group-hover:bg-[#0e7490]">
-              <span className="material-symbols-outlined text-[20px]">vaccines</span>
-            </div>
+            <BrandLogo size={36} rounded="xl" className="shadow-md shadow-slate-900/10" />
             <div className="leading-tight">
               <span className="block font-landing-display text-sm font-bold tracking-tight text-slate-900">
-                DeepLux Med
+                {APP_NAME}
               </span>
               <span className="block text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                Toxina DLM
+                {APP_TAGLINE}
               </span>
             </div>
           </a>
 
           <div className="hidden items-center gap-6 md:flex">
+            <Link
+              to="/"
+              className="text-sm font-medium text-slate-600 transition-colors hover:text-[#0891B2] cursor-pointer"
+            >
+              Inicio
+            </Link>
             <a
               href="#formacion"
               className="text-sm font-medium text-slate-600 transition-colors hover:text-[#0891B2] cursor-pointer"
@@ -214,7 +220,7 @@ const Landing: React.FC = () => {
                   <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-inner">
                     <img
                       src="/landing/reporte-aplicacion-toxina.png"
-                      alt="Reporte de aplicación de toxina botulínica generado por Toxina DLM, con dosis por músculo, volumen en ml y total aplicado"
+                      alt={`Reporte de aplicación de toxina botulínica generado por ${APP_NAME}, con dosis por músculo, volumen en ml y total aplicado`}
                       className="w-full h-auto object-contain"
                       loading="eager"
                     />
@@ -258,7 +264,7 @@ const Landing: React.FC = () => {
                     Herramienta de apoyo para residentes en formación
                   </h2>
                   <p className="mt-4 text-slate-600 leading-relaxed">
-                    Toxina DLM también tiene fines educativos: consulta de anatomía funcional,
+                    {APP_NAME} también tiene fines educativos: consulta de anatomía funcional,
                     protocolos por patología y práctica guiada en el cálculo de dosis — siempre bajo
                     supervisión del médico adscrito y con fines formativos, no terapéuticos autónomos.
                   </p>
@@ -477,13 +483,11 @@ const Landing: React.FC = () => {
           <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-3">
             <div>
               <div className="mb-4 flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#0891B2] text-white">
-                  <span className="material-symbols-outlined text-[18px]">vaccines</span>
-                </div>
-                <span className="font-landing-display font-bold text-slate-900">DeepLux Med</span>
+                <BrandLogo size={32} rounded="lg" className="shadow-sm" />
+                <span className="font-landing-display font-bold text-slate-900">{APP_NAME}</span>
               </div>
               <p className="text-sm leading-relaxed text-slate-600">
-                Plataforma Toxina DLM — soporte tecnológico para investigación clínica, formación de
+                Plataforma {APP_NAME} — soporte tecnológico para investigación clínica, formación de
                 residentes y registro en toxina botulínica. Uso gratuito en fase Beta.
               </p>
             </div>
@@ -519,7 +523,7 @@ const Landing: React.FC = () => {
               <address className="not-italic text-sm leading-relaxed text-slate-600">
                 <strong className="text-slate-800">Juan Marcos Yocupicio Robles</strong>
                 <br />
-                Marca comercial: DeepLux Med / Toxina DLM
+                Marca comercial: {APP_NAME}
                 <br />
                 Calle 34 x 41, No. 439, Col. Industrial
                 <br />
@@ -537,7 +541,7 @@ const Landing: React.FC = () => {
 
           <div className="mt-10 rounded-xl border border-slate-200 bg-slate-50 p-5">
             <p className="text-xs leading-relaxed text-slate-600">
-              <strong className="text-slate-800">Leyenda de no suministro:</strong> DeepLux no
+              <strong className="text-slate-800">Leyenda de no suministro:</strong> {APP_NAME} no
               comercializa, distribuye ni prescribe sustancias farmacológicas ni toxinas botulínicas de
               ninguna marca comercial. La app es estrictamente un soporte de información en salud,
               proporcionada &ldquo;tal cual&rdquo; (as-is) durante su periodo de prueba de
@@ -546,7 +550,7 @@ const Landing: React.FC = () => {
           </div>
 
           <p className="mt-8 text-center text-xs text-slate-400">
-            © {new Date().getFullYear()} DeepLux Med · Toxina DLM · Todos los derechos reservados
+            © {new Date().getFullYear()} {APP_NAME} · Todos los derechos reservados
           </p>
         </div>
       </footer>

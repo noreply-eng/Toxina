@@ -6,12 +6,12 @@
 
 **Responsable del tratamiento:** Juan Marcos Yocupicio Robles  
 **Domicilio:** Calle 34 x 41, No. 439, Colonia Industrial, C.P. 97150, Mérida, Yucatán, México  
-**Marca comercial:** DeepLux Med / Toxina DLM  
-**Correo de contacto para privacidad:** privacidad@deeplux.org
+**Marca comercial:** SONOTOX  
+**Correo de contacto para privacidad:** jmyocupicior@gmail.com
 
 ## II. Roles en el tratamiento de datos
 
-DeepLux Med opera la plataforma Toxina DLM como **encargado del tratamiento** respecto a los expedientes clínicos que el profesional de la salud aloja en la aplicación.
+El responsable opera la plataforma SONOTOX como **encargado del tratamiento** respecto a los expedientes clínicos que el profesional de la salud aloja en la aplicación.
 
 El **médico usuario** actúa como **responsable del tratamiento** frente a los datos personales de sus pacientes que ingresa, registra o gestiona mediante la plataforma, y es quien debe contar con la base legal correspondiente (incluido el consentimiento informado del paciente) antes de cargar datos sensibles.
 
@@ -102,13 +102,13 @@ Usted puede ejercer en cualquier momento sus derechos de **Acceso, Rectificació
 **Canales para ejercer derechos ARCO:**
 
 1. Módulo de Privacidad dentro de la aplicación (Configuración > Privacidad).
-2. Correo electrónico: privacidad@deeplux.org
+2. Correo electrónico: jmyocupicior@gmail.com
 
 Responderemos su solicitud en un plazo máximo de **20 días hábiles** contados desde su recepción, prorrogables por 20 días hábiles más cuando proceda, conforme a la LFPDPPP.
 
 ## XI. Revocación del consentimiento
 
-Puede revocar su consentimiento en cualquier momento mediante el módulo de Privacidad o enviando solicitud a privacidad@deeplux.org.
+Puede revocar su consentimiento en cualquier momento mediante el módulo de Privacidad o enviando solicitud a jmyocupicior@gmail.com.
 
 La revocación puede implicar la imposibilidad de continuar utilizando la plataforma y la cancelación de su cuenta. Los datos podrán conservarse únicamente durante el plazo necesario para cumplir obligaciones legales o resolver controversias.
 

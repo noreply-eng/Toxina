@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import LegalAcceptanceForm from '../components/LegalAcceptanceForm';
 import LegalFooterLinks from '../components/LegalFooterLinks';
+import { APP_NAME } from '../constants/brand';
 import {
   CURRENT_PRIVACY_VERSION,
   CURRENT_TERMS_VERSION,
@@ -107,7 +108,7 @@ const LegalAcceptance: React.FC = () => {
             {mode === 'reconsent' ? 'Actualización legal' : 'Consentimiento legal'}
           </h1>
           <p className="text-sm text-text-muted mt-2 max-w-sm mx-auto">
-            Antes de utilizar Toxina DLM debe aceptar los términos de uso y otorgar su
+            Antes de utilizar {APP_NAME} debe aceptar los términos de uso y otorgar su
             consentimiento expreso para el tratamiento de datos personales sensibles.
           </p>
         </div>
