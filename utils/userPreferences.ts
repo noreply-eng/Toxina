@@ -23,7 +23,7 @@ export const DEFAULT_USER_PREFERENCES: UserPreferences = {
   default_dose_option: 'min',
   default_dilution: '2.5',
   language: 'es',
-  dark_mode: false,
+  dark_mode: true,
   appointment_reminders: true,
   default_appointment_duration: 30,
 };

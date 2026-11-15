@@ -34,6 +34,16 @@ import FacialPlannerModal from '../components/facial/FacialPlannerModal';
 import BodyAnatomySelectorModal from '../components/anatomy/BodyAnatomySelectorModal';
 import type { FacialPlanExport } from '../hooks/useFacialPlan';
 import { MuscleData } from '../data/muscleData';
+import { convertMusclesForBrand } from '../utils/toxinConversion';
+
+function formatDoseValue(value: number): string {
+  if (!Number.isFinite(value)) return '';
+  return String(Math.round(value * 100) / 100);
+}
+
+function roundDose(value: number): number {
+  return Math.round(value * 100) / 100;
+}
 
 const Calculator: React.FC = () => {
   const location = useLocation();
@@ -47,6 +57,8 @@ const Calculator: React.FC = () => {
   const [protocolVariant, setProtocolVariant] = useState<ProtocolVariant>('A');
   const [selectedPatternId, setSelectedPatternId] = useState<string>('');
   const [templateLoadMessage, setTemplateLoadMessage] = useState<string | null>(null);
+  const [brandConversionMessage, setBrandConversionMessage] = useState<string | null>(null);
+  const [doseDrafts, setDoseDrafts] = useState<Record<string, string>>({});
 
   // Step 1: Configuration
   // Step 1: Configuration & State
@@ -614,7 +626,45 @@ const Calculator: React.FC = () => {
     setIsCalculated(false);
   };
 
+  const handleBrandChange = (newBrand: string) => {
+    const oldBrand = selectedBrand as ToxinBrand | '';
+
+    if (!newBrand) {
+      updateState({ selectedBrand: '', selectedMuscles: [] });
+      setIsCalculated(false);
+      setTotalUnits(0);
+      setBrandConversionMessage(null);
+      setDoseDrafts({});
+      return;
+    }
+
+    const toBrand = newBrand as ToxinBrand;
+
+    if (!oldBrand || oldBrand === toBrand || selectedMuscles.length === 0) {
+      updateState({ selectedBrand: toBrand });
+      setBrandConversionMessage(null);
+      if (oldBrand && oldBrand !== toBrand) {
+        setIsCalculated(false);
+        setTotalUnits(0);
+      }
+      return;
+    }
+
+    const { muscles, message } = convertMusclesForBrand(
+      selectedMuscles,
+      oldBrand as ToxinBrand,
+      toBrand
+    );
+
+    updateState({ selectedBrand: toBrand, selectedMuscles: muscles });
+    setIsCalculated(false);
+    setTotalUnits(0);
+    setDoseDrafts({});
+    setBrandConversionMessage(message);
+  };
+
   const handleDoseOptionChange = (id: string, option: 'min' | 'max') => {
+    clearDoseDraft(id);
     updateState({ 
         selectedMuscles: selectedMuscles.map(m => 
             m.id === id ? { ...m, doseOption: option, customDose: undefined } : m
@@ -626,9 +676,41 @@ const Calculator: React.FC = () => {
   const handleCustomDoseChange = (id: string, dose: number) => {
      updateState({
         selectedMuscles: selectedMuscles.map(m => 
-            m.id === id ? { ...m, customDose: dose } : m
+            m.id === id ? { ...m, customDose: roundDose(dose) } : m
         )
      });
+  };
+
+  const clearDoseDraft = (id: string) => {
+    setDoseDrafts((prev) => {
+      if (!(id in prev)) return prev;
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+  };
+
+  const stepCustomDose = (id: string, current: number, delta: number) => {
+    const drafted = doseDrafts[id];
+    const base = drafted !== undefined && drafted !== '' && drafted !== '.'
+      ? Number(drafted.replace(',', '.'))
+      : current;
+    const safe = Number.isFinite(base) ? base : current;
+    clearDoseDraft(id);
+    handleCustomDoseChange(id, Math.max(0, safe + delta));
+  };
+
+  const commitDoseDraft = (id: string, raw: string) => {
+    const normalized = raw.trim().replace(',', '.');
+    clearDoseDraft(id);
+    if (normalized === '' || normalized === '.') {
+      handleCustomDoseChange(id, 0);
+      return;
+    }
+    const parsed = Number(normalized);
+    if (Number.isFinite(parsed) && parsed >= 0) {
+      handleCustomDoseChange(id, parsed);
+    }
   };
 
   const calculateTotal = () => {
@@ -638,7 +720,7 @@ const Calculator: React.FC = () => {
     const updatedMuscles = selectedMuscles.map(m => {
         const range = dosisData[selectedBrand][m.name];
         const baseDose = m.doseOption === 'min' ? range.min : range.max;
-        const adjustedDose = Math.round(baseDose * adjustmentFactor);
+        const adjustedDose = roundDose(baseDose * adjustmentFactor);
         
         // Use custom dose if set, otherwise calculated adjusted dose
         const finalDose = m.customDose !== undefined ? m.customDose : adjustedDose;
@@ -649,8 +731,10 @@ const Calculator: React.FC = () => {
     });
 
     updateState({ selectedMuscles: updatedMuscles });
-    setTotalUnits(total);
+    setDoseDrafts({});
+    setTotalUnits(roundDose(total));
     setIsCalculated(true);
+    setBrandConversionMessage(null);
 
     // Reveal post-calc actions in the scroll flow (no longer stacked in the fixed bar)
     requestAnimationFrame(() => {
@@ -938,13 +1022,16 @@ const Calculator: React.FC = () => {
         )}
       </div>
 
-      <main className="flex-1 px-4 py-6 space-y-6 overflow-x-hidden overflow-y-auto no-scrollbar print:hidden pb-36 lg:pb-28 max-w-3xl mx-auto w-full">
-        <div className="text-center mb-6">
-          <h2 className="text-2xl font-extrabold text-slate-800 dark:text-white leading-tight">
-            Cálculo de Dosis <br/><span className="text-primary">Toxina Botulínica</span>
+      <main className="flex-1 px-4 md:px-6 py-6 md:py-8 space-y-6 overflow-x-hidden overflow-y-auto no-scrollbar print:hidden pb-36 lg:pb-28 max-w-3xl md:max-w-6xl lg:max-w-7xl mx-auto w-full">
+        <div className="text-center md:text-left mb-2 md:mb-1">
+          <h2 className="text-2xl md:text-3xl font-extrabold text-slate-800 dark:text-white leading-tight">
+            Cálculo de Dosis{' '}
+            <br className="md:hidden" />
+            <span className="text-primary">Toxina Botulínica</span>
           </h2>
         </div>
 
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
         {/* Step 1: Config */}
         <section className="bg-white dark:bg-surface-dark p-5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 space-y-5 relative">
           <div className="absolute top-0 left-0 w-1.5 h-full bg-primary rounded-l-2xl"></div>
@@ -964,11 +1051,7 @@ const Calculator: React.FC = () => {
                 <span className="material-icons-round absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xl">branding_watermark</span>
                 <select 
                   value={selectedBrand}
-                  onChange={(e) => {
-                    const newBrand = e.target.value as any;
-                    updateState({ selectedBrand: newBrand, selectedMuscles: [] });
-                    setIsCalculated(false);
-                  }}
+                  onChange={(e) => handleBrandChange(e.target.value)}
                   className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border-none rounded-xl focus:ring-2 focus:ring-primary/50 text-slate-800 dark:text-slate-100 appearance-none font-medium"
                 >
                   <option value="">Seleccione una marca</option>
@@ -978,6 +1061,11 @@ const Calculator: React.FC = () => {
                 </select>
                 <span className="material-icons-round absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">expand_more</span>
               </div>
+              {brandConversionMessage && (
+                <p className="text-xs text-amber-800 dark:text-amber-200 bg-amber-50 dark:bg-amber-950/40 border border-amber-200/60 dark:border-amber-800/40 rounded-lg px-3 py-2 leading-relaxed break-words">
+                  {brandConversionMessage}
+                </p>
+              )}
             </div>
             
             {/* Dilution */}
@@ -1113,6 +1201,7 @@ const Calculator: React.FC = () => {
             </div>
           </div>
         </section>
+        </div>
 
         {/* Pathology Template Auto-Fill */}
         {/* ... (template section stays similar, maybe add icons) ... */}
@@ -1226,8 +1315,8 @@ const Calculator: React.FC = () => {
 
           <div className="space-y-4 min-w-0">
             {/* Muscle Adder */}
-            <div className="flex flex-col gap-3">
-                <div className="relative min-w-0">
+            <div className="flex flex-col lg:flex-row lg:items-center gap-3">
+                <div className="relative min-w-0 lg:flex-1">
                     <select 
                         value={selectedMuscleName}
                         onChange={(e) => setSelectedMuscleName(e.target.value)}
@@ -1241,7 +1330,7 @@ const Calculator: React.FC = () => {
                     </select>
                 </div>
                 
-                <div className="grid grid-cols-[7.5rem_1fr] gap-2">
+                <div className="grid grid-cols-[7.5rem_1fr] lg:grid-cols-[9rem_11rem] gap-2 lg:shrink-0">
                      <select 
                         value={selectedSide}
                         onChange={(e) => setSelectedSide(e.target.value as any)}
@@ -1262,13 +1351,14 @@ const Calculator: React.FC = () => {
             </div>
 
             {/* List of Selected Muscles */}
-            <div className="space-y-3 mt-4">
+            <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-3">
                 {selectedMuscles.map((muscle) => {
                      const range = selectedBrand ? dosisData[selectedBrand][muscle.name] : { min: 0, max: 0 };
                      const motorPoint = puntosMotoresData[muscle.name];
                       const baseDose = muscle.doseOption === 'min' ? range.min : range.max;
-                      const adjusted = Math.round(baseDose * adjustmentFactor);
+                      const adjusted = roundDose(baseDose * adjustmentFactor);
                       const displayDose = muscle.customDose !== undefined ? muscle.customDose : adjusted;
+                      const doseFieldValue = doseDrafts[muscle.id] ?? formatDoseValue(displayDose);
                      
                     return (
                     <div key={muscle.id} className="bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-800 p-4 pr-10 relative group min-w-0">
@@ -1308,26 +1398,39 @@ const Calculator: React.FC = () => {
                         </div>
                         
                         <div className="flex flex-wrap items-center gap-3">
-                            <span className="text-sm font-medium text-slate-500 dark:text-slate-400">Dosis:</span>
-                            <div className="flex items-center gap-1">
+                            <span className="text-sm font-semibold text-slate-500 dark:text-slate-400">Dosis</span>
+                            <div className="flex items-center gap-2">
                                 <button 
                                     type="button"
-                                    onClick={() => handleCustomDoseChange(muscle.id, Math.max(1, displayDose - 1))}
-                                    className="w-8 h-8 flex items-center justify-center bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 hover:bg-slate-100 text-slate-600"
-                                >-</button>
+                                    onClick={() => stepCustomDose(muscle.id, displayDose, -0.5)}
+                                    className="w-11 h-11 flex items-center justify-center bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 text-slate-700 dark:text-slate-200 text-xl font-medium"
+                                    aria-label="Restar 0.5 unidades"
+                                >−</button>
                                 <input 
-                                    type="number"
-                                    value={displayDose}
-                                    onChange={(e) => handleCustomDoseChange(muscle.id, parseInt(e.target.value) || 0)}
-                                    className="w-16 text-center bg-transparent border-b border-slate-300 focus:border-primary focus:outline-none font-bold text-lg text-slate-800 dark:text-white"
+                                    type="text"
+                                    inputMode="decimal"
+                                    value={doseFieldValue}
+                                    onChange={(e) => {
+                                      const raw = e.target.value.replace(',', '.');
+                                      if (raw === '' || /^\d*\.?\d{0,2}$/.test(raw)) {
+                                        setDoseDrafts((prev) => ({ ...prev, [muscle.id]: raw }));
+                                      }
+                                    }}
+                                    onBlur={(e) => commitDoseDraft(muscle.id, e.target.value)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur();
+                                    }}
+                                    aria-label={`Dosis de ${muscle.name}`}
+                                    className="w-28 sm:w-32 h-12 text-center bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/40 focus:outline-none font-bold text-2xl tabular-nums text-slate-900 dark:text-white"
                                 />
                                 <button 
                                     type="button"
-                                     onClick={() => handleCustomDoseChange(muscle.id, displayDose + 1)}
-                                    className="w-8 h-8 flex items-center justify-center bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 hover:bg-slate-100 text-slate-600"
+                                    onClick={() => stepCustomDose(muscle.id, displayDose, 0.5)}
+                                    className="w-11 h-11 flex items-center justify-center bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 text-slate-700 dark:text-slate-200 text-xl font-medium"
+                                    aria-label="Sumar 0.5 unidades"
                                 >+</button>
                             </div>
-                            <span className="font-bold text-slate-800 dark:text-white">U</span>
+                            <span className="text-base font-bold text-slate-800 dark:text-white">U</span>
                         </div>
 
                          {motorPoint && (
@@ -1359,7 +1462,7 @@ const Calculator: React.FC = () => {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
               <button
                 type="button"
                 onClick={copySummaryToClipboard}
@@ -1425,7 +1528,7 @@ const Calculator: React.FC = () => {
 
       {/* Sticky calculate CTA — stays compact so it never covers muscle cards */}
       <div className="fixed bottom-[85px] lg:bottom-4 left-0 lg:left-64 right-0 z-40 px-4 print:hidden pointer-events-none">
-        <div className="max-w-3xl mx-auto pointer-events-auto">
+        <div className="max-w-3xl md:max-w-6xl lg:max-w-7xl mx-auto pointer-events-auto">
           <button
             type="button"
             onClick={calculateTotal}

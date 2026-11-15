@@ -75,7 +75,8 @@ const PublicLayout = ({ session }: { session: Session | null }) => {
 
 const App: React.FC = () => {
   const [isDarkMode, setIsDarkMode] = useState(() => {
-    return localStorage.getItem('dark_mode') === 'true';
+    const saved = localStorage.getItem('dark_mode');
+    return saved !== null ? saved === 'true' : true;
   });
   const [session, setSession] = useState<Session | null>(null);
   const [offlineSession, setOfflineSession] = useState<Session | null>(null);
