@@ -62,6 +62,8 @@ import {
 // Lazy-loaded privileged portals (never bundled in initial client chunk)
 const AdminMedia = lazy(() => import('./screens/AdminMedia'));
 const AdminMuscleMediaEditor = lazy(() => import('./screens/AdminMuscleMediaEditor'));
+const AdminPathologies = lazy(() => import('./screens/AdminPathologies'));
+const AdminPathologyEditor = lazy(() => import('./screens/AdminPathologyEditor'));
 const SuperAdminDashboard = lazy(
   () => import('./features/super-admin/pages/SuperAdminDashboard')
 );
@@ -288,6 +290,8 @@ const AppShell: React.FC<AppShellProps> = ({
                 <Route element={<RequireSuperAdmin />}>
                   <Route path="/admin/media" element={<AdminMedia />} />
                   <Route path="/admin/media/:muscleId" element={<AdminMuscleMediaEditor />} />
+                  <Route path="/admin/pathologies" element={<AdminPathologies />} />
+                  <Route path="/admin/pathologies/:pathologyId" element={<AdminPathologyEditor />} />
                 </Route>
                 <Route
                   path="/settings"

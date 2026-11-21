@@ -6,6 +6,7 @@
 import { dosisData } from '../constants/toxinData';
 
 export type ProtocolVariant = 'A' | 'B' | 'C';
+export type ToxinBrand = 'Botox' | 'Dysport' | 'Xeomin';
 
 /** Patrón clínico de deformidad (p. ej. espasticidad de miembro superior/inferior). */
 export interface SpasticityPattern {
@@ -25,6 +26,8 @@ export interface PathologyProtocol {
   protocolVariant?: ProtocolVariant;
   /** Patrón de deformidad al que pertenece el músculo (p. ej. 'pie-equinovaro'). */
   pattern?: string;
+  /** Dosis sugeridas personalizadas por marca (opcional; si se omite, se calcula desde `dose`). */
+  brandDoses?: Partial<Record<ToxinBrand, number>>;
 }
 
 /** Línea de tiempo de acción de la toxina para una indicación. */
@@ -658,15 +661,99 @@ export const pathologyClinicalSafety: Record<
 export const getPathologySafety = (
   pathologyId: string
 ): { contraindications: string[]; adverseEffects: string[] } => {
+  const current = pathologiesData.find((p) => p.id === pathologyId);
   const specific = pathologyClinicalSafety[pathologyId];
+  const customContra =
+    current?.contraindications !== undefined
+      ? current.contraindications
+      : specific?.contraindications ?? [];
+  const customAdverse =
+    current?.adverseEffects && current.adverseEffects.length > 0
+      ? current.adverseEffects
+      : specific?.adverseEffects ?? GENERAL_BONT_ADVERSE_EFFECTS;
+
+  const combinedContra = Array.from(
+    new Set([...GENERAL_BONT_CONTRAINDICATIONS, ...customContra.filter(Boolean)])
+  );
+
   return {
-    contraindications: [
-      ...GENERAL_BONT_CONTRAINDICATIONS,
-      ...(specific?.contraindications ?? []),
-    ],
-    adverseEffects: specific?.adverseEffects ?? GENERAL_BONT_ADVERSE_EFFECTS,
+    contraindications: combinedContra,
+    adverseEffects: customAdverse,
   };
 };
+
+export const PATHOLOGY_OVERRIDES_STORAGE_KEY = 'sonotox_pathology_overrides_v1';
+export const PATHOLOGIES_UPDATED_EVENT = 'sonotox:pathologies-updated';
+
+function clonePathology(p: PathologyData): PathologyData {
+  return JSON.parse(JSON.stringify(p)) as PathologyData;
+}
+
+/** Snapshot inmutable de las 12 patologías base con su seguridad clínica específica integrada. */
+export const DEFAULT_PATHOLOGIES_DATA: PathologyData[] = pathologiesData.map((p) => {
+  const copy = clonePathology(p);
+  const specific = pathologyClinicalSafety[copy.id];
+  if (!copy.contraindications) {
+    copy.contraindications = [...(specific?.contraindications ?? [])];
+  }
+  if (!copy.adverseEffects) {
+    copy.adverseEffects = [...(specific?.adverseEffects ?? GENERAL_BONT_ADVERSE_EFFECTS)];
+  }
+  return copy;
+});
+
+export const getDefaultPathologyById = (id: string): PathologyData | undefined => {
+  const found = DEFAULT_PATHOLOGIES_DATA.find((p) => p.id === id);
+  return found ? clonePathology(found) : undefined;
+};
+
+/**
+ * Aplica en memoria las personalizaciones del administrador sobre `pathologiesData`
+ * manteniendo la misma referencia de arreglo para todos los módulos consumidores.
+ */
+export const applyPathologyOverrides = (
+  overridesMap: Record<string, PathologyData>
+): PathologyData[] => {
+  const seen = new Set<string>();
+  const merged: PathologyData[] = [];
+
+  DEFAULT_PATHOLOGIES_DATA.forEach((base) => {
+    seen.add(base.id);
+    const override = overridesMap[base.id];
+    if (override) {
+      merged.push(clonePathology({ ...base, ...override, id: base.id }));
+    } else {
+      merged.push(clonePathology(base));
+    }
+  });
+
+  Object.values(overridesMap).forEach((custom) => {
+    if (custom && custom.id && !seen.has(custom.id)) {
+      seen.add(custom.id);
+      merged.push(clonePathology(custom));
+    }
+  });
+
+  pathologiesData.splice(0, pathologiesData.length, ...merged);
+  return pathologiesData;
+};
+
+// Hidratar inmediatamente desde localStorage si existen protocolos editados en caché
+try {
+  if (typeof window !== 'undefined' && window.localStorage) {
+    const raw = window.localStorage.getItem(PATHOLOGY_OVERRIDES_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw) as Record<string, PathologyData>;
+      if (parsed && typeof parsed === 'object') {
+        applyPathologyOverrides(parsed);
+      }
+    } else {
+      applyPathologyOverrides({});
+    }
+  }
+} catch {
+  // Ignorar errores de acceso a localStorage
+}
 
 /**
  * Funciones auxiliares para la gestión de datos.
@@ -687,7 +774,7 @@ export const getPathologyProtocolVariants = (pathologyId: string): ProtocolVaria
 
 /** Extrae rango o dosis fija en unidades Ona/Xeomin desde texto del protocolo. */
 export const parseProtocolDoseOna = (doseText: string): { min?: number; max?: number; fixed?: number } => {
-  const normalized = doseText.replace(/,/g, '.');
+  const normalized = (doseText || '').replace(/,/g, '.');
   const rangeMatch = normalized.match(/(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)/);
   if (rangeMatch) {
     return { min: parseFloat(rangeMatch[1]), max: parseFloat(rangeMatch[2]) };
@@ -701,10 +788,8 @@ export const parseProtocolDoseOna = (doseText: string): { min?: number; max?: nu
 
 const ONA_TO_DYSPORT_RATIO = 2.5;
 
-export type ToxinBrand = 'Botox' | 'Dysport' | 'Xeomin';
-
-/** Convierte dosis del protocolo (Ona) a U sugeridas para la marca seleccionada. */
-export const resolveProtocolSuggestedDose = (
+/** Calcula automáticamente las U sugeridas para una marca a partir del texto `dose` y `dosisData`. */
+export const resolveProtocolAutoSuggestedDose = (
   protocol: PathologyProtocol,
   brand: ToxinBrand
 ): { customDose: number; doseOption: 'min' | 'max' } => {
@@ -740,6 +825,18 @@ export const resolveProtocolSuggestedDose = (
     return { customDose: brandRange.min, doseOption: 'min' };
   }
   return { customDose: 0, doseOption: 'min' };
+};
+
+/** Convierte dosis del protocolo a U sugeridas para la marca seleccionada (respetando override manual si existe). */
+export const resolveProtocolSuggestedDose = (
+  protocol: PathologyProtocol,
+  brand: ToxinBrand
+): { customDose: number; doseOption: 'min' | 'max' } => {
+  const manualBrandDose = protocol.brandDoses?.[brand];
+  if (typeof manualBrandDose === 'number' && Number.isFinite(manualBrandDose) && manualBrandDose >= 0) {
+    return { customDose: Math.round(manualBrandDose), doseOption: 'min' };
+  }
+  return resolveProtocolAutoSuggestedDose(protocol, brand);
 };
 
 /** Patrones de deformidad definidos para una patología (p. ej. espasticidad). */

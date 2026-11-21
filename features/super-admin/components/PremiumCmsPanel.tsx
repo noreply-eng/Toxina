@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { musclesData } from '../../../data/muscleData';
+import { usePathologies } from '../../../hooks/usePathologies';
 import {
   deleteClinicalPearl,
   deleteProcedureVideo,
@@ -14,7 +15,8 @@ import {
 
 const PremiumCmsPanel: React.FC = () => {
   const navigate = useNavigate();
-  const [subTab, setSubTab] = useState<'media' | 'pearls' | 'videos'>('media');
+  const { pathologies, isCustomized } = usePathologies();
+  const [subTab, setSubTab] = useState<'protocols' | 'media' | 'pearls' | 'videos'>('protocols');
   const [pearls, setPearls] = useState<MuscleClinicalPearl[]>([]);
   const [videos, setVideos] = useState<ProcedureVideo[]>([]);
   const [loading, setLoading] = useState(false);
@@ -39,7 +41,7 @@ const PremiumCmsPanel: React.FC = () => {
     finally { setLoading(false); }
   }, []);
 
-  useEffect(() => { if (subTab !== 'media') load(); }, [subTab, load]);
+  useEffect(() => { if (subTab === 'pearls' || subTab === 'videos') load(); }, [subTab, load]);
 
   const handleAddPearl = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,11 +65,12 @@ const PremiumCmsPanel: React.FC = () => {
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2">
         {[
+          { id: 'protocols', label: 'Protocolos por Patología', icon: 'medical_information' },
           { id: 'media', label: 'Imágenes Punto Motor y USG', icon: 'photo_library' },
           { id: 'pearls', label: 'Perlas Clínicas Premium', icon: 'lightbulb' },
           { id: 'videos', label: 'Videos de Procedimientos', icon: 'video_library' },
         ].map((t) => (
-          <button key={t.id} type="button" onClick={() => setSubTab(t.id as any)} className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 ${subTab === t.id ? 'bg-primary text-white' : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800'}`}>
+          <button key={t.id} type="button" onClick={() => setSubTab(t.id as any)} className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer ${subTab === t.id ? 'bg-primary text-white' : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800'}`}>
             <span className="material-symbols-outlined text-base">{t.icon}</span>{t.label}
           </button>
         ))}
@@ -75,6 +78,82 @@ const PremiumCmsPanel: React.FC = () => {
       {error && (
         <div className="rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800/70 p-3 text-xs font-bold text-red-700 dark:text-red-300">
           {error}
+        </div>
+      )}
+      {subTab === 'protocols' && (
+        <div className="space-y-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h4 className="font-black text-base">Editor de Protocolos de Patologías ({pathologies.length} patologías)</h4>
+              <p className="text-xs text-slate-500 mt-1">
+                Edita músculos, dosis sugeridas por marca (Botox, Dysport, Xeomin), patrones de espasticidad, variantes A/B/C, línea de tiempo y seguridad clínica.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => navigate('/admin/pathologies/new')}
+                className="px-4 py-2.5 rounded-xl bg-slate-900 dark:bg-slate-800 text-white text-xs font-black flex items-center gap-1.5 cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-base">add_circle</span>
+                Nueva Patología
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate('/admin/pathologies')}
+                className="px-5 py-2.5 rounded-xl bg-primary text-white text-xs font-black flex items-center gap-2 cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-base">open_in_new</span>
+                Abrir Gestor Completo
+              </button>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 divide-y divide-slate-100 dark:divide-slate-800">
+            {pathologies.map((pat) => {
+              const custom = isCustomized(pat.id);
+              return (
+                <div
+                  key={pat.id}
+                  className="p-4 flex flex-wrap items-center justify-between gap-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="font-bold text-sm">{pat.title}</p>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                        {pat.protocols.length} músculo{pat.protocols.length === 1 ? '' : 's'}
+                      </span>
+                      {custom && (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
+                          Editado por Admin
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-500 truncate mt-0.5">
+                      {pat.subtitle} · Toxina: {pat.suggestedToxin}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/pathology/${pat.id}`)}
+                      className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs font-bold hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer"
+                    >
+                      Ver Ficha
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/admin/pathologies/${pat.id}`)}
+                      className="px-3.5 py-1.5 rounded-xl bg-primary text-white text-xs font-bold flex items-center gap-1 cursor-pointer"
+                    >
+                      <span className="material-symbols-outlined text-sm">edit</span>
+                      Editar Protocolo
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
       {subTab === 'media' && (

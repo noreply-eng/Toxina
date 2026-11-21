@@ -7,7 +7,6 @@ import ScheduleConsultationModal from '../components/ScheduleConsultationModal';
 import { getSuggestedFollowUpDate, toLocalDatetimeValue } from '../utils/followUpIntervals';
 import { dosisData, puntosMotoresData } from '../constants/toxinData';
 import {
-  pathologiesData,
   getPathologyTemplate,
   getPathologyProtocolVariants,
   getPathologyPatterns,
@@ -16,6 +15,7 @@ import {
   type ProtocolVariant,
   type ToxinBrand,
 } from '../data/pathologyData';
+import { usePathologies } from '../hooks/usePathologies';
 import { findMuscleForCalculatorName } from '../data/muscleData';
 import {
   ANATOMY_IMAGE_FRAME,
@@ -53,6 +53,7 @@ function roundDose(value: number): number {
 const Calculator: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { pathologies: pathologiesData } = usePathologies();
   const { can } = useEntitlements();
   const canSaveTreatment = can('treatments.persist');
   const canViewAnatomy = can('guides.anatomy');
@@ -381,17 +382,17 @@ const Calculator: React.FC = () => {
   const pathologyTitle = useMemo(() => {
     if (!selectedPathology) return '';
     return getPathologyById(selectedPathology)?.title ?? selectedPathology;
-  }, [selectedPathology]);
+  }, [selectedPathology, pathologiesData]);
 
   const protocolVariants = useMemo(() => {
     if (!selectedPathology) return [] as ProtocolVariant[];
     return getPathologyProtocolVariants(selectedPathology);
-  }, [selectedPathology]);
+  }, [selectedPathology, pathologiesData]);
 
   const pathologyPatterns = useMemo(() => {
     if (!selectedPathology) return [];
     return getPathologyPatterns(selectedPathology);
-  }, [selectedPathology]);
+  }, [selectedPathology, pathologiesData]);
 
   const handleLoadPathologyTemplate = useCallback(
     (options?: { replace?: boolean; variant?: ProtocolVariant; patternId?: string }) => {

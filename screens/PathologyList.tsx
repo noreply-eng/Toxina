@@ -1,11 +1,13 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { pathologiesData, PathologyData } from '../data/pathologyData';
+import { PathologyData } from '../data/pathologyData';
 import {
   getFavoritePathologies,
   getRecentPathologies,
   toggleFavoritePathology,
 } from '../utils/pathologyPrefs';
+import { useIsAdmin } from '../hooks/useIsAdmin';
+import { usePathologies } from '../hooks/usePathologies';
 
 // Placeholder profesional (SVG en data URI) para imágenes que fallan al cargar.
 const IMAGE_PLACEHOLDER =
@@ -36,6 +38,8 @@ const CATEGORY_ORDER: CategoryKey[] = ['neurological', 'autonomic', 'urological'
 
 const PathologyList: React.FC = () => {
   const navigate = useNavigate();
+  const { isAdmin } = useIsAdmin();
+  const { pathologies: pathologiesData, isCustomized } = usePathologies();
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   const [categoryFilter, setCategoryFilter] = useState<CategoryKey | 'all'>('all');
@@ -55,11 +59,11 @@ const PathologyList: React.FC = () => {
   const showQuickAccess = !searchQuery.trim() && categoryFilter === 'all';
   const favoritePathologies = useMemo(
     () => favorites.map((id) => pathologiesData.find((p) => p.id === id)).filter(Boolean) as PathologyData[],
-    [favorites]
+    [favorites, pathologiesData]
   );
   const recentPathologies = useMemo(
     () => recents.map((id) => pathologiesData.find((p) => p.id === id)).filter(Boolean) as PathologyData[],
-    [recents]
+    [recents, pathologiesData]
   );
 
   const filteredPathologies = useMemo(() => {
@@ -81,7 +85,7 @@ const PathologyList: React.FC = () => {
     }
 
     return result;
-  }, [searchQuery, categoryFilter]);
+  }, [searchQuery, categoryFilter, pathologiesData]);
 
   // Group by clinical category (real categories, ordered)
   const categories = useMemo<Record<string, PathologyData[]>>(() => {
@@ -109,7 +113,7 @@ const PathologyList: React.FC = () => {
     };
     pathologiesData.forEach(p => { counts[p.category] += 1; });
     return counts;
-  }, []);
+  }, [pathologiesData]);
 
   return (
     <div className="flex flex-col min-h-screen bg-background-light dark:bg-background-dark">
@@ -122,12 +126,23 @@ const PathologyList: React.FC = () => {
           >
             <span className="material-symbols-outlined">arrow_back</span>
           </button>
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             <h1 className="text-xl font-bold tracking-tight text-text-main dark:text-white">
               Patologías
             </h1>
             <p className="text-xs text-text-muted">{filteredPathologies.length} patologías disponibles</p>
           </div>
+          {isAdmin && (
+            <button
+              type="button"
+              onClick={() => navigate('/admin/pathologies')}
+              className="px-3 py-2 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
+              title="Gestionar todos los protocolos de patologías"
+            >
+              <span className="material-symbols-outlined text-[18px]">edit_note</span>
+              <span className="hidden sm:inline">Editar Protocolos</span>
+            </button>
+          )}
           {/* View toggle */}
           <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 rounded-lg p-1">
             <button
@@ -301,6 +316,19 @@ const PathologyList: React.FC = () => {
                               {favorites.includes(path.id) ? 'star' : 'star_border'}
                             </span>
                           </button>
+                          {isAdmin && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/admin/pathologies/${path.id}`);
+                              }}
+                              className="absolute top-2 left-2 size-8 rounded-full bg-primary/90 backdrop-blur-sm flex items-center justify-center text-white hover:bg-primary transition-colors shadow"
+                              title="Editar protocolo (Admin)"
+                            >
+                              <span className="material-symbols-outlined text-[16px]">edit</span>
+                            </button>
+                          )}
                         </div>
                         {/* Content */}
                         <div className="p-3">
@@ -336,11 +364,31 @@ const PathologyList: React.FC = () => {
                           />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="font-bold text-sm text-text-main dark:text-white truncate">{path.title}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="font-bold text-sm text-text-main dark:text-white truncate">{path.title}</p>
+                            {isAdmin && isCustomized(path.id) && (
+                              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 shrink-0">
+                                Editado
+                              </span>
+                            )}
+                          </div>
                           <p className="text-xs text-text-muted truncate mt-0.5">{path.subtitle}</p>
                           <p className="text-xs text-slate-400 truncate mt-1">{path.description}</p>
                         </div>
                         <div className="flex items-center gap-1 flex-shrink-0">
+                          {isAdmin && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/admin/pathologies/${path.id}`);
+                              }}
+                              className="size-8 rounded-full flex items-center justify-center text-primary hover:bg-primary/10 transition-colors cursor-pointer"
+                              title="Editar protocolo (Admin)"
+                            >
+                              <span className="material-symbols-outlined text-[18px]">edit</span>
+                            </button>
+                          )}
                           <button
                             onClick={(e) => handleToggleFavorite(e, path.id)}
                             className="size-8 rounded-full flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"

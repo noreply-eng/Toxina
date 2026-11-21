@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  getPathologyById,
   getPathologyPatterns,
   getPathologyProtocolVariants,
   getPathologySafety,
@@ -13,6 +12,8 @@ import {
 import { findMuscleForCalculatorName } from '../data/muscleData';
 import { addRecentPathology } from '../utils/pathologyPrefs';
 import FacialPlannerModal from '../components/facial/FacialPlannerModal';
+import { useIsAdmin } from '../hooks/useIsAdmin';
+import { usePathology } from '../hooks/usePathologies';
 
 const BRANDS: ToxinBrand[] = ['Botox', 'Dysport', 'Xeomin'];
 
@@ -30,8 +31,8 @@ const PathologyDetail: React.FC = () => {
   const [safetyExpanded, setSafetyExpanded] = useState(false);
   const [facialPlannerOpen, setFacialPlannerOpen] = useState(false);
   const [shareMsg, setShareMsg] = useState<string | null>(null);
-
-  const pathology = getPathologyById(id || '');
+  const { isAdmin } = useIsAdmin();
+  const { pathology, isCustomized } = usePathology(id);
 
   const variants = useMemo(
     () => (pathology ? getPathologyProtocolVariants(pathology.id) : []),
@@ -160,6 +161,17 @@ const PathologyDetail: React.FC = () => {
           {pathology.title}
         </h1>
         <div className="flex items-center gap-1">
+          {isAdmin && (
+            <button
+              type="button"
+              onClick={() => navigate(`/admin/pathologies/${pathology.id}`)}
+              className="flex items-center gap-1 px-3 h-9 rounded-full bg-primary/10 hover:bg-primary/20 text-primary text-xs font-bold transition-colors print:hidden cursor-pointer mr-1"
+              title="Editar protocolo de esta patología (Admin)"
+            >
+              <span className="material-symbols-outlined text-[18px]">edit</span>
+              <span className="hidden sm:inline">Editar protocolo</span>
+            </button>
+          )}
           <button
             onClick={handleShare}
             className="flex size-10 items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors print:hidden"
@@ -195,11 +207,17 @@ const PathologyDetail: React.FC = () => {
       {/* Content */}
       <div className="px-4 -mt-6 relative z-10">
         {/* Category Badge */}
-        <div className="flex items-center gap-2 mb-4">
+        <div className="flex items-center gap-2 mb-4 flex-wrap">
           <span className={`${categoryColors[pathology.category]} text-white text-xs font-bold px-3 py-1 rounded-full`}>
             {categoryLabels[pathology.category]}
           </span>
           <span className="text-text-muted dark:text-slate-400 text-sm">{pathology.subtitle}</span>
+          {isAdmin && isCustomized && (
+            <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 flex items-center gap-1">
+              <span className="material-symbols-outlined text-[12px]">verified</span>
+              Protocolo Personalizado
+            </span>
+          )}
         </div>
 
         {/* Description */}
@@ -258,25 +276,37 @@ const PathologyDetail: React.FC = () => {
 
         {/* Dosage Protocol */}
         <div className="bg-white dark:bg-surface-dark rounded-2xl p-5 shadow-sm border border-slate-100 dark:border-slate-800 mb-4">
-          <div className="flex items-center justify-between mb-4 gap-2">
+          <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
             <h2 className="text-base font-bold text-text-main dark:text-white">Protocolo de Dosificación</h2>
-            {variants.length > 1 && (
-              <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 rounded-lg p-1">
-                {variants.map((v) => (
-                  <button
-                    key={v}
-                    onClick={() => setSelectedVariant(v)}
-                    className={`px-3 py-1 rounded-md text-xs font-bold transition-colors ${
-                      selectedVariant === v
-                        ? 'bg-white dark:bg-slate-700 shadow-sm text-primary'
-                        : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
-                    }`}
-                  >
-                    {v}
-                  </button>
-                ))}
-              </div>
-            )}
+            <div className="flex items-center gap-2">
+              {variants.length > 1 && (
+                <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 rounded-lg p-1">
+                  {variants.map((v) => (
+                    <button
+                      key={v}
+                      onClick={() => setSelectedVariant(v)}
+                      className={`px-3 py-1 rounded-md text-xs font-bold transition-colors ${
+                        selectedVariant === v
+                          ? 'bg-white dark:bg-slate-700 shadow-sm text-primary'
+                          : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                      }`}
+                    >
+                      {v}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={() => navigate(`/admin/pathologies/${pathology.id}`)}
+                  className="px-3 py-1.5 rounded-lg bg-primary text-white text-xs font-bold flex items-center gap-1 shadow-sm hover:bg-primary-dark transition-colors print:hidden cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[15px]">edit</span>
+                  <span>Editar protocolo</span>
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Selector de patrón (espasticidad) */}

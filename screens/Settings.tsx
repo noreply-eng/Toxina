@@ -38,6 +38,7 @@ const SETTINGS_ROUTES: Record<string, string> = {
   lang: '/language',
   agenda: '/appointment-settings',
   'admin-media': '/admin/media',
+  'admin-pathologies': '/admin/pathologies',
   'super-admin': '/super-admin',
   enterprise: '/enterprise',
 };
@@ -249,6 +250,13 @@ const Settings: React.FC<SettingsProps> = ({ toggleDarkMode, isDarkMode }) => {
                 name: 'Panel SuperAdmin',
                 sub: 'Usuarios, clínicas, planes, cobros, Enterprise y CMS',
                 icon: 'admin_panel_settings',
+                type: 'link',
+              },
+              {
+                id: 'admin-pathologies',
+                name: 'Protocolos por Patología',
+                sub: 'Editar dosis, músculos, patrones y fichas clínicas',
+                icon: 'medical_information',
                 type: 'link',
               },
               {
