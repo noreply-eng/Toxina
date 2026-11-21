@@ -29,8 +29,11 @@ export type SideMode = 'izq' | 'ambos' | 'der';
 export type PointDepth = 'superficial' | 'profundo';
 export type RiskType = 'ptosisCeja' | 'sonrisa' | 'disfagia';
 
-/** Imagen de atlas anatómico (fondo del planificador) */
+/** Imagen de atlas anatómico frontal (fondo del planificador) */
 export const FACIAL_ANATOMY_IMAGE = '/facial/anatomy-base.png';
+
+/** Imagen de atlas anatómico posterior (occipital, paravertebrales, esplenio, ECOM y trapecio) */
+export const FACIAL_POSTERIOR_ANATOMY_IMAGE = '/facial/anatomy-posterior-base.png';
 
 /** Región de la imagen dentro del viewBox (ajusta alineación atlas ↔ paths) */
 export const ANATOMY_IMAGE_FRAME = {
@@ -565,7 +568,8 @@ export const FACIAL_MUSCLES: FacialMuscleConfig[] = [
     ],
   },
 
-  // ==================== VISTA POSTERIOR / PREEMPT (OCCIPITAL, PARAVERTEBRALES, TRAPECIO) ====================
+  // ==================== VISTA POSTERIOR / PREEMPT & DISTONÍA CERVICAL ====================
+  // Calibrados sobre /facial/anatomy-posterior-base.png (viewBox 0 0 400 500)
   // En vista posterior: Izquierda de pantalla (X < 200) = Izquierda del paciente (side: 'izq')
   //                     Derecha de pantalla (X > 200) = Derecha del paciente (side: 'der')
   {
@@ -577,15 +581,15 @@ export const FACIAL_MUSCLES: FacialMuscleConfig[] = [
     layer: 'superficial',
     maxDoseAesthetic: 60,
     svgPath:
-      'M118,162 C136,144 172,140 194,154 C196,178 194,202 186,216 C162,220 132,212 116,196 C110,184 112,170 118,162 Z M282,162 C264,144 228,140 206,154 C204,178 206,202 214,216 C238,220 268,212 284,196 C290,184 288,170 282,162 Z',
-    bbox: { minX: 112, minY: 142, maxX: 288, maxY: 220 },
+      'M102,154 C122,140 156,136 180,136 C188,158 192,188 188,232 C164,230 134,225 114,222 C100,204 98,176 102,154 Z M298,154 C278,140 244,136 220,136 C212,158 208,188 212,232 C236,230 266,225 286,222 C300,204 302,176 298,154 Z',
+    bbox: { minX: 98, minY: 136, maxX: 302, maxY: 232 },
     defaultPoints: [
-      { x: 174, y: 196, doseOna: 5, depth: 'superficial', side: 'izq' },
-      { x: 152, y: 178, doseOna: 5, depth: 'superficial', side: 'izq' },
-      { x: 134, y: 194, doseOna: 5, depth: 'superficial', side: 'izq' },
-      { x: 226, y: 196, doseOna: 5, depth: 'superficial', side: 'der' },
-      { x: 248, y: 178, doseOna: 5, depth: 'superficial', side: 'der' },
-      { x: 266, y: 194, doseOna: 5, depth: 'superficial', side: 'der' },
+      { x: 168, y: 202, doseOna: 5, depth: 'superficial', side: 'izq' },
+      { x: 146, y: 176, doseOna: 5, depth: 'superficial', side: 'izq' },
+      { x: 122, y: 196, doseOna: 5, depth: 'superficial', side: 'izq' },
+      { x: 232, y: 202, doseOna: 5, depth: 'superficial', side: 'der' },
+      { x: 254, y: 176, doseOna: 5, depth: 'superficial', side: 'der' },
+      { x: 278, y: 196, doseOna: 5, depth: 'superficial', side: 'der' },
     ],
   },
   {
@@ -597,13 +601,49 @@ export const FACIAL_MUSCLES: FacialMuscleConfig[] = [
     layer: 'profundo',
     maxDoseAesthetic: 40,
     svgPath:
-      'M162,232 C174,226 190,228 194,240 C196,276 194,316 188,344 C174,346 162,336 160,316 C158,286 158,252 162,232 Z M238,232 C226,226 210,228 206,240 C204,276 206,316 212,344 C226,346 238,336 240,316 C242,286 242,252 238,232 Z',
-    bbox: { minX: 158, minY: 226, maxX: 242, maxY: 346 },
+      'M134,228 C154,230 174,234 186,244 C193,274 193,314 186,348 C180,366 172,378 164,386 C146,382 132,374 126,364 C136,324 138,274 134,228 Z M266,228 C246,230 226,234 214,244 C207,274 207,314 214,348 C220,366 228,378 236,386 C254,382 268,374 274,364 C264,324 262,274 266,228 Z',
+    bbox: { minX: 126, minY: 228, maxX: 274, maxY: 386 },
     defaultPoints: [
-      { x: 178, y: 264, doseOna: 5, depth: 'profundo', side: 'izq' },
-      { x: 176, y: 304, doseOna: 5, depth: 'profundo', side: 'izq' },
-      { x: 222, y: 264, doseOna: 5, depth: 'profundo', side: 'der' },
-      { x: 224, y: 304, doseOna: 5, depth: 'profundo', side: 'der' },
+      { x: 168, y: 272, doseOna: 5, depth: 'profundo', side: 'izq' },
+      { x: 166, y: 318, doseOna: 5, depth: 'profundo', side: 'izq' },
+      { x: 232, y: 272, doseOna: 5, depth: 'profundo', side: 'der' },
+      { x: 234, y: 318, doseOna: 5, depth: 'profundo', side: 'der' },
+    ],
+  },
+  {
+    id: 'splenius-capitis',
+    muscleKey: 'Esplenio de la cabeza',
+    name: 'Esplenio de la Cabeza',
+    zone: 'cuello',
+    view: 'back',
+    layer: 'profundo',
+    maxDoseAesthetic: 80,
+    svgPath:
+      'M132,240 C138,266 136,310 126,352 C118,344 114,322 116,294 C118,268 124,248 132,240 Z M268,240 C262,266 264,310 274,352 C282,344 286,322 284,294 C282,268 276,248 268,240 Z',
+    bbox: { minX: 114, minY: 240, maxX: 286, maxY: 352 },
+    defaultPoints: [
+      { x: 126, y: 286, doseOna: 10, depth: 'profundo', side: 'izq' },
+      { x: 124, y: 322, doseOna: 10, depth: 'profundo', side: 'izq' },
+      { x: 274, y: 286, doseOna: 10, depth: 'profundo', side: 'der' },
+      { x: 276, y: 322, doseOna: 10, depth: 'profundo', side: 'der' },
+    ],
+  },
+  {
+    id: 'sternocleidomastoid-posterior',
+    muscleKey: 'Esternocleidomastoideo',
+    name: 'ECOM (Inserción Mastoidea)',
+    zone: 'cuello',
+    view: 'back',
+    layer: 'superficial',
+    maxDoseAesthetic: 50,
+    svgPath:
+      'M100,224 C112,222 124,228 128,238 C120,270 116,308 114,344 C106,330 100,294 98,256 C98,240 98,230 100,224 Z M300,224 C288,222 276,228 272,238 C280,270 284,308 286,344 C294,330 300,294 302,256 C302,240 302,230 300,224 Z',
+    bbox: { minX: 98, minY: 222, maxX: 302, maxY: 344 },
+    defaultPoints: [
+      { x: 111, y: 264, doseOna: 10, depth: 'profundo', side: 'izq' },
+      { x: 112, y: 302, doseOna: 10, depth: 'profundo', side: 'izq' },
+      { x: 289, y: 264, doseOna: 10, depth: 'profundo', side: 'der' },
+      { x: 288, y: 302, doseOna: 10, depth: 'profundo', side: 'der' },
     ],
   },
   {
@@ -615,15 +655,15 @@ export const FACIAL_MUSCLES: FacialMuscleConfig[] = [
     layer: 'superficial',
     maxDoseAesthetic: 60,
     svgPath:
-      'M154,320 C168,336 186,356 194,380 C194,412 192,444 188,468 C144,456 92,442 46,424 C74,394 122,356 154,320 Z M246,320 C232,336 214,356 206,380 C206,412 208,444 212,468 C256,456 308,442 354,424 C326,394 278,356 246,320 Z',
-    bbox: { minX: 46, minY: 320, maxX: 354, maxY: 468 },
+      'M116,368 C134,380 156,390 178,396 C192,404 196,438 196,492 L152,492 C122,460 80,446 32,446 C66,422 98,398 116,368 Z M284,368 C266,380 244,390 222,396 C208,404 204,438 204,492 L248,492 C278,460 320,446 368,446 C334,422 302,398 284,368 Z',
+    bbox: { minX: 32, minY: 368, maxX: 368, maxY: 492 },
     defaultPoints: [
-      { x: 148, y: 374, doseOna: 5, depth: 'superficial', side: 'izq' },
-      { x: 116, y: 396, doseOna: 5, depth: 'superficial', side: 'izq' },
-      { x: 84, y: 416, doseOna: 5, depth: 'superficial', side: 'izq' },
-      { x: 252, y: 374, doseOna: 5, depth: 'superficial', side: 'der' },
-      { x: 284, y: 396, doseOna: 5, depth: 'superficial', side: 'der' },
-      { x: 316, y: 416, doseOna: 5, depth: 'superficial', side: 'der' },
+      { x: 158, y: 416, doseOna: 5, depth: 'superficial', side: 'izq' },
+      { x: 124, y: 424, doseOna: 5, depth: 'superficial', side: 'izq' },
+      { x: 88, y: 434, doseOna: 5, depth: 'superficial', side: 'izq' },
+      { x: 242, y: 416, doseOna: 5, depth: 'superficial', side: 'der' },
+      { x: 276, y: 424, doseOna: 5, depth: 'superficial', side: 'der' },
+      { x: 312, y: 434, doseOna: 5, depth: 'superficial', side: 'der' },
     ],
   },
 ];

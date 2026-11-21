@@ -22,6 +22,7 @@ import {
   convertOnaToBrand,
   FACIAL_ANATOMY_IMAGE,
   FACIAL_MUSCLE_BY_ID,
+  FACIAL_POSTERIOR_ANATOMY_IMAGE,
   FACIAL_VIEWBOX,
   type FacialMuscleConfig,
   type ToxinBrand as FacialToxinBrand,
@@ -1051,7 +1052,11 @@ const Calculator: React.FC = () => {
                           aria-label={`Puntos de inyección — ${muscle.displayName}`}
                         >
                           <image
-                            href={FACIAL_ANATOMY_IMAGE}
+                            href={
+                              muscle.facialConfig.view === 'back'
+                                ? FACIAL_POSTERIOR_ANATOMY_IMAGE
+                                : FACIAL_ANATOMY_IMAGE
+                            }
                             x={ANATOMY_IMAGE_FRAME.x}
                             y={ANATOMY_IMAGE_FRAME.y}
                             width={ANATOMY_IMAGE_FRAME.width}

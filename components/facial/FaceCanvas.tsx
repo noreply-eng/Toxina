@@ -3,6 +3,7 @@ import {
   ANATOMY_IMAGE_FRAME,
   DANGER_REGIONS,
   FACIAL_ANATOMY_IMAGE,
+  FACIAL_POSTERIOR_ANATOMY_IMAGE,
   FACIAL_VIEWBOX,
   FACE_GUIDE_PATHS,
   type AnatomyLayerFilter,
@@ -324,10 +325,12 @@ const FaceCanvas: React.FC<FaceCanvasProps> = ({
       clone.setAttribute('width', '800');
       clone.setAttribute('height', '1000');
 
-      // Embed base image as data URL if in front view so canvas taint doesn't block export
+      // Embed base image as data URL so canvas taint doesn't block export
       const imgEl = clone.querySelector('image');
-      if (imgEl && plannerView === 'front') {
-        const res = await fetch(FACIAL_ANATOMY_IMAGE);
+      if (imgEl) {
+        const imgSrc =
+          plannerView === 'front' ? FACIAL_ANATOMY_IMAGE : FACIAL_POSTERIOR_ANATOMY_IMAGE;
+        const res = await fetch(imgSrc);
         const blob = await res.blob();
         const dataUrl = await new Promise<string>((resolve) => {
           const reader = new FileReader();
@@ -773,65 +776,56 @@ const FaceCanvas: React.FC<FaceCanvasProps> = ({
 
             {/* ==================== FONDO VISTA POSTERIOR (OCCIPITAL / CERVICAL PREEMPT) ==================== */}
             {plannerView === 'back' && (
-              <g id="posterior-preempt-atlas" pointerEvents="none">
-                {/* Silueta craneocervical posterior y hombros */}
-                <path
-                  d="M200,36 C258,36 300,76 302,138 C303,174 294,206 276,232 C264,254 256,284 258,318 C282,348 332,386 374,424 L374,486 L26,486 L26,424 C68,386 118,348 142,318 C144,284 136,254 124,232 C106,206 97,174 98,138 C100,76 142,36 200,36 Z"
-                  fill="url(#posterior-head-grad)"
-                  stroke="#475569"
-                  strokeWidth={1.2}
-                />
-                {/* Pabellones auriculares posteriores */}
-                <path
-                  d="M98,148 C86,146 80,164 84,186 C87,202 95,212 106,208 M302,148 C314,146 320,164 316,186 C313,202 305,212 294,208"
-                  fill="none"
-                  stroke="#64748b"
-                  strokeWidth={1.4}
-                />
-                {/* Galea aponeurótica / Sutura lambdoidea */}
-                <path
-                  d="M126,146 Q200,118 274,146"
-                  fill="none"
-                  stroke="#94a3b8"
-                  strokeWidth={0.8}
-                  strokeDasharray="3 3"
-                  opacity={0.45}
-                />
-                {/* Línea nucal superior y Protuberancia Occipital Externa (Inion) */}
-                <path
-                  d="M114,204 Q158,186 200,202 Q242,186 286,204"
-                  fill="none"
-                  stroke="#cbd5e1"
-                  strokeWidth={1.1}
-                  strokeDasharray="4 3"
-                  opacity={0.65}
-                />
-                <circle cx={200} cy={202} r={3.5} fill="#f8fafc" opacity={0.7} />
-                <text x={200} y={214} textAnchor="middle" fontSize={6.5} fill="#cbd5e1" opacity={0.75}>
-                  Inion (Protub. Occipital)
-                </text>
-                {/* Eje vertebral cervical (C1 - C7) */}
-                <line
-                  x1={200}
-                  y1={42}
-                  x2={200}
-                  y2={480}
-                  stroke="#94a3b8"
-                  strokeWidth={0.75}
-                  strokeDasharray="3 5"
-                  opacity={0.4}
-                />
-                {[235, 255, 275, 295, 315, 335, 355].map((vy, idx) => (
-                  <g key={vy} opacity={0.5}>
-                    <ellipse cx={200} cy={vy} rx={4.5} ry={2.5} fill="#64748b" />
-                    {idx === 6 && (
-                      <text x={210} y={vy + 2} fontSize={6.5} fill="#94a3b8">
-                        C7
-                      </text>
-                    )}
+              <>
+                {showAnatomy && (
+                  <g clipPath="url(#face-soft-clip)" opacity={0.94}>
+                    <image
+                      href={FACIAL_POSTERIOR_ANATOMY_IMAGE}
+                      x={ANATOMY_IMAGE_FRAME.x}
+                      y={ANATOMY_IMAGE_FRAME.y}
+                      width={ANATOMY_IMAGE_FRAME.width}
+                      height={ANATOMY_IMAGE_FRAME.height}
+                      preserveAspectRatio="xMidYMid slice"
+                      style={{ pointerEvents: 'none' }}
+                    />
+                    <rect
+                      width={FACIAL_VIEWBOX.width}
+                      height={FACIAL_VIEWBOX.height}
+                      fill="url(#anatomy-vignette)"
+                      pointerEvents="none"
+                    />
                   </g>
-                ))}
-              </g>
+                )}
+
+                {showSchematicSkin && (
+                  <g id="posterior-schematic" opacity={0.85} pointerEvents="none">
+                    <path
+                      d={FACE_GUIDE_PATHS.midline}
+                      stroke="#475569"
+                      strokeWidth={0.75}
+                      strokeDasharray="4 4"
+                    />
+                    <path
+                      d="M114,226 Q158,216 200,232 Q242,216 286,226"
+                      fill="none"
+                      stroke="#cbd5e1"
+                      strokeWidth={1.1}
+                      strokeDasharray="4 3"
+                    />
+                  </g>
+                )}
+
+                {showAnatomy && (
+                  <path
+                    d={FACE_GUIDE_PATHS.midline}
+                    stroke="#ffffff"
+                    strokeWidth={0.6}
+                    strokeDasharray="3 5"
+                    strokeOpacity={0.22}
+                    pointerEvents="none"
+                  />
+                )}
+              </>
             )}
 
             {/* Atenuación hemilado inactivo */}
@@ -957,11 +951,9 @@ const FaceCanvas: React.FC<FaceCanvasProps> = ({
                         ? hasOtherFocus
                           ? 0.14
                           : 0.28
-                        : plannerView === 'back'
-                          ? 0.22
-                          : anatomyLayerFilter !== 'todos'
-                            ? 0.12
-                            : 0.04;
+                        : anatomyLayerFilter !== 'todos'
+                          ? 0.12
+                          : 0.04;
 
                   const stroke = isOver
                     ? '#f87171'
@@ -975,18 +967,16 @@ const FaceCanvas: React.FC<FaceCanvasProps> = ({
                           ? '#fb923c'
                           : '#ffffff';
 
-                  const strokeWidth = isFocused ? 2.6 : isActive || isOver ? 1.5 : 0.8;
+                  const strokeWidth = isFocused ? 2.6 : isActive || isOver ? 1.5 : 0.65;
                   const strokeOpacity = isFocused
                     ? 1
                     : isActive || isOver
                       ? hasOtherFocus
                         ? 0.55
                         : 0.9
-                      : plannerView === 'back'
-                        ? 0.45
-                        : anatomyLayerFilter !== 'todos'
-                          ? 0.4
-                          : 0.16;
+                      : anatomyLayerFilter !== 'todos'
+                        ? 0.4
+                        : 0.16;
 
                   return (
                     <g
@@ -1066,7 +1056,7 @@ const FaceCanvas: React.FC<FaceCanvasProps> = ({
                 {viewMuscles.map((muscle) => {
                   const isFocused = focusMuscleId === muscle.id;
                   const isActive = activeMuscleIds.has(muscle.id);
-                  if (!isFocused && !isActive && plannerView !== 'back') return null;
+                  if (!isFocused && !isActive) return null;
                   if (!isFocused && focusMuscleId) return null;
 
                   const summary = muscleSummaries.find((s) => s.muscleId === muscle.id);
