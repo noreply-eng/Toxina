@@ -1,12 +1,13 @@
 /**
- * Configuración del planificador facial estético: músculos, puntos por defecto,
- * zonas de riesgo y geometría SVG (viewBox 0 0 400 500).
+ * Configuración del planificador facial estético y clínico: músculos superficiales y profundos,
+ * puntos por defecto alineados al atlas (viewBox 0 0 400 500), zonas de riesgo y presets clínicos.
  */
 
 export const FACIAL_VIEWBOX = { width: 400, height: 500 } as const;
 
 export type AestheticZone =
   | 'frente'
+  | 'sien'
   | 'glabela'
   | 'periocular'
   | 'nariz'
@@ -14,7 +15,13 @@ export type AestheticZone =
   | 'perioral'
   | 'menton'
   | 'mandibula'
-  | 'cuello';
+  | 'cuello'
+  | 'occipital';
+
+export type FacialPlannerView = 'front' | 'back';
+export type MuscleLayer = 'superficial' | 'profundo';
+export type AnatomyLayerFilter = 'todos' | 'superficial' | 'profundo';
+export type PointSizeMode = 'sm' | 'md' | 'lg';
 
 export type PointSide = 'izq' | 'der' | 'centro';
 /** Modo de selección lateral al activar un músculo */
@@ -53,11 +60,76 @@ export interface FacialMuscleConfig {
   muscleKey: string;
   name: string;
   zone: AestheticZone;
+  /** Vista anatómica en el planificador ('front' por defecto o 'back' para PREEMPT occipital/cervical) */
+  view?: FacialPlannerView;
+  /** Plano anatómico principal para filtrado y codificación visual */
+  layer: MuscleLayer;
   maxDoseAesthetic: number;
   svgPath: string;
   bbox: MuscleBBox;
   defaultPoints: DefaultPointTemplate[];
 }
+
+export interface ClinicalFacialPreset {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  muscleIds: string[];
+}
+
+export const CLINICAL_FACIAL_PRESETS: ClinicalFacialPreset[] = [
+  {
+    id: 'tercio-superior',
+    name: 'Tercio Superior',
+    description: 'Frente, entrecejo (glabela) y patas de gallo',
+    icon: 'visibility',
+    muscleIds: ['frontalis', 'corrugator', 'procerus', 'orbicularis-oculi'],
+  },
+  {
+    id: 'sonrisa-gingival',
+    name: 'Sonrisa Gingival / Nariz',
+    description: 'LLSAN, elevador del labio superior y bunny lines / punta nasal',
+    icon: 'sentiment_satisfied',
+    muscleIds: ['llsan', 'levator-labii-superioris', 'nasalis'],
+  },
+  {
+    id: 'tercio-inferior',
+    name: 'Nefertiti / Tercio Inf.',
+    description: 'Comisuras (DAO), mentón adoquinado y bandas platismales',
+    icon: 'face_retouching_natural',
+    muscleIds: ['depressor-anguli-oris', 'mentalis', 'platysma'],
+  },
+  {
+    id: 'bruxismo-atm',
+    name: 'Bruxismo y ATM',
+    description: 'Masetero, temporal y complejo pterigoideo profundo',
+    icon: 'dentistry',
+    muscleIds: ['masseter', 'temporalis', 'medial-pterygoid', 'lateral-pterygoid'],
+  },
+  {
+    id: 'migrana-preempt',
+    name: 'Migraña PREEMPT (155U)',
+    description: 'Protocolo PREEMPT completo: Frontal, Corrugador, Prócer, Temporal, Occipital, Paravertebrales y Trapecio',
+    icon: 'psychology',
+    muscleIds: [
+      'frontalis',
+      'corrugator',
+      'procerus',
+      'temporalis',
+      'occipitalis',
+      'cervical-paraspinals',
+      'trapezius-facial',
+    ],
+  },
+  {
+    id: 'sincinesias',
+    name: 'Sincinesias Faciales',
+    description: 'Control periocular, cigomático, perioral, mentón y platisma',
+    icon: 'neurology',
+    muscleIds: ['orbicularis-oculi', 'zygomaticus-major', 'orbicularis-oris', 'mentalis', 'platysma'],
+  },
+];
 
 export interface DangerRegion {
   id: string;
@@ -68,35 +140,35 @@ export interface DangerRegion {
 }
 
 export const RISK_MESSAGES: Record<RiskType, string> = {
-  ptosisCeja: 'Riesgo alto de ptosis de ceja',
-  sonrisa: 'Riesgo de compromiso de la sonrisa',
-  disfagia: 'Riesgo de disfagia o disfonía',
+  ptosisCeja: 'Riesgo alto de ptosis de ceja o palpebral (<1.5 cm del reborde orbitario)',
+  sonrisa: 'Riesgo de asimetría o caída de la sonrisa (fascículos cigomáticos)',
+  disfagia: 'Riesgo de disfagia o debilidad cervical anterior por difusión profunda',
 };
 
 export const DANGER_REGIONS: DangerRegion[] = [
   {
     id: 'orbital-rim-upper',
     risk: 'ptosisCeja',
-    polygon: [108, 124, 292, 124, 292, 152, 108, 152],
-    label: 'Reborde orbitario superior',
+    polygon: [108, 122, 292, 122, 292, 146, 108, 146],
+    label: 'Reborde orbitario superior (zona de seguridad frontal)',
   },
   {
     id: 'zygomatic-patient-right',
     risk: 'sonrisa',
-    polygon: [120, 205, 182, 205, 178, 262, 124, 256],
-    label: 'Región cigomática (der. paciente)',
+    polygon: [94, 216, 120, 218, 144, 286, 126, 290],
+    label: 'Trayecto cigomático (der. paciente)',
   },
   {
     id: 'zygomatic-patient-left',
     risk: 'sonrisa',
-    polygon: [280, 205, 218, 205, 222, 262, 276, 256],
-    label: 'Región cigomática (izq. paciente)',
+    polygon: [306, 216, 280, 218, 256, 286, 274, 290],
+    label: 'Trayecto cigomático (izq. paciente)',
   },
   {
     id: 'deep-neck',
     risk: 'disfagia',
-    polygon: [134, 414, 266, 414, 258, 486, 142, 486],
-    label: 'Cuello profundo',
+    polygon: [148, 410, 252, 410, 246, 488, 154, 488],
+    label: 'Región laríngea / cuello anterior profundo',
   },
 ];
 
@@ -106,38 +178,65 @@ export const NECK_OUTLINE_PATH =
 
 /** Contorno facial base (capa cutánea): frente, sienes, pómulos, mandíbula y mentón */
 export const FACE_OUTLINE_PATH =
-  'M200,58 C160,58 128,66 112,96 C100,120 96,158 98,196 C100,250 108,300 128,345 C146,388 168,418 200,432 C232,418 254,388 272,345 C292,300 300,250 302,196 C304,158 300,120 288,96 C272,66 240,58 200,58 Z';
+  'M200,44 C156,44 120,56 104,90 C92,116 90,156 92,196 C94,250 104,300 124,342 C144,370 172,380 200,382 C228,380 256,370 276,342 C296,300 306,250 308,196 C310,156 308,116 296,90 C280,56 244,44 200,44 Z';
 
 export const FACE_GUIDE_PATHS = {
-  midline: 'M200,60 L200,486',
-  leftBrow: 'M116,134 Q150,126 186,132',
-  rightBrow: 'M214,132 Q250,126 284,134',
-  leftEye: 'M112,168 Q150,156 190,168 Q150,182 112,168',
-  rightEye: 'M210,168 Q250,156 292,168 Q250,182 210,168',
-  nose: 'M200,150 L200,232 Q200,242 190,246 Q200,250 210,246 Q200,242 200,232',
-  mouth: 'M158,300 Q200,312 242,300 M164,306 Q200,318 236,306',
-  foreheadWrinkles: 'M124,90 Q200,84 276,90 M128,104 Q200,98 272,104',
-  glabellarLines: 'M188,150 Q192,140 194,132 M212,150 Q208,140 206,132',
-  crowFeetLeft: 'M104,164 Q94,172 96,184 M104,172 Q95,180 98,190',
-  crowFeetRight: 'M296,164 Q306,172 304,184 M296,172 Q305,180 302,190',
-  platysmaBands: 'M160,410 Q158,445 166,478 M200,410 L200,480 M240,410 Q242,445 234,478',
+  midline: 'M200,40 L200,490',
+  leftBrow: 'M108,136 Q148,124 188,134',
+  rightBrow: 'M212,134 Q252,124 292,136',
+  leftEye: 'M116,176 Q146,162 176,176 Q146,190 116,176',
+  rightEye: 'M224,176 Q254,162 284,176 Q254,190 224,176',
+  nose: 'M200,150 L200,236 Q200,248 186,252 Q200,258 214,252 Q200,248 200,236',
+  mouth: 'M152,294 Q200,304 248,294 M158,300 Q200,312 242,300',
+  foreheadWrinkles: 'M118,80 Q200,74 282,80 M122,102 Q200,96 278,102',
+  glabellarLines: 'M188,148 Q192,138 194,130 M212,148 Q208,138 206,130',
+  crowFeetLeft: 'M98,162 Q88,172 90,184 M98,174 Q89,184 92,196',
+  crowFeetRight: 'M302,162 Q312,172 310,184 M302,174 Q311,184 308,196',
+  platysmaBands: 'M152,370 Q144,425 130,480 M200,375 L200,485 M248,370 Q256,425 270,480',
 };
 
+/**
+ * Catálogo completo de 21 músculos craneofaciales y cervicales calibrados con anatomy-base.png
+ * Convención radiológica (paciente de frente):
+ * - Izquierda de pantalla (X < 200) = Derecha del paciente (side: 'der')
+ * - Derecha de pantalla (X > 200) = Izquierda del paciente (side: 'izq')
+ */
 export const FACIAL_MUSCLES: FacialMuscleConfig[] = [
+  // ==================== TERCIO SUPERIOR & SIEN ====================
   {
     id: 'frontalis',
     muscleKey: 'Frontalis',
     name: 'Frontal',
     zone: 'frente',
+    layer: 'superficial',
     maxDoseAesthetic: 20,
     svgPath:
-      'M116,66 C150,60 250,60 284,66 C288,90 288,112 282,128 C256,122 236,120 214,127 C210,112 207,106 200,106 C193,106 190,112 186,127 C164,120 144,122 118,128 C112,112 112,90 116,66 Z',
-    bbox: { minX: 112, minY: 60, maxX: 288, maxY: 128 },
+      'M106,68 C118,46 156,42 195,48 C198,74 198,104 195,130 C174,124 140,122 106,134 C102,112 102,88 106,68 Z M294,68 C282,46 244,42 205,48 C202,74 202,104 205,130 C226,124 260,122 294,134 C298,112 298,88 294,68 Z',
+    bbox: { minX: 102, minY: 42, maxX: 298, maxY: 134 },
     defaultPoints: [
-      { x: 155, y: 90, doseOna: 2, depth: 'superficial', side: 'der' },
-      { x: 245, y: 90, doseOna: 2, depth: 'superficial', side: 'izq' },
-      { x: 178, y: 112, doseOna: 2, depth: 'superficial', side: 'der' },
-      { x: 222, y: 112, doseOna: 2, depth: 'superficial', side: 'izq' },
+      { x: 136, y: 78, doseOna: 2, depth: 'superficial', side: 'der' },
+      { x: 170, y: 74, doseOna: 2, depth: 'superficial', side: 'der' },
+      { x: 154, y: 104, doseOna: 2, depth: 'superficial', side: 'der' },
+      { x: 264, y: 78, doseOna: 2, depth: 'superficial', side: 'izq' },
+      { x: 230, y: 74, doseOna: 2, depth: 'superficial', side: 'izq' },
+      { x: 246, y: 104, doseOna: 2, depth: 'superficial', side: 'izq' },
+    ],
+  },
+  {
+    id: 'temporalis',
+    muscleKey: 'Temporalis',
+    name: 'Temporal',
+    zone: 'sien',
+    layer: 'profundo',
+    maxDoseAesthetic: 40,
+    svgPath:
+      'M86,96 C94,86 102,94 104,114 C105,138 101,164 94,182 C86,178 82,158 82,134 C82,116 83,102 86,96 Z M314,96 C306,86 298,94 296,114 C295,138 299,164 306,182 C314,178 318,158 318,134 C318,116 317,102 314,96 Z',
+    bbox: { minX: 82, minY: 86, maxX: 318, maxY: 182 },
+    defaultPoints: [
+      { x: 93, y: 114, doseOna: 5, depth: 'profundo', side: 'der' },
+      { x: 91, y: 146, doseOna: 5, depth: 'profundo', side: 'der' },
+      { x: 307, y: 114, doseOna: 5, depth: 'profundo', side: 'izq' },
+      { x: 309, y: 146, doseOna: 5, depth: 'profundo', side: 'izq' },
     ],
   },
   {
@@ -145,15 +244,16 @@ export const FACIAL_MUSCLES: FacialMuscleConfig[] = [
     muscleKey: 'Corrugator',
     name: 'Corrugador',
     zone: 'glabela',
+    layer: 'profundo',
     maxDoseAesthetic: 12,
     svgPath:
-      'M164,142 C176,138 190,146 194,158 C186,164 174,164 165,157 C160,150 159,145 164,142 Z M236,142 C224,138 210,146 206,158 C214,164 226,164 235,157 C240,150 241,145 236,142 Z',
-    bbox: { minX: 159, minY: 138, maxX: 241, maxY: 164 },
+      'M190,148 C180,151 162,144 148,136 C150,128 168,127 188,135 C192,138 193,144 190,148 Z M210,148 C220,151 238,144 252,136 C250,128 232,127 212,135 C208,138 207,144 210,148 Z',
+    bbox: { minX: 148, minY: 127, maxX: 252, maxY: 151 },
     defaultPoints: [
-      { x: 180, y: 152, doseOna: 4, depth: 'profundo', side: 'der' },
-      { x: 220, y: 152, doseOna: 4, depth: 'profundo', side: 'izq' },
-      { x: 168, y: 148, doseOna: 2, depth: 'superficial', side: 'der' },
-      { x: 232, y: 148, doseOna: 2, depth: 'superficial', side: 'izq' },
+      { x: 182, y: 141, doseOna: 4, depth: 'profundo', side: 'der' },
+      { x: 162, y: 135, doseOna: 2, depth: 'superficial', side: 'der' },
+      { x: 218, y: 141, doseOna: 4, depth: 'profundo', side: 'izq' },
+      { x: 238, y: 135, doseOna: 2, depth: 'superficial', side: 'izq' },
     ],
   },
   {
@@ -161,23 +261,26 @@ export const FACIAL_MUSCLES: FacialMuscleConfig[] = [
     muscleKey: 'Procerus',
     name: 'Prócer',
     zone: 'glabela',
+    layer: 'superficial',
     maxDoseAesthetic: 5,
-    svgPath: 'M190,150 C196,148 204,148 210,150 C211,166 208,180 200,186 C192,180 189,166 190,150 Z',
-    bbox: { minX: 189, minY: 148, maxX: 211, maxY: 186 },
-    defaultPoints: [{ x: 200, y: 166, doseOna: 4, depth: 'profundo', side: 'centro' }],
+    svgPath:
+      'M190,134 C196,131 204,131 210,134 C209,150 206,164 200,172 C194,164 191,150 190,134 Z',
+    bbox: { minX: 190, minY: 131, maxX: 210, maxY: 172 },
+    defaultPoints: [{ x: 200, y: 150, doseOna: 4, depth: 'profundo', side: 'centro' }],
   },
   {
     id: 'depressor-supercilii',
     muscleKey: 'Depressor supercilii',
     name: 'Depresor de la Ceja',
     zone: 'glabela',
+    layer: 'profundo',
     maxDoseAesthetic: 8,
     svgPath:
-      'M176,160 C184,158 190,166 189,176 C182,180 174,175 173,168 C172,163 173,161 176,160 Z M224,160 C216,158 210,166 211,176 C218,180 226,175 227,168 C228,163 227,161 224,160 Z',
-    bbox: { minX: 172, minY: 158, maxX: 228, maxY: 180 },
+      'M178,150 C185,148 191,154 190,168 C183,172 175,167 174,158 C174,153 175,151 178,150 Z M222,150 C215,148 209,154 210,168 C217,172 225,167 226,158 C226,153 225,151 222,150 Z',
+    bbox: { minX: 174, minY: 148, maxX: 226, maxY: 172 },
     defaultPoints: [
-      { x: 180, y: 168, doseOna: 2, depth: 'profundo', side: 'der' },
-      { x: 220, y: 168, doseOna: 2, depth: 'profundo', side: 'izq' },
+      { x: 182, y: 159, doseOna: 2, depth: 'profundo', side: 'der' },
+      { x: 218, y: 159, doseOna: 2, depth: 'profundo', side: 'izq' },
     ],
   },
   {
@@ -185,45 +288,50 @@ export const FACIAL_MUSCLES: FacialMuscleConfig[] = [
     muscleKey: 'Orbicularis oculi',
     name: 'Orbicular de los Ojos',
     zone: 'periocular',
+    layer: 'superficial',
     maxDoseAesthetic: 12,
     svgPath:
-      'M108,168 C108,154 128,144 150,144 C172,144 192,154 192,168 C192,182 172,192 150,192 C128,192 108,182 108,168 Z M292,168 C292,154 272,144 250,144 C228,144 208,154 208,168 C208,182 228,192 250,192 C272,192 292,182 292,168 Z',
-    bbox: { minX: 108, minY: 144, maxX: 292, maxY: 192 },
+      'M96,176 C96,146 120,130 148,130 C172,130 184,148 184,174 C184,202 166,224 140,224 C112,224 96,204 96,176 Z M304,176 C304,146 280,130 252,130 C228,130 216,148 216,174 C216,202 234,224 260,224 C288,224 304,204 304,176 Z',
+    bbox: { minX: 96, minY: 130, maxX: 304, maxY: 224 },
     defaultPoints: [
-      { x: 118, y: 170, doseOna: 2, depth: 'superficial', side: 'der' },
-      { x: 138, y: 186, doseOna: 2, depth: 'superficial', side: 'der' },
-      { x: 162, y: 178, doseOna: 2, depth: 'superficial', side: 'der' },
-      { x: 282, y: 170, doseOna: 2, depth: 'superficial', side: 'izq' },
-      { x: 262, y: 186, doseOna: 2, depth: 'superficial', side: 'izq' },
-      { x: 238, y: 178, doseOna: 2, depth: 'superficial', side: 'izq' },
+      { x: 104, y: 158, doseOna: 2, depth: 'superficial', side: 'der' },
+      { x: 102, y: 178, doseOna: 2, depth: 'superficial', side: 'der' },
+      { x: 108, y: 198, doseOna: 2, depth: 'superficial', side: 'der' },
+      { x: 296, y: 158, doseOna: 2, depth: 'superficial', side: 'izq' },
+      { x: 298, y: 178, doseOna: 2, depth: 'superficial', side: 'izq' },
+      { x: 292, y: 198, doseOna: 2, depth: 'superficial', side: 'izq' },
     ],
   },
+
+  // ==================== NARIZ Y TERCIO MEDIO ====================
   {
     id: 'nasalis',
     muscleKey: 'Nasalis',
-    name: 'Nasal',
+    name: 'Nasal (Bunny Lines y Septo)',
     zone: 'nariz',
-    maxDoseAesthetic: 4,
+    layer: 'superficial',
+    maxDoseAesthetic: 6,
     svgPath:
-      'M184,196 C190,194 195,200 196,210 C196,220 193,226 186,226 C182,220 181,208 182,200 C182,198 183,197 184,196 Z M216,196 C210,194 205,200 204,210 C204,220 207,226 214,226 C218,220 219,208 218,200 C218,198 217,197 216,196 Z',
-    bbox: { minX: 181, minY: 194, maxX: 219, maxY: 226 },
+      'M186,174 C194,172 198,184 198,204 C198,220 194,230 184,232 C175,226 173,210 176,192 C178,180 182,175 186,174 Z M214,174 C206,172 202,184 202,204 C202,220 206,230 216,232 C225,226 227,210 224,192 C222,180 218,175 214,174 Z M193,248 C197,246 203,246 207,248 C208,255 205,261 200,262 C195,261 192,255 193,248 Z',
+    bbox: { minX: 173, minY: 172, maxX: 227, maxY: 262 },
     defaultPoints: [
-      { x: 190, y: 208, doseOna: 2, depth: 'superficial', side: 'der' },
-      { x: 210, y: 208, doseOna: 2, depth: 'superficial', side: 'izq' },
+      { x: 186, y: 202, doseOna: 2, depth: 'superficial', side: 'der' },
+      { x: 214, y: 202, doseOna: 2, depth: 'superficial', side: 'izq' },
     ],
   },
   {
     id: 'llsan',
     muscleKey: 'Levator labii superioris alaeque nasi',
-    name: 'Elevador LLSAN',
+    name: 'Elevador LLSAN (Sonrisa Gingival)',
     zone: 'tercioMedio',
+    layer: 'superficial',
     maxDoseAesthetic: 4,
     svgPath:
-      'M176,196 C181,196 186,202 187,214 C188,234 185,250 179,255 C173,250 171,232 172,212 C172,202 173,198 176,196 Z M224,196 C219,196 214,202 213,214 C212,234 215,250 221,255 C227,250 229,232 228,212 C228,202 227,198 224,196 Z',
-    bbox: { minX: 171, minY: 196, maxX: 229, maxY: 255 },
+      'M174,182 C179,182 181,196 178,216 C175,236 172,254 166,264 C160,260 159,244 163,222 C166,202 169,184 174,182 Z M226,182 C221,182 219,196 222,216 C225,236 228,254 234,264 C240,260 241,244 237,222 C234,202 231,184 226,182 Z',
+    bbox: { minX: 159, minY: 182, maxX: 241, maxY: 264 },
     defaultPoints: [
-      { x: 180, y: 226, doseOna: 2, depth: 'superficial', side: 'der' },
-      { x: 220, y: 226, doseOna: 2, depth: 'superficial', side: 'izq' },
+      { x: 169, y: 228, doseOna: 2, depth: 'superficial', side: 'der' },
+      { x: 231, y: 228, doseOna: 2, depth: 'superficial', side: 'izq' },
     ],
   },
   {
@@ -231,27 +339,14 @@ export const FACIAL_MUSCLES: FacialMuscleConfig[] = [
     muscleKey: 'Levator labii superioris',
     name: 'Elevador Labio Sup.',
     zone: 'tercioMedio',
+    layer: 'superficial',
     maxDoseAesthetic: 6,
     svgPath:
-      'M166,222 C171,220 177,224 179,238 C181,258 179,272 173,278 C167,274 164,256 165,238 C165,228 164,225 166,222 Z M234,222 C229,220 223,224 221,238 C219,258 221,272 227,278 C233,274 236,256 235,238 C235,228 236,225 234,222 Z',
-    bbox: { minX: 164, minY: 220, maxX: 236, maxY: 278 },
+      'M138,222 C146,220 156,220 160,224 C162,240 162,256 160,268 C154,270 148,266 146,256 C142,244 137,230 138,222 Z M262,222 C254,220 244,220 240,224 C238,240 238,256 240,268 C246,270 252,266 254,256 C258,244 263,230 262,222 Z',
+    bbox: { minX: 137, minY: 220, maxX: 263, maxY: 270 },
     defaultPoints: [
-      { x: 172, y: 250, doseOna: 2, depth: 'superficial', side: 'der' },
-      { x: 228, y: 250, doseOna: 2, depth: 'superficial', side: 'izq' },
-    ],
-  },
-  {
-    id: 'zygomaticus-major',
-    muscleKey: 'Zygomaticus major',
-    name: 'Cigomático Mayor',
-    zone: 'tercioMedio',
-    maxDoseAesthetic: 6,
-    svgPath:
-      'M134,206 C144,204 151,211 150,222 C166,248 175,270 180,288 C173,293 163,289 157,279 C145,258 135,236 128,216 C127,210 130,207 134,206 Z M266,206 C256,204 249,211 250,222 C234,248 225,270 220,288 C227,293 237,289 243,279 C255,258 265,236 272,216 C273,210 270,207 266,206 Z',
-    bbox: { minX: 127, minY: 204, maxX: 273, maxY: 293 },
-    defaultPoints: [
-      { x: 150, y: 240, doseOna: 2, depth: 'superficial', side: 'der' },
-      { x: 250, y: 240, doseOna: 2, depth: 'superficial', side: 'izq' },
+      { x: 151, y: 244, doseOna: 2, depth: 'superficial', side: 'der' },
+      { x: 249, y: 244, doseOna: 2, depth: 'superficial', side: 'izq' },
     ],
   },
   {
@@ -259,56 +354,62 @@ export const FACIAL_MUSCLES: FacialMuscleConfig[] = [
     muscleKey: 'Zygomaticus minor',
     name: 'Cigomático Menor',
     zone: 'tercioMedio',
+    layer: 'superficial',
     maxDoseAesthetic: 4,
     svgPath:
-      'M164,214 C170,212 175,218 175,230 C175,252 172,268 168,274 C162,270 160,252 161,232 C161,222 160,217 164,214 Z M236,214 C230,212 225,218 225,230 C225,252 228,268 232,274 C238,270 240,252 239,232 C239,222 240,217 236,214 Z',
-    bbox: { minX: 160, minY: 212, maxX: 240, maxY: 274 },
+      'M116,222 C122,219 129,222 134,230 C144,246 152,260 156,274 C151,278 145,276 140,266 C130,250 120,236 114,226 C113,224 114,222 116,222 Z M284,222 C278,219 271,222 266,230 C256,246 248,260 244,274 C249,278 255,276 260,266 C270,250 280,236 286,226 C287,224 286,222 284,222 Z',
+    bbox: { minX: 113, minY: 219, maxX: 287, maxY: 278 },
     defaultPoints: [
-      { x: 168, y: 244, doseOna: 1, depth: 'superficial', side: 'der' },
-      { x: 232, y: 244, doseOna: 1, depth: 'superficial', side: 'izq' },
+      { x: 135, y: 248, doseOna: 1, depth: 'superficial', side: 'der' },
+      { x: 265, y: 248, doseOna: 1, depth: 'superficial', side: 'izq' },
+    ],
+  },
+  {
+    id: 'zygomaticus-major',
+    muscleKey: 'Zygomaticus major',
+    name: 'Cigomático Mayor',
+    zone: 'tercioMedio',
+    layer: 'superficial',
+    maxDoseAesthetic: 6,
+    // Nace alto y lateral en el arco/hueso cigomático (X≈96, Y≈218) y baja en diagonal al modiolo (X≈146, Y≈292)
+    svgPath:
+      'M96,218 C102,215 110,220 116,230 C128,250 140,270 148,288 C144,295 137,294 131,284 C119,264 106,242 94,224 C93,221 94,219 96,218 Z M304,218 C298,215 290,220 284,230 C272,250 260,270 252,288 C256,295 263,294 269,284 C281,264 294,242 306,224 C307,221 306,219 304,218 Z',
+    bbox: { minX: 93, minY: 215, maxX: 307, maxY: 295 },
+    defaultPoints: [
+      { x: 122, y: 256, doseOna: 2, depth: 'superficial', side: 'der' },
+      { x: 278, y: 256, doseOna: 2, depth: 'superficial', side: 'izq' },
     ],
   },
   {
     id: 'levator-anguli-oris',
     muscleKey: 'Levator anguli oris',
-    name: 'Elevador Ángulo Boca',
+    name: 'Elevador Ángulo Boca (Canino)',
     zone: 'tercioMedio',
+    layer: 'profundo',
     maxDoseAesthetic: 4,
     svgPath:
-      'M168,250 C174,248 179,254 179,268 C179,286 176,296 170,300 C164,296 162,282 163,266 C163,256 163,252 168,250 Z M232,250 C226,248 221,254 221,268 C221,286 224,296 230,300 C236,296 238,282 237,266 C237,256 237,252 232,250 Z',
-    bbox: { minX: 162, minY: 248, maxX: 238, maxY: 300 },
+      'M136,246 C143,244 149,248 150,260 C151,274 149,284 144,288 C138,285 134,272 134,258 C134,250 134,247 136,246 Z M264,246 C257,244 251,248 250,260 C249,274 251,284 256,288 C262,285 266,272 266,258 C266,250 266,247 264,246 Z',
+    bbox: { minX: 134, minY: 244, maxX: 266, maxY: 288 },
     defaultPoints: [
-      { x: 170, y: 272, doseOna: 2, depth: 'superficial', side: 'der' },
-      { x: 230, y: 272, doseOna: 2, depth: 'superficial', side: 'izq' },
+      { x: 142, y: 268, doseOna: 2, depth: 'profundo', side: 'der' },
+      { x: 258, y: 268, doseOna: 2, depth: 'profundo', side: 'izq' },
     ],
   },
+
+  // ==================== REGIÓN PERIORAL Y MEJILLA ====================
   {
-    id: 'orbicularis-oris',
-    muscleKey: 'Orbicularis oris',
-    name: 'Orbicular Labios',
+    id: 'buccinator',
+    muscleKey: 'Buccinator',
+    name: 'Buccinador',
     zone: 'perioral',
-    maxDoseAesthetic: 10,
+    layer: 'profundo',
+    maxDoseAesthetic: 15,
     svgPath:
-      'M148,300 C148,287 172,280 200,280 C228,280 252,287 252,300 C252,313 228,320 200,320 C172,320 148,313 148,300 Z',
-    bbox: { minX: 148, minY: 280, maxX: 252, maxY: 320 },
+      'M120,262 C130,262 140,270 144,282 C142,292 132,294 122,290 C116,282 116,270 120,262 Z M280,262 C270,262 260,270 256,282 C258,292 268,294 278,290 C284,282 284,270 280,262 Z',
+    bbox: { minX: 116, minY: 262, maxX: 284, maxY: 294 },
     defaultPoints: [
-      { x: 176, y: 300, doseOna: 1, depth: 'superficial', side: 'der' },
-      { x: 224, y: 300, doseOna: 1, depth: 'superficial', side: 'izq' },
-      { x: 200, y: 314, doseOna: 1, depth: 'superficial', side: 'centro' },
-    ],
-  },
-  {
-    id: 'depressor-anguli-oris',
-    muscleKey: 'Depressor anguli oris',
-    name: 'Depresor Ángulo Boca',
-    zone: 'perioral',
-    maxDoseAesthetic: 10,
-    svgPath:
-      'M164,298 C170,297 175,303 176,313 C175,325 168,335 158,337 C152,331 150,318 153,308 C156,301 160,299 164,298 Z M236,298 C230,297 225,303 224,313 C225,325 232,335 242,337 C248,331 250,318 247,308 C244,301 240,299 236,298 Z',
-    bbox: { minX: 150, minY: 297, maxX: 250, maxY: 337 },
-    defaultPoints: [
-      { x: 160, y: 316, doseOna: 2, depth: 'superficial', side: 'der' },
-      { x: 240, y: 316, doseOna: 2, depth: 'superficial', side: 'izq' },
+      { x: 130, y: 278, doseOna: 3, depth: 'profundo', side: 'der' },
+      { x: 270, y: 278, doseOna: 3, depth: 'profundo', side: 'izq' },
     ],
   },
   {
@@ -316,43 +417,61 @@ export const FACIAL_MUSCLES: FacialMuscleConfig[] = [
     muscleKey: 'Risorius',
     name: 'Risorio',
     zone: 'perioral',
+    layer: 'superficial',
     maxDoseAesthetic: 4,
     svgPath:
-      'M130,300 C142,296 156,298 168,302 C160,309 148,311 138,310 C133,309 130,305 130,300 Z M270,300 C258,296 244,298 232,302 C240,309 252,311 262,310 C267,309 270,305 270,300 Z',
-    bbox: { minX: 130, minY: 296, maxX: 270, maxY: 311 },
+      'M116,292 C126,288 138,290 146,295 C142,303 128,305 118,302 C114,300 114,295 116,292 Z M284,292 C274,288 262,290 254,295 C258,303 272,305 282,302 C286,300 286,295 284,292 Z',
+    bbox: { minX: 114, minY: 288, maxX: 286, maxY: 305 },
     defaultPoints: [
-      { x: 140, y: 304, doseOna: 1, depth: 'superficial', side: 'der' },
-      { x: 260, y: 304, doseOna: 1, depth: 'superficial', side: 'izq' },
+      { x: 130, y: 296, doseOna: 1, depth: 'superficial', side: 'der' },
+      { x: 270, y: 296, doseOna: 1, depth: 'superficial', side: 'izq' },
+    ],
+  },
+  {
+    id: 'orbicularis-oris',
+    muscleKey: 'Orbicularis oris',
+    name: 'Orbicular de los Labios',
+    zone: 'perioral',
+    layer: 'superficial',
+    maxDoseAesthetic: 10,
+    svgPath:
+      'M146,294 C146,274 170,264 200,264 C230,264 254,274 254,294 C254,314 230,324 200,324 C170,324 146,314 146,294 Z',
+    bbox: { minX: 146, minY: 264, maxX: 254, maxY: 324 },
+    defaultPoints: [
+      { x: 176, y: 276, doseOna: 1, depth: 'superficial', side: 'der' },
+      { x: 224, y: 276, doseOna: 1, depth: 'superficial', side: 'izq' },
+      { x: 178, y: 314, doseOna: 1, depth: 'superficial', side: 'der' },
+      { x: 222, y: 314, doseOna: 1, depth: 'superficial', side: 'izq' },
+    ],
+  },
+  {
+    id: 'depressor-anguli-oris',
+    muscleKey: 'Depressor anguli oris',
+    name: 'Depresor Ángulo Boca (DAO)',
+    zone: 'perioral',
+    layer: 'superficial',
+    maxDoseAesthetic: 10,
+    svgPath:
+      'M146,296 C152,302 154,322 150,342 C138,344 126,338 122,328 C126,312 136,300 146,296 Z M254,296 C248,302 246,322 250,342 C262,344 274,338 278,328 C274,312 264,300 254,296 Z',
+    bbox: { minX: 122, minY: 296, maxX: 278, maxY: 344 },
+    defaultPoints: [
+      { x: 138, y: 324, doseOna: 2, depth: 'superficial', side: 'der' },
+      { x: 262, y: 324, doseOna: 2, depth: 'superficial', side: 'izq' },
     ],
   },
   {
     id: 'depressor-labii-inferioris',
     muscleKey: 'Depressor labii inferioris',
-    name: 'Depresor Labio Inf.',
+    name: 'Depresor Labio Inf. (DLI)',
     zone: 'perioral',
+    layer: 'profundo',
     maxDoseAesthetic: 6,
     svgPath:
-      'M180,314 C186,312 193,316 195,326 C196,338 193,347 187,349 C181,345 179,332 180,322 C180,318 179,316 180,314 Z M220,314 C214,312 207,316 205,326 C204,338 207,347 213,349 C219,345 221,332 220,322 C220,318 221,316 220,314 Z',
-    bbox: { minX: 179, minY: 312, maxX: 221, maxY: 349 },
+      'M154,316 C164,314 174,316 178,324 C178,336 172,348 162,350 C152,346 150,330 154,316 Z M246,316 C236,314 226,316 222,324 C222,336 228,348 238,350 C248,346 250,330 246,316 Z',
+    bbox: { minX: 150, minY: 314, maxX: 250, maxY: 350 },
     defaultPoints: [
-      { x: 186, y: 330, doseOna: 2, depth: 'superficial', side: 'der' },
-      { x: 214, y: 330, doseOna: 2, depth: 'superficial', side: 'izq' },
-    ],
-  },
-  {
-    id: 'buccinator',
-    muscleKey: 'Buccinator',
-    name: 'Buccinador',
-    zone: 'perioral',
-    maxDoseAesthetic: 15,
-    // Pegado al borde lateral del orbicular de los labios (bbox oris ≈ 148–252).
-    // Pantalla izq = der. paciente; pantalla der = izq. paciente.
-    svgPath:
-      'M146,278 C158,276 168,288 168,300 C168,312 158,324 146,322 C138,312 136,296 138,286 C140,280 143,279 146,278 Z M254,278 C242,276 232,288 232,300 C232,312 242,324 254,322 C262,312 264,296 262,286 C260,280 257,279 254,278 Z',
-    bbox: { minX: 136, minY: 276, maxX: 264, maxY: 324 },
-    defaultPoints: [
-      { x: 155, y: 300, doseOna: 3, depth: 'profundo', side: 'der' },
-      { x: 245, y: 300, doseOna: 3, depth: 'profundo', side: 'izq' },
+      { x: 165, y: 332, doseOna: 2, depth: 'profundo', side: 'der' },
+      { x: 235, y: 332, doseOna: 2, depth: 'profundo', side: 'izq' },
     ],
   },
   {
@@ -360,49 +479,151 @@ export const FACIAL_MUSCLES: FacialMuscleConfig[] = [
     muscleKey: 'Mentalis',
     name: 'Mentoniano',
     zone: 'menton',
+    layer: 'profundo',
     maxDoseAesthetic: 8,
     svgPath:
-      'M186,338 C192,336 208,336 214,338 C216,352 213,367 207,373 C203,369 197,369 193,373 C187,367 184,352 186,338 Z',
-    bbox: { minX: 184, minY: 336, maxX: 216, maxY: 373 },
-    defaultPoints: [{ x: 200, y: 354, doseOna: 4, depth: 'profundo', side: 'centro' }],
+      'M178,326 C188,323 197,325 198,334 C199,348 197,360 190,364 C180,362 175,346 178,326 Z M222,326 C212,323 203,325 202,334 C201,348 203,360 210,364 C220,362 225,346 222,326 Z',
+    bbox: { minX: 175, minY: 323, maxX: 225, maxY: 364 },
+    defaultPoints: [
+      { x: 190, y: 346, doseOna: 3, depth: 'profundo', side: 'der' },
+      { x: 210, y: 346, doseOna: 3, depth: 'profundo', side: 'izq' },
+    ],
   },
+
+  // ==================== MANDÍBULA / MASTICADORES ====================
   {
     id: 'masseter',
     muscleKey: 'Masseter',
     name: 'Masetero',
     zone: 'mandibula',
+    layer: 'superficial',
     maxDoseAesthetic: 50,
-    // Pegado al borde mandibular / ángulo (un poco más afuera).
-    // Pantalla izq = der. paciente; pantalla der = izq. paciente.
     svgPath:
-      'M100,248 C116,242 128,252 130,274 C132,304 128,334 120,356 C112,366 98,362 92,346 C88,316 92,280 98,258 C99,252 99,249 100,248 Z M300,248 C284,242 272,252 270,274 C268,304 272,334 280,356 C288,366 302,362 308,346 C312,316 308,280 302,258 C301,252 301,249 300,248 Z',
-    bbox: { minX: 88, minY: 242, maxX: 312, maxY: 366 },
+      'M98,234 C108,232 118,244 122,266 C125,290 124,316 118,334 C108,334 100,318 96,294 C94,272 95,248 98,234 Z M302,234 C292,232 282,244 278,266 C275,290 276,316 282,334 C292,334 300,318 304,294 C306,272 305,248 302,234 Z',
+    bbox: { minX: 94, minY: 232, maxX: 306, maxY: 334 },
     defaultPoints: [
-      { x: 110, y: 268, doseOna: 5, depth: 'profundo', side: 'der' },
-      { x: 114, y: 302, doseOna: 5, depth: 'profundo', side: 'der' },
-      { x: 106, y: 342, doseOna: 5, depth: 'profundo', side: 'der' },
-      { x: 290, y: 268, doseOna: 5, depth: 'profundo', side: 'izq' },
-      { x: 286, y: 302, doseOna: 5, depth: 'profundo', side: 'izq' },
-      { x: 294, y: 342, doseOna: 5, depth: 'profundo', side: 'izq' },
+      { x: 108, y: 274, doseOna: 5, depth: 'profundo', side: 'der' },
+      { x: 114, y: 300, doseOna: 5, depth: 'profundo', side: 'der' },
+      { x: 104, y: 316, doseOna: 5, depth: 'profundo', side: 'der' },
+      { x: 292, y: 274, doseOna: 5, depth: 'profundo', side: 'izq' },
+      { x: 286, y: 300, doseOna: 5, depth: 'profundo', side: 'izq' },
+      { x: 296, y: 316, doseOna: 5, depth: 'profundo', side: 'izq' },
     ],
   },
+  {
+    id: 'lateral-pterygoid',
+    muscleKey: 'Lateral pterygoid',
+    name: 'Pterigoideo Lateral',
+    zone: 'mandibula',
+    layer: 'profundo',
+    maxDoseAesthetic: 15,
+    svgPath:
+      'M88,198 C96,194 106,198 108,208 C108,218 100,224 92,222 C86,218 85,206 88,198 Z M312,198 C304,194 294,198 292,208 C292,218 300,224 308,222 C314,218 315,206 312,198 Z',
+    bbox: { minX: 85, minY: 194, maxX: 315, maxY: 224 },
+    defaultPoints: [
+      { x: 96, y: 210, doseOna: 5, depth: 'profundo', side: 'der' },
+      { x: 304, y: 210, doseOna: 5, depth: 'profundo', side: 'izq' },
+    ],
+  },
+  {
+    id: 'medial-pterygoid',
+    muscleKey: 'Medial pterygoid',
+    name: 'Pterigoideo Medial',
+    zone: 'mandibula',
+    layer: 'profundo',
+    maxDoseAesthetic: 30,
+    svgPath:
+      'M106,314 C114,312 122,318 122,330 C120,342 112,346 104,342 C100,334 101,320 106,314 Z M294,314 C286,312 278,318 278,330 C280,342 288,346 296,342 C300,334 299,320 294,314 Z',
+    bbox: { minX: 100, minY: 312, maxX: 300, maxY: 346 },
+    defaultPoints: [
+      { x: 112, y: 330, doseOna: 5, depth: 'profundo', side: 'der' },
+      { x: 288, y: 330, doseOna: 5, depth: 'profundo', side: 'izq' },
+    ],
+  },
+
+  // ==================== CUELLO ====================
   {
     id: 'platysma',
     muscleKey: 'Platysma',
     name: 'Platisma',
     zone: 'cuello',
-    maxDoseAesthetic: 12,
-    // Bandas cervicales más anchas y largas
+    view: 'front',
+    layer: 'superficial',
+    maxDoseAesthetic: 30,
     svgPath:
-      'M125,388 C152,385 172,392 176,415 C178,445 174,468 166,490 C148,488 132,482 124,470 C118,448 118,415 122,396 C123,391 124,389 125,388 Z M275,388 C248,385 228,392 224,415 C222,445 226,468 234,490 C252,488 268,482 276,470 C282,448 282,415 278,396 C277,391 276,389 275,388 Z',
-    bbox: { minX: 118, minY: 385, maxX: 282, maxY: 490 },
+      'M114,344 C136,356 164,364 186,366 C188,408 188,452 186,490 C156,480 108,464 68,452 C96,426 110,388 114,344 Z M286,344 C264,356 236,364 214,366 C212,408 212,452 214,490 C244,480 292,464 332,452 C304,426 290,388 286,344 Z',
+    bbox: { minX: 68, minY: 344, maxX: 332, maxY: 490 },
     defaultPoints: [
-      { x: 142, y: 408, doseOna: 2, depth: 'superficial', side: 'der' },
-      { x: 138, y: 438, doseOna: 2, depth: 'superficial', side: 'der' },
-      { x: 148, y: 468, doseOna: 2, depth: 'superficial', side: 'der' },
-      { x: 258, y: 408, doseOna: 2, depth: 'superficial', side: 'izq' },
-      { x: 262, y: 438, doseOna: 2, depth: 'superficial', side: 'izq' },
-      { x: 252, y: 468, doseOna: 2, depth: 'superficial', side: 'izq' },
+      { x: 132, y: 362, doseOna: 2, depth: 'superficial', side: 'der' },
+      { x: 162, y: 396, doseOna: 2, depth: 'superficial', side: 'der' },
+      { x: 132, y: 420, doseOna: 2, depth: 'superficial', side: 'der' },
+      { x: 158, y: 448, doseOna: 2, depth: 'superficial', side: 'der' },
+      { x: 268, y: 362, doseOna: 2, depth: 'superficial', side: 'izq' },
+      { x: 238, y: 396, doseOna: 2, depth: 'superficial', side: 'izq' },
+      { x: 268, y: 420, doseOna: 2, depth: 'superficial', side: 'izq' },
+      { x: 242, y: 448, doseOna: 2, depth: 'superficial', side: 'izq' },
+    ],
+  },
+
+  // ==================== VISTA POSTERIOR / PREEMPT (OCCIPITAL, PARAVERTEBRALES, TRAPECIO) ====================
+  // En vista posterior: Izquierda de pantalla (X < 200) = Izquierda del paciente (side: 'izq')
+  //                     Derecha de pantalla (X > 200) = Derecha del paciente (side: 'der')
+  {
+    id: 'occipitalis',
+    muscleKey: 'Occipitalis',
+    name: 'Occipital (PREEMPT)',
+    zone: 'occipital',
+    view: 'back',
+    layer: 'superficial',
+    maxDoseAesthetic: 60,
+    svgPath:
+      'M118,162 C136,144 172,140 194,154 C196,178 194,202 186,216 C162,220 132,212 116,196 C110,184 112,170 118,162 Z M282,162 C264,144 228,140 206,154 C204,178 206,202 214,216 C238,220 268,212 284,196 C290,184 288,170 282,162 Z',
+    bbox: { minX: 112, minY: 142, maxX: 288, maxY: 220 },
+    defaultPoints: [
+      { x: 174, y: 196, doseOna: 5, depth: 'superficial', side: 'izq' },
+      { x: 152, y: 178, doseOna: 5, depth: 'superficial', side: 'izq' },
+      { x: 134, y: 194, doseOna: 5, depth: 'superficial', side: 'izq' },
+      { x: 226, y: 196, doseOna: 5, depth: 'superficial', side: 'der' },
+      { x: 248, y: 178, doseOna: 5, depth: 'superficial', side: 'der' },
+      { x: 266, y: 194, doseOna: 5, depth: 'superficial', side: 'der' },
+    ],
+  },
+  {
+    id: 'cervical-paraspinals',
+    muscleKey: 'Cervical Paraspinals',
+    name: 'Paravertebrales Cervicales (PREEMPT)',
+    zone: 'cuello',
+    view: 'back',
+    layer: 'profundo',
+    maxDoseAesthetic: 40,
+    svgPath:
+      'M162,232 C174,226 190,228 194,240 C196,276 194,316 188,344 C174,346 162,336 160,316 C158,286 158,252 162,232 Z M238,232 C226,226 210,228 206,240 C204,276 206,316 212,344 C226,346 238,336 240,316 C242,286 242,252 238,232 Z',
+    bbox: { minX: 158, minY: 226, maxX: 242, maxY: 346 },
+    defaultPoints: [
+      { x: 178, y: 264, doseOna: 5, depth: 'profundo', side: 'izq' },
+      { x: 176, y: 304, doseOna: 5, depth: 'profundo', side: 'izq' },
+      { x: 222, y: 264, doseOna: 5, depth: 'profundo', side: 'der' },
+      { x: 224, y: 304, doseOna: 5, depth: 'profundo', side: 'der' },
+    ],
+  },
+  {
+    id: 'trapezius-facial',
+    muscleKey: 'Trapezius',
+    name: 'Trapecio Superior (PREEMPT)',
+    zone: 'cuello',
+    view: 'back',
+    layer: 'superficial',
+    maxDoseAesthetic: 60,
+    svgPath:
+      'M154,320 C168,336 186,356 194,380 C194,412 192,444 188,468 C144,456 92,442 46,424 C74,394 122,356 154,320 Z M246,320 C232,336 214,356 206,380 C206,412 208,444 212,468 C256,456 308,442 354,424 C326,394 278,356 246,320 Z',
+    bbox: { minX: 46, minY: 320, maxX: 354, maxY: 468 },
+    defaultPoints: [
+      { x: 148, y: 374, doseOna: 5, depth: 'superficial', side: 'izq' },
+      { x: 116, y: 396, doseOna: 5, depth: 'superficial', side: 'izq' },
+      { x: 84, y: 416, doseOna: 5, depth: 'superficial', side: 'izq' },
+      { x: 252, y: 374, doseOna: 5, depth: 'superficial', side: 'der' },
+      { x: 284, y: 396, doseOna: 5, depth: 'superficial', side: 'der' },
+      { x: 316, y: 416, doseOna: 5, depth: 'superficial', side: 'der' },
     ],
   },
 ];
@@ -458,8 +679,8 @@ export function detectRiskAt(x: number, y: number): RiskType | null {
 
 export function clampToBBox(x: number, y: number, bbox: MuscleBBox): { x: number; y: number } {
   return {
-    x: Math.min(Math.max(x, bbox.minX), bbox.maxX),
-    y: Math.min(Math.max(y, bbox.minY), bbox.maxY),
+    x: Math.round(Math.min(Math.max(x, bbox.minX), bbox.maxX) * 10) / 10,
+    y: Math.round(Math.min(Math.max(y, bbox.minY), bbox.maxY) * 10) / 10,
   };
 }
 
@@ -493,15 +714,14 @@ export function sidesForMode(mode: SideMode): PointSide[] {
  * - x baja (izquierda de pantalla) = derecha del paciente
  * - x alta (derecha de pantalla) = izquierda del paciente
  */
-export function sideFromClickX(x: number, midlineTolerance = 16): SideMode {
+export function sideFromClickX(x: number, midlineTolerance = 10): PointSide {
   const mid = FACIAL_VIEWBOX.width / 2;
-  if (Math.abs(x - mid) <= midlineTolerance) return 'ambos';
+  if (Math.abs(x - mid) <= midlineTolerance) return 'centro';
   return x < mid ? 'der' : 'izq';
 }
 
 /** Mitad de pantalla que corresponde al lado del paciente */
 export function screenHalfForPatientSide(side: 'izq' | 'der'): 'left' | 'right' {
-  // Paciente de frente: su derecha → izquierda de pantalla
   return side === 'der' ? 'left' : 'right';
 }
 

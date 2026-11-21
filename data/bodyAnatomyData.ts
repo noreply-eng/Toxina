@@ -105,7 +105,7 @@ export const bodyRegionsDatabase: Record<BodyRegionKey, BodyRegionInfo> = {
   },
   trapecio: {
     key: 'trapecio',
-    views: ['back'],
+    views: ['front', 'back'],
     shortLabel: 'Trapecio',
     tag: 'Espalda Alta y Cintura Escapular',
     title: 'Trapecio y Estabilizadores Escapulares',

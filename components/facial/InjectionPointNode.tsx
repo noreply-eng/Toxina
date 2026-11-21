@@ -1,6 +1,7 @@
 import React, { useCallback, useRef } from 'react';
 import {
   convertOnaToBrand,
+  type PointSizeMode,
   type ToxinBrand,
 } from '../../constants/facialAestheticMap';
 import type { InjectionPoint } from '../../hooks/useFacialPlan';
@@ -8,6 +9,7 @@ import type { InjectionPoint } from '../../hooks/useFacialPlan';
 interface InjectionPointNodeProps {
   point: InjectionPoint;
   brand: ToxinBrand;
+  pointSize?: PointSizeMode;
   isSelected: boolean;
   dimmed?: boolean;
   onSelect: (id: string) => void;
@@ -15,6 +17,15 @@ interface InjectionPointNodeProps {
   onOpenPopover: (id: string, clientX: number, clientY: number) => void;
   svgRef: React.RefObject<SVGSVGElement | null>;
 }
+
+const SIZE_CONFIG: Record<
+  PointSizeMode,
+  { r: number; hitR: number; selR: number; riskR: number; deepRingR: number; fontSize: number; textY: number }
+> = {
+  sm: { r: 6.2, hitR: 14, selR: 9.2, riskR: 8.5, deepRingR: 4.5, fontSize: 6.2, textY: 2.2 },
+  md: { r: 9.2, hitR: 17, selR: 13, riskR: 12.2, deepRingR: 7, fontSize: 8.2, textY: 3 },
+  lg: { r: 12.4, hitR: 21, selR: 16.5, riskR: 15.5, deepRingR: 9.6, fontSize: 10.2, textY: 3.6 },
+};
 
 function screenToSvg(svg: SVGSVGElement, clientX: number, clientY: number) {
   const pt = svg.createSVGPoint();
@@ -29,6 +40,7 @@ function screenToSvg(svg: SVGSVGElement, clientX: number, clientY: number) {
 const InjectionPointNode: React.FC<InjectionPointNodeProps> = ({
   point,
   brand,
+  pointSize = 'md',
   isSelected,
   dimmed = false,
   onSelect,
@@ -43,8 +55,25 @@ const InjectionPointNode: React.FC<InjectionPointNodeProps> = ({
 
   const displayDose = convertOnaToBrand(point.doseOna, brand);
   const isRisk = !!point.risk;
-  const fill = isRisk ? '#ef4444' : isSelected ? '#f97316' : '#e06d53';
-  const stroke = isSelected ? '#fff' : isRisk ? '#fecaca' : '#fff';
+  const isDeep = point.depth === 'profundo';
+  const cfg = SIZE_CONFIG[pointSize];
+
+  // Visual differentiation:
+  // - Risk: Crimson red (#ef4444)
+  // - Profundo (Intramuscular deep): Clinical Cyan/Blue (#0284c7 / #0ea5e9)
+  // - Superficial (Subcutaneous/Intradermal): Coral/Orange (#e06d53 / #f97316)
+  const fill = isRisk
+    ? '#ef4444'
+    : isDeep
+      ? isSelected
+        ? '#0ea5e9'
+        : '#0284c7'
+      : isSelected
+        ? '#f97316'
+        : '#e06d53';
+
+  const stroke = isSelected ? '#ffffff' : isRisk ? '#fecaca' : isDeep ? '#bae6fd' : '#ffffff';
+  const selectionRingColor = isDeep ? '#38bdf8' : '#f97316';
 
   const clearLongPress = () => {
     if (longPressTimer.current) {
@@ -63,7 +92,7 @@ const InjectionPointNode: React.FC<InjectionPointNodeProps> = ({
 
       longPressTimer.current = setTimeout(() => {
         onOpenPopover(point.id, e.clientX, e.clientY);
-      }, 500);
+      }, 480);
     },
     [onOpenPopover, onSelect, point.id]
   );
@@ -111,29 +140,57 @@ const InjectionPointNode: React.FC<InjectionPointNodeProps> = ({
       style={{
         touchAction: 'none',
         cursor: 'grab',
-        opacity: dimmed ? 0.35 : 1,
+        opacity: dimmed ? 0.3 : 1,
       }}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onPointerCancel={clearLongPress}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onOpenPopover(point.id, e.clientX, e.clientY);
+      }}
       role="button"
-      aria-label={`Punto ${displayDose} unidades${isRisk ? ', zona de riesgo' : ''}`}
+      aria-label={`Punto ${displayDose} unidades (${point.depth})${isRisk ? ', zona de riesgo' : ''}`}
       aria-pressed={isSelected}
     >
+      <title>{`${displayDose} U (${point.depth === 'profundo' ? 'Profundo / IM' : 'Superficial / SC'}) · Doble clic o clic derecho para editar · Arrastra para mover`}</title>
       {/* Expanded hit area */}
-      <circle r={18} fill="transparent" />
+      <circle r={cfg.hitR} fill="transparent" />
       {isSelected && (
-        <circle r={14} fill="none" stroke="#f97316" strokeWidth={1.5} strokeOpacity={0.55} />
+        <circle
+          r={cfg.selR}
+          fill="none"
+          stroke={selectionRingColor}
+          strokeWidth={1.6}
+          strokeOpacity={0.75}
+        />
       )}
       {isRisk && !isSelected && (
-        <circle r={13} fill="none" stroke="#f87171" strokeWidth={1.25} strokeOpacity={0.7} />
+        <circle r={cfg.riskR} fill="none" stroke="#f87171" strokeWidth={1.3} strokeOpacity={0.8} />
       )}
-      <circle r={10} fill={fill} stroke={stroke} strokeWidth={isSelected ? 2.5 : 2} />
+      <circle
+        r={cfg.r}
+        fill={fill}
+        stroke={stroke}
+        strokeWidth={isSelected ? 2.2 : 1.7}
+      />
+      {/* Inner dashed ring for deep intramuscular points */}
+      {isDeep && (
+        <circle
+          r={cfg.deepRingR}
+          fill="none"
+          stroke="rgba(255,255,255,0.45)"
+          strokeWidth={0.8}
+          strokeDasharray="2 1.5"
+          pointerEvents="none"
+        />
+      )}
       <text
-        y={4}
+        y={cfg.textY}
         textAnchor="middle"
-        fontSize={8.5}
+        fontSize={cfg.fontSize}
         fontWeight="bold"
         fill="#fff"
         pointerEvents="none"

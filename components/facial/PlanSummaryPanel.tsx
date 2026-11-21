@@ -1,6 +1,13 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import type { FacialPlanController } from '../../hooks/useFacialPlan';
-import type { PointSide, SideMode, ToxinBrand } from '../../constants/facialAestheticMap';
+import {
+  CLINICAL_FACIAL_PRESETS,
+  FACIAL_MUSCLE_BY_ID,
+  type AnatomyLayerFilter,
+  type PointSide,
+  type SideMode,
+  type ToxinBrand,
+} from '../../constants/facialAestheticMap';
 
 type PanelTab = 'plan' | 'muscles' | 'safety';
 
@@ -33,12 +40,18 @@ const PlanSummaryPanel: React.FC<PlanSummaryPanelProps> = ({
     setBrand,
     dilution,
     setDilution,
+    plannerView,
+    setPlannerView,
     sideMode,
     setSideMode,
     mirrorSync,
     setMirrorSync,
     showDangerZones,
     setShowDangerZones,
+    anatomyLayerFilter,
+    setAnatomyLayerFilter,
+    addPointMode,
+    setAddPointMode,
     layerVisibility,
     setLayerVisibility,
     muscleSummaries,
@@ -46,10 +59,15 @@ const PlanSummaryPanel: React.FC<PlanSummaryPanelProps> = ({
     totalVolumeMl,
     activeRisks,
     overDoseMuscles,
+    asymmetricMuscles,
     points,
     clearPlan,
+    loadPreset,
     musclesCatalog,
     toggleMuscle,
+    addCustomPoint,
+    adjustMuscleDose,
+    equalizeMuscleSides,
     removeMuscleSide,
     clearLaterality,
     activeMuscleIds,
@@ -65,7 +83,7 @@ const PlanSummaryPanel: React.FC<PlanSummaryPanelProps> = ({
   ];
 
   const sideChipClass = (active: boolean) =>
-    `inline-flex items-center gap-0.5 px-2 py-1 rounded-md text-[10px] font-semibold min-h-[28px] cursor-pointer transition-colors border ${
+    `inline-flex items-center gap-0.5 px-2 py-1 rounded-md text-[10px] font-semibold min-h-[26px] cursor-pointer transition-colors border ${
       active
         ? 'bg-sky-500/20 text-sky-300 border-sky-500/40 hover:bg-red-500/20 hover:text-red-300 hover:border-red-400/40'
         : 'bg-slate-900/60 text-slate-600 border-slate-700/60 cursor-default'
@@ -85,18 +103,30 @@ const PlanSummaryPanel: React.FC<PlanSummaryPanelProps> = ({
     setConfirmClear(false);
   };
 
+  const alertCount = activeRisks.length + overDoseMuscles.length + asymmetricMuscles.length;
+
   const tabs: { id: PanelTab; label: string; badge?: number }[] = [
     { id: 'plan', label: 'Plan' },
-    { id: 'muscles', label: 'Músculos' },
+    { id: 'muscles', label: `Músculos (${musclesCatalog.length})` },
     {
       id: 'safety',
       label: 'Seguridad',
-      badge:
-        activeRisks.length + overDoseMuscles.length > 0
-          ? activeRisks.length + overDoseMuscles.length
-          : undefined,
+      badge: alertCount > 0 ? alertCount : undefined,
     },
   ];
+
+  const superficialTotal = useMemo(
+    () => musclesCatalog.filter((m) => m.layer === 'superficial').length,
+    [musclesCatalog]
+  );
+  const deepTotal = useMemo(
+    () => musclesCatalog.filter((m) => m.layer === 'profundo').length,
+    [musclesCatalog]
+  );
+
+  const filteredCatalog = musclesCatalog.filter(
+    (m) => anatomyLayerFilter === 'todos' || m.layer === anatomyLayerFilter
+  );
 
   return (
     <div className="flex flex-col lg:h-full bg-surface-dark border-t lg:border-t-0 lg:border-l border-slate-800">
@@ -117,14 +147,14 @@ const PlanSummaryPanel: React.FC<PlanSummaryPanelProps> = ({
         className={`flex flex-col flex-1 min-h-0 lg:overflow-hidden ${collapsed ? 'hidden lg:flex' : ''}`}
       >
         {/* Compact config */}
-        <div className="p-3 border-b border-slate-800 space-y-3 shrink-0">
+        <div className="p-3 border-b border-slate-800 space-y-2.5 shrink-0">
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="text-[10px] text-slate-400 uppercase tracking-wide">Marca</label>
               <select
                 value={brand}
                 onChange={(e) => setBrand(e.target.value as ToxinBrand)}
-                className="mt-1 w-full rounded-lg bg-slate-800 border border-slate-700 text-white text-sm px-2.5 py-2 min-h-[40px] cursor-pointer"
+                className="mt-1 w-full rounded-lg bg-slate-800 border border-slate-700 text-white text-sm px-2.5 py-2 min-h-[38px] cursor-pointer"
               >
                 {BRANDS.map((b) => (
                   <option key={b} value={b}>
@@ -143,13 +173,13 @@ const PlanSummaryPanel: React.FC<PlanSummaryPanelProps> = ({
                 min="0"
                 value={dilution}
                 onChange={(e) => setDilution(e.target.value)}
-                className="mt-1 w-full rounded-lg bg-slate-800 border border-slate-700 text-white text-sm px-2.5 py-2 min-h-[40px]"
+                className="mt-1 w-full rounded-lg bg-slate-800 border border-slate-700 text-white text-sm px-2.5 py-2 min-h-[38px]"
               />
             </div>
           </div>
 
           <div>
-            <p className="text-[10px] text-slate-400 uppercase tracking-wide mb-1.5">
+            <p className="text-[10px] text-slate-400 uppercase tracking-wide mb-1">
               Lado a colocar
             </p>
             <div
@@ -164,7 +194,8 @@ const PlanSummaryPanel: React.FC<PlanSummaryPanelProps> = ({
                   role="radio"
                   aria-checked={sideMode === m.id}
                   onClick={() => setSideMode(m.id)}
-                  className={`py-2 rounded-lg text-[11px] font-semibold min-h-[36px] cursor-pointer transition-colors ${
+                  title={`Colocar puntos en: ${m.label} del paciente`}
+                  className={`py-1.5 rounded-lg text-[11px] font-semibold min-h-[34px] cursor-pointer transition-colors ${
                     sideMode === m.id
                       ? 'bg-primary text-white shadow-sm'
                       : 'text-slate-400 hover:text-white hover:bg-slate-800'
@@ -174,13 +205,8 @@ const PlanSummaryPanel: React.FC<PlanSummaryPanelProps> = ({
                 </button>
               ))}
             </div>
-            <p className="text-[10px] text-slate-500 mt-1.5 leading-snug">
-              {sideMode === 'ambos'
-                ? 'Toca un músculo para agregar ambos lados. Toca de nuevo para quitarlo.'
-                : 'Toca un músculo para agregar/quitar solo ese lado. El otro se conserva.'}
-            </p>
-            <p className="text-[10px] text-slate-600 mt-1 leading-snug">
-              Izq/Der = lado del paciente (de frente: D a la izq. de pantalla, I a la der.).
+            <p className="text-[10px] text-slate-500 mt-1 leading-snug">
+              Izq/Der = lado del paciente (D a la izq. de pantalla en vista frontal).
             </p>
           </div>
 
@@ -188,19 +214,33 @@ const PlanSummaryPanel: React.FC<PlanSummaryPanelProps> = ({
             <button
               type="button"
               onClick={() => setMirrorSync(!mirrorSync)}
-              className={`px-2.5 py-1.5 rounded-lg text-[11px] font-medium min-h-[36px] cursor-pointer transition-colors border ${
+              className={`px-2.5 py-1.5 rounded-lg text-[11px] font-medium min-h-[34px] cursor-pointer transition-colors border ${
                 mirrorSync
                   ? 'bg-sky-500/20 text-sky-300 border-sky-500/35'
                   : 'bg-slate-800 text-slate-300 border-transparent hover:bg-slate-700'
               }`}
-              title="Al mover o cambiar dosis, sincroniza el punto del otro lado"
+              title="Al mover, cambiar dosis o agregar puntos libres, sincroniza el punto simétrico del otro lado"
             >
               Espejo edición {mirrorSync ? 'ON' : 'OFF'}
             </button>
             <button
               type="button"
+              onClick={() => setAddPointMode(!addPointMode)}
+              className={`px-2.5 py-1.5 rounded-lg text-[11px] font-medium min-h-[34px] cursor-pointer transition-colors border flex items-center gap-1 ${
+                addPointMode
+                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/45'
+                  : 'bg-slate-800 text-slate-300 border-transparent hover:bg-slate-700'
+              }`}
+              title="Permite hacer clic en cualquier parte de un músculo en el mapa para insertar un punto extra"
+            >
+              <span className="material-symbols-outlined text-[14px]">add_location_alt</span>
+              + Punto
+            </button>
+            <button
+              type="button"
               onClick={() => setShowDangerZones(!showDangerZones)}
-              className={`px-2.5 py-1.5 rounded-lg text-[11px] font-medium min-h-[36px] cursor-pointer transition-colors ${
+              title="Mostrar u ocultar polígonos de advertencia anatómica en el mapa"
+              className={`px-2.5 py-1.5 rounded-lg text-[11px] font-medium min-h-[34px] cursor-pointer transition-colors ${
                 showDangerZones
                   ? 'bg-red-500/15 text-red-300 border border-red-500/35'
                   : 'bg-slate-800 text-slate-300 border border-transparent hover:bg-slate-700'
@@ -212,7 +252,8 @@ const PlanSummaryPanel: React.FC<PlanSummaryPanelProps> = ({
               type="button"
               onClick={handleClear}
               onBlur={() => setConfirmClear(false)}
-              className={`px-2.5 py-1.5 rounded-lg text-[11px] font-medium min-h-[36px] cursor-pointer transition-colors ${
+              title="Borrar todos los puntos del plan actual"
+              className={`px-2.5 py-1.5 rounded-lg text-[11px] font-medium min-h-[34px] cursor-pointer transition-colors ${
                 confirmClear
                   ? 'bg-red-500/25 text-red-300 border border-red-400/50'
                   : 'bg-slate-800 text-slate-300 border border-transparent hover:bg-slate-700'
@@ -241,7 +282,7 @@ const PlanSummaryPanel: React.FC<PlanSummaryPanelProps> = ({
                       setConfirmClearSide(null);
                     }}
                     onBlur={() => setConfirmClearSide((c) => (c === side ? null : c))}
-                    className={`flex-1 px-2 py-1.5 rounded-lg text-[10px] font-medium min-h-[32px] cursor-pointer border transition-colors ${
+                    className={`flex-1 px-2 py-1 rounded-lg text-[10px] font-medium min-h-[30px] cursor-pointer border transition-colors ${
                       confirming
                         ? 'bg-red-500/25 text-red-300 border-red-400/50'
                         : 'bg-slate-800/80 text-slate-400 border-slate-700 hover:text-slate-200'
@@ -262,6 +303,7 @@ const PlanSummaryPanel: React.FC<PlanSummaryPanelProps> = ({
                 ['anatomy', 'Atlas'],
                 ['muscles', 'Zonas'],
                 ['points', 'Puntos'],
+                ['labels', 'Nombres'],
               ] as const
             ).map(([layer, label]) => (
               <label
@@ -319,62 +361,153 @@ const PlanSummaryPanel: React.FC<PlanSummaryPanelProps> = ({
           ))}
         </div>
 
-        {/* Tab content — scroll interno en desktop; en móvil scrollea el modal completo */}
+        {/* Tab content */}
         <div
           className="flex-1 overflow-y-auto overscroll-y-contain p-3 space-y-3 min-h-0 touch-pan-y"
           role="tabpanel"
         >
           {tab === 'plan' && (
             <>
+              {/* Protocolos Clínicos Rápidos */}
+              <div>
+                <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1.5">
+                  Protocolos rápidos (1 clic)
+                </h3>
+                <div className="flex flex-wrap gap-1.5">
+                  {CLINICAL_FACIAL_PRESETS.map((preset) => (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      onClick={() => {
+                        loadPreset(preset.muscleIds);
+                        if (preset.id === 'migrana-preempt') {
+                          setAnatomyLayerFilter('todos');
+                        }
+                      }}
+                      title={preset.description}
+                      className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-800/90 hover:bg-slate-700 text-slate-200 border border-slate-700 text-[10px] font-semibold cursor-pointer transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-[13px] text-sky-400">
+                        {preset.icon}
+                      </span>
+                      {preset.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <div>
                 <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wide mb-2">
                   Por músculo
                 </h3>
                 {muscleSummaries.length === 0 ? (
                   <p className="text-xs text-slate-500 leading-relaxed">
-                    Toca un músculo en el mapa para agregar puntos. Usa Izq/Ambos/Der para
-                    controlar qué lado se coloca. En cada músculo, toca un chip para quitar ese
-                    lado.
+                    Toca un músculo en el mapa o elige un protocolo rápido arriba. Usa los botones{' '}
+                    <strong className="text-slate-300">Superficiales / Profundos</strong> o cambia a{' '}
+                    <strong className="text-purple-300">Posterior · PREEMPT</strong> para occipital y
+                    cuello.
                   </p>
                 ) : (
                   <div className="space-y-2">
                     {muscleSummaries.map((s) => {
+                      const muscleCfg = FACIAL_MUSCLE_BY_ID[s.muscleId];
                       const hasIzq = s.sides.includes('izq');
                       const hasDer = s.sides.includes('der');
                       const hasCentro = s.sides.includes('centro');
-                      const sideButtons: { side: PointSide | 'ambos'; label: string; active: boolean }[] =
-                        [
-                          { side: 'izq', label: 'Izq', active: hasIzq },
-                          { side: 'der', label: 'Der', active: hasDer },
-                        ];
+                      const sideButtons: {
+                        side: PointSide | 'ambos';
+                        label: string;
+                        units: number;
+                        active: boolean;
+                      }[] = [
+                        { side: 'izq', label: 'Izq', units: s.izqBrand, active: hasIzq },
+                        { side: 'der', label: 'Der', units: s.derBrand, active: hasDer },
+                      ];
                       if (hasCentro && !hasIzq && !hasDer) {
                         sideButtons.length = 0;
-                        sideButtons.push({ side: 'centro', label: 'Centro', active: true });
+                        sideButtons.push({
+                          side: 'centro',
+                          label: 'Centro',
+                          units: s.centroBrand,
+                          active: true,
+                        });
                       }
 
                       return (
                         <div
                           key={s.muscleId}
+                          onClick={() => {
+                            if (muscleCfg && (muscleCfg.view ?? 'front') !== plannerView) {
+                              setPlannerView(muscleCfg.view ?? 'front');
+                            }
+                            onHighlightMuscle?.(
+                              highlightedMuscleId === s.muscleId ? null : s.muscleId
+                            );
+                          }}
                           onMouseEnter={() => onHighlightMuscle?.(s.muscleId)}
                           onMouseLeave={() => onHighlightMuscle?.(null)}
-                          className={`rounded-lg border p-3 transition-colors ${
+                          className={`rounded-lg border p-3 transition-all cursor-pointer ${
                             highlightedMuscleId === s.muscleId
-                              ? 'border-primary/50 bg-primary/10'
+                              ? 'border-yellow-400 bg-yellow-400/10 shadow-md shadow-yellow-500/10 ring-1 ring-yellow-400/50'
                               : s.overDose
                                 ? 'border-red-500/45 bg-red-500/5'
-                                : 'border-slate-700 bg-slate-800/50'
+                                : 'border-slate-700 bg-slate-800/50 hover:border-slate-600'
                           }`}
                         >
                           <div className="flex justify-between items-start gap-2">
                             <div className="min-w-0">
-                              <p className="text-xs font-bold text-white truncate">{s.name}</p>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                {highlightedMuscleId === s.muscleId && (
+                                  <span className="size-2 rounded-full bg-yellow-400 animate-pulse shrink-0" />
+                                )}
+                                <p className="text-xs font-bold text-white truncate">{s.name}</p>
+                                {muscleCfg && (
+                                  <span
+                                    className={`px-1.5 py-0.2 rounded text-[9px] font-bold uppercase ${
+                                      muscleCfg.layer === 'profundo'
+                                        ? 'bg-sky-500/15 text-sky-300'
+                                        : 'bg-orange-500/15 text-orange-300'
+                                    }`}
+                                  >
+                                    {muscleCfg.layer === 'profundo' ? 'Prof.' : 'Sup.'}
+                                  </span>
+                                )}
+                                {s.view === 'back' && (
+                                  <span className="px-1.5 py-0.2 rounded text-[9px] font-bold uppercase bg-purple-500/20 text-purple-300">
+                                    Post.
+                                  </span>
+                                )}
+                              </div>
                               <p className="text-[11px] text-slate-400">
                                 {s.pointCount} pts · máx {s.maxDoseAesthetic} U ona
                               </p>
                             </div>
-                            <span className="text-sm font-bold text-primary shrink-0">
-                              {s.totalBrand} U
-                            </span>
+
+                            {/* Direct Dose Stepper (- / +) for the whole muscle */}
+                            <div
+                              className="flex items-center gap-1 shrink-0"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <button
+                                type="button"
+                                title="Reducir dosis en todos los puntos de este músculo"
+                                onClick={() => adjustMuscleDose(s.muscleId, -0.5)}
+                                className="size-6 rounded-md bg-slate-900 hover:bg-slate-700 border border-slate-700 text-slate-200 font-bold text-xs flex items-center justify-center cursor-pointer"
+                              >
+                                −
+                              </button>
+                              <span className="text-sm font-bold text-primary min-w-[40px] text-center tabular-nums">
+                                {s.totalBrand} U
+                              </span>
+                              <button
+                                type="button"
+                                title="Aumentar dosis en todos los puntos de este músculo"
+                                onClick={() => adjustMuscleDose(s.muscleId, 0.5)}
+                                className="size-6 rounded-md bg-slate-900 hover:bg-slate-700 border border-slate-700 text-slate-200 font-bold text-xs flex items-center justify-center cursor-pointer"
+                              >
+                                +
+                              </button>
+                            </div>
                           </div>
 
                           <div className="flex flex-wrap items-center gap-1.5 mt-2">
@@ -385,7 +518,7 @@ const PlanSummaryPanel: React.FC<PlanSummaryPanelProps> = ({
                                 disabled={!chip.active}
                                 title={
                                   chip.active
-                                    ? `Quitar lado ${chip.label}`
+                                    ? `Quitar lado ${chip.label} (${chip.units} U)`
                                     : `${chip.label} no activo`
                                 }
                                 onClick={(e) => {
@@ -395,7 +528,10 @@ const PlanSummaryPanel: React.FC<PlanSummaryPanelProps> = ({
                                 }}
                                 className={sideChipClass(chip.active)}
                               >
-                                {chip.label}
+                                <span>
+                                  {chip.label}
+                                  {chip.active ? ` ${chip.units}U` : ''}
+                                </span>
                                 {chip.active && (
                                   <span className="material-symbols-outlined text-[12px] opacity-80">
                                     close
@@ -403,6 +539,38 @@ const PlanSummaryPanel: React.FC<PlanSummaryPanelProps> = ({
                                 )}
                               </button>
                             ))}
+
+                            {/* Botón directo para sumar un punto extra en este músculo sin encimarlos */}
+                            {muscleCfg && (
+                              <button
+                                type="button"
+                                title="Agregar un punto de aplicación adicional en este músculo (desplazado automáticamente)"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if ((muscleCfg.view ?? 'front') !== plannerView) {
+                                    setPlannerView(muscleCfg.view ?? 'front');
+                                  }
+                                  const tpl = muscleCfg.defaultPoints[0];
+                                  const baseX = tpl
+                                    ? tpl.x
+                                    : Math.round((muscleCfg.bbox.minX + muscleCfg.bbox.maxX) / 2);
+                                  const baseY = tpl
+                                    ? tpl.y
+                                    : Math.round((muscleCfg.bbox.minY + muscleCfg.bbox.maxY) / 2);
+                                  const step = Math.floor(s.pointCount / 2) + 1;
+                                  const angle = step * 1.35;
+                                  const radius = Math.min(18, 6 + step * 3);
+                                  const nextX = baseX + Math.round(Math.cos(angle) * radius);
+                                  const nextY = baseY + Math.round(Math.sin(angle) * radius);
+                                  addCustomPoint(s.muscleId, nextX, nextY);
+                                }}
+                                className="inline-flex items-center gap-0.5 px-2 py-1 rounded-md text-[10px] font-semibold min-h-[26px] cursor-pointer transition-colors border bg-amber-500/15 text-amber-300 border-amber-500/35 hover:bg-amber-500/25"
+                              >
+                                <span className="material-symbols-outlined text-[12px]">add</span>
+                                Punto
+                              </button>
+                            )}
+
                             {(hasIzq || hasDer) && (
                               <button
                                 type="button"
@@ -417,6 +585,29 @@ const PlanSummaryPanel: React.FC<PlanSummaryPanelProps> = ({
                               </button>
                             )}
                           </div>
+
+                          {/* Alerta de Asimetría Izq vs Der con botón Igualar Lados en 1 clic */}
+                          {s.isAsymmetric && (
+                            <div
+                              className="mt-2 pt-1.5 border-t border-slate-700/80 flex items-center justify-between gap-2"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <span className="text-[10px] text-amber-300 flex items-center gap-1">
+                                <span className="material-symbols-outlined text-[13px]">
+                                  balance
+                                </span>
+                                Asimetría: Izq {s.izqBrand}U ≠ Der {s.derBrand}U
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => equalizeMuscleSides(s.muscleId)}
+                                className="px-2 py-0.5 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-400/40 text-[10px] font-bold cursor-pointer transition-colors"
+                                title="Igualar ambos lados con la misma cantidad de puntos y dosis"
+                              >
+                                Igualar lados
+                              </button>
+                            </div>
+                          )}
 
                           {s.risks.length > 0 && (
                             <p className="text-[11px] text-red-300 mt-1.5 flex items-center gap-1">
@@ -440,44 +631,91 @@ const PlanSummaryPanel: React.FC<PlanSummaryPanelProps> = ({
           )}
 
           {tab === 'muscles' && (
-            <div className="grid grid-cols-2 gap-1.5">
-              {musclesCatalog.map((m) => {
-                const active = activeMuscleIds.has(m.id);
-                const highlighted = highlightedMuscleId === m.id;
-                return (
+            <div className="space-y-2.5">
+              {/* Filtro por plano anatómico */}
+              <div className="grid grid-cols-3 gap-1 p-1 rounded-xl bg-slate-900 border border-slate-700">
+                {(
+                  [
+                    { id: 'todos', label: `Todos (${musclesCatalog.length})` },
+                    { id: 'superficial', label: `Superficial (${superficialTotal})` },
+                    { id: 'profundo', label: `Profundo (${deepTotal})` },
+                  ] as { id: AnatomyLayerFilter; label: string }[]
+                ).map((f) => (
                   <button
-                    key={m.id}
+                    key={f.id}
                     type="button"
-                    onClick={() => toggleMuscle(m.id)}
-                    onMouseEnter={() => onHighlightMuscle?.(m.id)}
-                    onMouseLeave={() => onHighlightMuscle?.(null)}
-                    onFocus={() => onHighlightMuscle?.(m.id)}
-                    onBlur={() => onHighlightMuscle?.(null)}
-                    className={`text-left px-2.5 py-2 rounded-lg text-[11px] min-h-[40px] cursor-pointer transition-colors border ${
-                      active
-                        ? 'bg-primary/20 text-primary border-primary/35'
-                        : highlighted
-                          ? 'bg-slate-700 text-white border-slate-500'
-                          : 'bg-slate-800 text-slate-300 border-transparent hover:bg-slate-700'
+                    onClick={() => setAnatomyLayerFilter(f.id)}
+                    className={`py-1.5 rounded-lg text-[10px] font-bold cursor-pointer transition-colors ${
+                      anatomyLayerFilter === f.id
+                        ? f.id === 'profundo'
+                          ? 'bg-sky-600 text-white'
+                          : f.id === 'superficial'
+                            ? 'bg-orange-600 text-white'
+                            : 'bg-slate-700 text-white'
+                        : 'text-slate-400 hover:text-white'
                     }`}
                   >
-                    {m.name}
+                    {f.label}
                   </button>
-                );
-              })}
+                ))}
+              </div>
+
+              <div className="grid grid-cols-2 gap-1.5">
+                {filteredCatalog.map((m) => {
+                  const active = activeMuscleIds.has(m.id);
+                  const highlighted = highlightedMuscleId === m.id;
+                  const isDeep = m.layer === 'profundo';
+                  const isBack = (m.view ?? 'front') === 'back';
+                  return (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => {
+                        if ((m.view ?? 'front') !== plannerView) {
+                          setPlannerView(m.view ?? 'front');
+                        }
+                        toggleMuscle(m.id);
+                      }}
+                      onMouseEnter={() => onHighlightMuscle?.(m.id)}
+                      onMouseLeave={() => onHighlightMuscle?.(null)}
+                      onFocus={() => onHighlightMuscle?.(m.id)}
+                      onBlur={() => onHighlightMuscle?.(null)}
+                      className={`text-left px-2.5 py-2 rounded-lg text-[11px] min-h-[44px] cursor-pointer transition-colors border flex flex-col justify-between ${
+                        active
+                          ? isDeep
+                            ? 'bg-sky-500/20 text-sky-300 border-sky-500/45'
+                            : 'bg-primary/20 text-primary border-primary/40'
+                          : highlighted
+                            ? 'bg-slate-700 text-white border-slate-500'
+                            : 'bg-slate-800 text-slate-300 border-transparent hover:bg-slate-700'
+                      }`}
+                    >
+                      <span className="font-semibold leading-tight line-clamp-1">{m.name}</span>
+                      <span
+                        className={`text-[9px] mt-0.5 ${
+                          isDeep ? 'text-sky-400/80' : 'text-orange-300/75'
+                        }`}
+                      >
+                        {isBack ? 'Posterior · ' : ''}
+                        {isDeep ? 'Profundo' : 'Superficial'} · máx {m.maxDoseAesthetic} U
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           )}
 
           {tab === 'safety' && (
             <div className="space-y-3">
-              {activeRisks.length === 0 && overDoseMuscles.length === 0 ? (
+              {alertCount === 0 ? (
                 <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/10 p-3">
                   <p className="text-xs font-semibold text-emerald-300 flex items-center gap-1.5">
                     <span className="material-symbols-outlined text-[16px]">verified</span>
                     Sin alertas activas
                   </p>
                   <p className="text-[11px] text-emerald-200/80 mt-1">
-                    No hay puntos en zonas de riesgo ni sobredosificación detectada.
+                    No hay puntos en zonas de riesgo, sobredosificación ni asimetrías involuntarias.
                   </p>
                 </div>
               ) : (
@@ -507,11 +745,24 @@ const PlanSummaryPanel: React.FC<PlanSummaryPanelProps> = ({
                       <p className="text-[11px] text-amber-100/90">{overDoseMuscles.join(', ')}</p>
                     </div>
                   )}
+                  {asymmetricMuscles.length > 0 && (
+                    <div className="rounded-xl bg-sky-500/10 border border-sky-500/30 p-3">
+                      <p className="text-xs font-bold text-sky-300 mb-1 flex items-center gap-1">
+                        <span className="material-symbols-outlined text-[15px]">balance</span>
+                        Asimetría de dosis Izq vs. Der
+                      </p>
+                      <p className="text-[11px] text-sky-100/90">
+                        {asymmetricMuscles.join(', ')} tienen unidades distintas entre lado
+                        izquierdo y derecho. Puedes simetrizarlos con el botón &ldquo;Igualar
+                        lados&rdquo; en la pestaña Plan.
+                      </p>
+                    </div>
+                  )}
                 </>
               )}
               <p className="text-[11px] text-slate-500 leading-relaxed">
-                Las zonas de riesgo se muestran en el mapa cuando el interruptor está activo. El
-                color no es el único indicador: también hay mensajes y anillos en los puntos.
+                Los puntos superficiales se muestran en naranja y los profundos (intramusculares) en
+                azul cian con anillo punteado interno.
               </p>
             </div>
           )}
@@ -537,32 +788,44 @@ const PlanSummaryPanel: React.FC<PlanSummaryPanelProps> = ({
               <span className="tabular-nums">{points.length} pts</span>
             </div>
             {(unitsBySide.izq > 0 || unitsBySide.der > 0 || unitsBySide.centro > 0) && (
-              <p className="mt-1.5 text-[11px] text-slate-400 tabular-nums">
-                {unitsBySide.izq > 0 && (
-                  <span className="mr-2">
-                    Izq <span className="text-white font-medium">{unitsBySide.izq} U</span>
+              <div className="mt-1.5 flex items-center justify-between text-[11px] text-slate-400 tabular-nums">
+                <div>
+                  {unitsBySide.izq > 0 && (
+                    <span className="mr-2">
+                      Izq <span className="text-white font-medium">{unitsBySide.izq} U</span>
+                    </span>
+                  )}
+                  {unitsBySide.der > 0 && (
+                    <span className="mr-2">
+                      Der <span className="text-white font-medium">{unitsBySide.der} U</span>
+                    </span>
+                  )}
+                  {unitsBySide.centro > 0 && (
+                    <span>
+                      Centro <span className="text-white font-medium">{unitsBySide.centro} U</span>
+                    </span>
+                  )}
+                </div>
+                {unitsBySide.izq > 0 && unitsBySide.der > 0 && (
+                  <span
+                    className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                      unitsBySide.izq === unitsBySide.der
+                        ? 'bg-emerald-500/15 text-emerald-300'
+                        : 'bg-amber-500/15 text-amber-300'
+                    }`}
+                  >
+                    {unitsBySide.izq === unitsBySide.der ? 'Simétrico' : 'Asimétrico'}
                   </span>
                 )}
-                {unitsBySide.der > 0 && (
-                  <span className="mr-2">
-                    Der <span className="text-white font-medium">{unitsBySide.der} U</span>
-                  </span>
-                )}
-                {unitsBySide.centro > 0 && (
-                  <span>
-                    Centro <span className="text-white font-medium">{unitsBySide.centro} U</span>
-                  </span>
-                )}
-              </p>
+              </div>
             )}
-            {(activeRisks.length > 0 || overDoseMuscles.length > 0) && (
+            {alertCount > 0 && (
               <button
                 type="button"
                 onClick={() => setTab('safety')}
                 className="mt-2 text-[11px] text-red-300 hover:text-red-200 cursor-pointer underline-offset-2 hover:underline"
               >
-                Ver {activeRisks.length + overDoseMuscles.length} alerta
-                {activeRisks.length + overDoseMuscles.length === 1 ? '' : 's'}
+                Ver {alertCount} alerta{alertCount === 1 ? '' : 's'}
               </button>
             )}
           </div>

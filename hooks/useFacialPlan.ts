@@ -11,9 +11,13 @@ import {
   mirrorX,
   muscleHasLateralPoints,
   RISK_MESSAGES,
+  sideFromClickX,
+  type AnatomyLayerFilter,
   type DefaultPointTemplate,
+  type FacialPlannerView,
   type PointDepth,
   type PointSide,
+  type PointSizeMode,
   type RiskType,
   type SideMode,
   type ToxinBrand,
@@ -37,8 +41,13 @@ export interface MuscleSummary {
   muscleId: string;
   muscleKey: string;
   name: string;
+  view: FacialPlannerView;
   totalOna: number;
   totalBrand: number;
+  izqBrand: number;
+  derBrand: number;
+  centroBrand: number;
+  isAsymmetric: boolean;
   pointCount: number;
   maxDoseAesthetic: number;
   overDose: boolean;
@@ -51,6 +60,7 @@ export interface FacialPlanExport {
   dilution: string;
   pathologyId: string;
   muscles: MuscleSelection[];
+  points: InjectionPoint[];
 }
 
 let pointIdCounter = 0;
@@ -67,6 +77,7 @@ function buildPoint(
   const muscle = FACIAL_MUSCLE_BY_ID[muscleId];
   const x = overrides?.x ?? template.x;
   const y = overrides?.y ?? template.y;
+  const isBack = (muscle?.view ?? 'front') === 'back';
   return {
     id: nextPointId(muscleId),
     muscleId,
@@ -76,7 +87,7 @@ function buildPoint(
     doseOna: overrides?.doseOna ?? template.doseOna,
     depth: overrides?.depth ?? template.depth,
     side: overrides?.side ?? template.side,
-    risk: detectRiskAt(x, y),
+    risk: isBack ? null : detectRiskAt(x, y),
     mirrored: overrides?.mirrored,
   };
 }
@@ -90,6 +101,35 @@ function hasMuscleSide(
   return points.some((p) => p.muscleId === muscleId && p.side === side);
 }
 
+/**
+ * Encuentra el índice del punto contralateral más cercano a la posición espejo original.
+ */
+function findClosestContralateralIndex(
+  points: InjectionPoint[],
+  sourcePoint: InjectionPoint
+): number {
+  if (sourcePoint.side === 'centro') return -1;
+  const targetSide = mirrorSide(sourcePoint.side);
+  const targetX = mirrorX(sourcePoint.x);
+  const targetY = sourcePoint.y;
+
+  let bestIdx = -1;
+  let bestDist = Infinity;
+
+  points.forEach((p, idx) => {
+    if (p.muscleId !== sourcePoint.muscleId || p.id === sourcePoint.id || p.side !== targetSide) {
+      return;
+    }
+    const dist = Math.hypot(p.x - targetX, p.y - targetY);
+    if (dist < bestDist) {
+      bestDist = dist;
+      bestIdx = idx;
+    }
+  });
+
+  return bestIdx;
+}
+
 export interface UseFacialPlanOptions {
   initialBrand?: ToxinBrand;
   initialDilution?: string;
@@ -101,34 +141,35 @@ export interface UseFacialPlanOptions {
 export function useFacialPlan(options: UseFacialPlanOptions = {}) {
   const [brand, setBrand] = useState<ToxinBrand>(options.initialBrand ?? 'Botox');
   const [dilution, setDilution] = useState(options.initialDilution ?? '2.5');
+  const [plannerView, setPlannerView] = useState<FacialPlannerView>('front');
   const [sideMode, setSideMode] = useState<SideMode>(
     options.mirrorModeDefault === false ? 'izq' : 'ambos'
   );
-  /** Al editar (mover/dosis), sincronizar el punto contralateral si existe */
+  /** Al editar (mover/dosis/agregar punto libre), sincronizar el punto contralateral */
   const [mirrorSync, setMirrorSync] = useState(options.mirrorModeDefault ?? true);
   const [points, setPoints] = useState<InjectionPoint[]>([]);
   const [activeMuscleIds, setActiveMuscleIds] = useState<Set<string>>(new Set());
   const [selectedPointId, setSelectedPointId] = useState<string | null>(null);
   const [showDangerZones, setShowDangerZones] = useState(true);
+  const [anatomyLayerFilter, setAnatomyLayerFilter] = useState<AnatomyLayerFilter>('todos');
+  const [pointSize, setPointSize] = useState<PointSizeMode>('md');
+  const [addPointMode, setAddPointMode] = useState<boolean>(false);
   const [layerVisibility, setLayerVisibility] = useState({
     skin: true,
     muscles: true,
     points: true,
     anatomy: true,
+    labels: true,
   });
 
   /** Compat: mirrorMode = selección bilateral */
   const mirrorMode = sideMode === 'ambos';
   const setMirrorMode = useCallback((on: boolean) => {
     setSideMode(on ? 'ambos' : 'izq');
-    // Sync es independiente: no lo forzar aquí
   }, []);
 
   /**
    * Activa/desactiva puntos de un músculo según el modo lateral.
-   * Criterio por presencia de lado (no por distancia a plantilla).
-   * - ambos: toggle todo el músculo
-   * - izq/der: toggle solo ese lado; conserva el contralateral y el centro
    */
   const toggleMuscle = useCallback(
     (muscleId: string, overrideSide?: SideMode) => {
@@ -137,7 +178,6 @@ export function useFacialPlan(options: UseFacialPlanOptions = {}) {
 
       const mode = overrideSide ?? sideMode;
 
-      // Músculos solo de línea media (prócer, mentoniano…)
       if (!muscleHasLateralPoints(muscle)) {
         setPoints((prev) => {
           const exists = prev.some((p) => p.muscleId === muscleId);
@@ -163,14 +203,12 @@ export function useFacialPlan(options: UseFacialPlanOptions = {}) {
           const next = prev.filter((p) => {
             if (p.muscleId !== muscleId) return true;
             if (mode === 'ambos') return false;
-            // Quitar solo el lado pedido; conservar contralateral y centro
             return p.side !== mode;
           });
           setActiveMuscleIds(new Set(next.map((p) => p.muscleId)));
           return next;
         }
 
-        // Agregar plantillas del modo (sin centro en unilateral)
         const templates =
           mode === 'ambos'
             ? muscle.defaultPoints
@@ -188,6 +226,119 @@ export function useFacialPlan(options: UseFacialPlanOptions = {}) {
     },
     [sideMode]
   );
+
+  /**
+   * Agrega un nuevo punto de aplicación libre en las coordenadas (x, y) dentro del músculo indicado.
+   */
+  const addCustomPoint = useCallback(
+    (muscleId: string, rawX: number, rawY: number) => {
+      const muscle = FACIAL_MUSCLE_BY_ID[muscleId];
+      if (!muscle) return;
+
+      const isBack = (muscle.view ?? 'front') === 'back';
+      const clamped = clampToBBox(rawX, rawY, muscle.bbox);
+      let side: PointSide = 'centro';
+      if (muscleHasLateralPoints(muscle)) {
+        if (isBack) {
+          // En vista posterior: X < 200 = izquierda del paciente; X > 200 = derecha del paciente
+          side = clamped.x < 200 ? 'izq' : 'der';
+        } else {
+          const inferred = sideFromClickX(clamped.x, 8);
+          side = inferred === 'centro' ? (clamped.x < 200 ? 'der' : 'izq') : inferred;
+        }
+      }
+
+      const baseTemplate = muscle.defaultPoints[0] ?? {
+        x: clamped.x,
+        y: clamped.y,
+        doseOna: 2,
+        depth: muscle.layer === 'profundo' ? 'profundo' : 'superficial',
+        side,
+      };
+
+      const primaryPoint = buildPoint(muscleId, baseTemplate, {
+        x: clamped.x,
+        y: clamped.y,
+        side,
+        depth: baseTemplate.depth,
+        doseOna: baseTemplate.doseOna,
+      });
+
+      setPoints((prev) => {
+        const added: InjectionPoint[] = [primaryPoint];
+        if (mirrorSync && sideMode === 'ambos' && side !== 'centro') {
+          const mx = mirrorX(clamped.x);
+          const mClamped = clampToBBox(mx, clamped.y, muscle.bbox);
+          const contraPoint = buildPoint(muscleId, baseTemplate, {
+            x: mClamped.x,
+            y: mClamped.y,
+            side: mirrorSide(side),
+            depth: baseTemplate.depth,
+            doseOna: baseTemplate.doseOna,
+            mirrored: true,
+          });
+          added.push(contraPoint);
+        }
+        return [...prev, ...added];
+      });
+
+      setActiveMuscleIds((ids) => new Set(ids).add(muscleId));
+      setSelectedPointId(primaryPoint.id);
+    },
+    [mirrorSync, sideMode]
+  );
+
+  /** Ajusta la dosis (en unidades Ona) de TODOS los puntos activos de un músculo a la vez */
+  const adjustMuscleDose = useCallback((muscleId: string, deltaOnaPerPoint: number) => {
+    setPoints((prev) =>
+      prev.map((p) => {
+        if (p.muscleId !== muscleId) return p;
+        const newDose = Math.max(0.5, Math.round((p.doseOna + deltaOnaPerPoint) * 2) / 2);
+        return { ...p, doseOna: newDose };
+      })
+    );
+  }, []);
+
+  /**
+   * Simetriza los lados izquierdo y derecho de un músculo copiando el lado con mayor dosis
+   * hacia el lado contralateral.
+   */
+  const equalizeMuscleSides = useCallback((muscleId: string) => {
+    const muscle = FACIAL_MUSCLE_BY_ID[muscleId];
+    if (!muscle || !muscleHasLateralPoints(muscle)) return;
+
+    setPoints((prev) => {
+      const musclePts = prev.filter((p) => p.muscleId === muscleId);
+      const otherPts = prev.filter((p) => p.muscleId !== muscleId);
+      const izqPts = musclePts.filter((p) => p.side === 'izq');
+      const derPts = musclePts.filter((p) => p.side === 'der');
+      const centroPts = musclePts.filter((p) => p.side === 'centro');
+
+      const izqSum = izqPts.reduce((s, p) => s + p.doseOna, 0);
+      const derSum = derPts.reduce((s, p) => s + p.doseOna, 0);
+
+      const sourcePts = izqSum >= derSum && izqPts.length > 0 ? izqPts : derPts;
+      if (sourcePts.length === 0) return prev;
+
+      const mirroredPts: InjectionPoint[] = sourcePts.map((pt) => {
+        const mx = mirrorX(pt.x);
+        const mClamped = clampToBBox(mx, pt.y, muscle.bbox);
+        return buildPoint(
+          muscleId,
+          {
+            x: mClamped.x,
+            y: mClamped.y,
+            doseOna: pt.doseOna,
+            depth: pt.depth,
+            side: mirrorSide(pt.side),
+          },
+          { mirrored: true }
+        );
+      });
+
+      return [...otherPts, ...centroPts, ...sourcePts, ...mirroredPts];
+    });
+  }, []);
 
   /** Quita un lado concreto de un músculo (o todo el músculo si side === 'ambos') */
   const removeMuscleSide = useCallback((muscleId: string, side: PointSide | 'ambos') => {
@@ -225,37 +376,37 @@ export function useFacialPlan(options: UseFacialPlanOptions = {}) {
         if (idx < 0) return prev;
         const point = prev[idx];
         const muscle = FACIAL_MUSCLE_BY_ID[point.muscleId];
+        if (!muscle) return prev;
+        const isBack = (muscle.view ?? 'front') === 'back';
+
+        const pairIdx =
+          mirrorSync && point.side !== 'centro'
+            ? findClosestContralateralIndex(prev, point)
+            : -1;
+
         const clamped = clampToBBox(x, y, muscle.bbox);
         const updated: InjectionPoint = {
           ...point,
           x: clamped.x,
           y: clamped.y,
-          risk: detectRiskAt(clamped.x, clamped.y),
+          risk: isBack ? null : detectRiskAt(clamped.x, clamped.y),
           mirrored: false,
         };
-        let next = [...prev];
+        const next = [...prev];
         next[idx] = updated;
 
-        if (mirrorSync && point.side !== 'centro') {
-          const pairIdx = next.findIndex(
-            (p) =>
-              p.muscleId === point.muscleId &&
-              p.id !== pointId &&
-              p.side === mirrorSide(point.side)
-          );
-          if (pairIdx >= 0) {
-            const mx = mirrorX(clamped.x);
-            const mClamped = clampToBBox(mx, clamped.y, muscle.bbox);
-            next[pairIdx] = {
-              ...next[pairIdx],
-              x: mClamped.x,
-              y: mClamped.y,
-              doseOna: updated.doseOna,
-              depth: updated.depth,
-              risk: detectRiskAt(mClamped.x, mClamped.y),
-              mirrored: true,
-            };
-          }
+        if (pairIdx >= 0) {
+          const mx = mirrorX(clamped.x);
+          const mClamped = clampToBBox(mx, clamped.y, muscle.bbox);
+          next[pairIdx] = {
+            ...next[pairIdx],
+            x: mClamped.x,
+            y: mClamped.y,
+            doseOna: updated.doseOna,
+            depth: updated.depth,
+            risk: isBack ? null : detectRiskAt(mClamped.x, mClamped.y),
+            mirrored: true,
+          };
         }
         return next;
       });
@@ -270,18 +421,14 @@ export function useFacialPlan(options: UseFacialPlanOptions = {}) {
         if (idx < 0) return prev;
         const point = prev[idx];
         const newDose = Math.max(0.5, Math.round((point.doseOna + delta) * 2) / 2);
-        let next = prev.map((p) => (p.id === pointId ? { ...p, doseOna: newDose } : p));
+        const pairIdx =
+          mirrorSync && point.side !== 'centro'
+            ? findClosestContralateralIndex(prev, point)
+            : -1;
 
-        if (mirrorSync && point.side !== 'centro') {
-          next = next.map((p) =>
-            p.muscleId === point.muscleId &&
-            p.side === mirrorSide(point.side) &&
-            p.id !== pointId
-              ? { ...p, doseOna: newDose }
-              : p
-          );
-        }
-        return next;
+        return prev.map((p, i) =>
+          i === idx || (pairIdx >= 0 && i === pairIdx) ? { ...p, doseOna: newDose } : p
+        );
       });
     },
     [mirrorSync]
@@ -290,19 +437,17 @@ export function useFacialPlan(options: UseFacialPlanOptions = {}) {
   const setPointDepth = useCallback(
     (pointId: string, depth: PointDepth) => {
       setPoints((prev) => {
-        const point = prev.find((p) => p.id === pointId);
-        if (!point) return prev;
-        let next = prev.map((p) => (p.id === pointId ? { ...p, depth } : p));
-        if (mirrorSync && point.side !== 'centro') {
-          next = next.map((p) =>
-            p.muscleId === point.muscleId &&
-            p.side === mirrorSide(point.side) &&
-            p.id !== pointId
-              ? { ...p, depth }
-              : p
-          );
-        }
-        return next;
+        const idx = prev.findIndex((p) => p.id === pointId);
+        if (idx < 0) return prev;
+        const point = prev[idx];
+        const pairIdx =
+          mirrorSync && point.side !== 'centro'
+            ? findClosestContralateralIndex(prev, point)
+            : -1;
+
+        return prev.map((p, i) =>
+          i === idx || (pairIdx >= 0 && i === pairIdx) ? { ...p, depth } : p
+        );
       });
     },
     [mirrorSync]
@@ -340,7 +485,6 @@ export function useFacialPlan(options: UseFacialPlanOptions = {}) {
       const muscle = FACIAL_MUSCLE_BY_ID[id];
       if (!muscle) continue;
       newActive.add(id);
-      // Presets siempre bilaterales con las plantillas tal cual (sin duplicar espejo)
       for (const tpl of muscle.defaultPoints) {
         newPoints.push(buildPoint(id, tpl));
       }
@@ -353,13 +497,19 @@ export function useFacialPlan(options: UseFacialPlanOptions = {}) {
   }, []);
 
   const muscleSummaries = useMemo((): MuscleSummary[] => {
-    const map = new Map<string, MuscleSummary>();
+    const map = new Map<
+      string,
+      MuscleSummary & { izqOna: number; derOna: number; centroOna: number }
+    >();
     for (const p of points) {
       const muscle = FACIAL_MUSCLE_BY_ID[p.muscleId];
       if (!muscle) continue;
       const existing = map.get(p.muscleId);
       if (existing) {
         existing.totalOna += p.doseOna;
+        if (p.side === 'izq') existing.izqOna += p.doseOna;
+        else if (p.side === 'der') existing.derOna += p.doseOna;
+        else existing.centroOna += p.doseOna;
         existing.pointCount += 1;
         if (p.risk && !existing.risks.includes(p.risk)) existing.risks.push(p.risk);
         if (!existing.sides.includes(p.side)) existing.sides.push(p.side);
@@ -368,8 +518,16 @@ export function useFacialPlan(options: UseFacialPlanOptions = {}) {
           muscleId: p.muscleId,
           muscleKey: muscle.muscleKey,
           name: muscle.name,
+          view: muscle.view ?? 'front',
           totalOna: p.doseOna,
           totalBrand: 0,
+          izqOna: p.side === 'izq' ? p.doseOna : 0,
+          derOna: p.side === 'der' ? p.doseOna : 0,
+          centroOna: p.side === 'centro' ? p.doseOna : 0,
+          izqBrand: 0,
+          derBrand: 0,
+          centroBrand: 0,
+          isAsymmetric: false,
           pointCount: 1,
           maxDoseAesthetic: muscle.maxDoseAesthetic,
           overDose: false,
@@ -379,10 +537,20 @@ export function useFacialPlan(options: UseFacialPlanOptions = {}) {
       }
     }
     return Array.from(map.values()).map((s) => {
+      const muscle = FACIAL_MUSCLE_BY_ID[s.muscleId];
       const totalBrand = convertOnaToBrand(s.totalOna, brand);
+      const izqBrand = convertOnaToBrand(s.izqOna, brand);
+      const derBrand = convertOnaToBrand(s.derOna, brand);
+      const centroBrand = convertOnaToBrand(s.centroOna, brand);
+      const isAsymmetric =
+        !!muscle && muscleHasLateralPoints(muscle) && Math.abs(izqBrand - derBrand) > 0;
       return {
         ...s,
         totalBrand,
+        izqBrand,
+        derBrand,
+        centroBrand,
+        isAsymmetric,
         overDose: s.totalOna > s.maxDoseAesthetic,
       };
     });
@@ -405,6 +573,11 @@ export function useFacialPlan(options: UseFacialPlanOptions = {}) {
 
   const overDoseMuscles = useMemo(
     () => muscleSummaries.filter((s) => s.overDose).map((s) => s.name),
+    [muscleSummaries]
+  );
+
+  const asymmetricMuscles = useMemo(
+    () => muscleSummaries.filter((s) => s.isAsymmetric).map((s) => s.name),
     [muscleSummaries]
   );
 
@@ -466,6 +639,7 @@ export function useFacialPlan(options: UseFacialPlanOptions = {}) {
       dilution,
       pathologyId: options.pathologyId ?? 'estetica-facial',
       muscles,
+      points: [...points],
     };
   }, [points, brand, dilution, options.pathologyId]);
 
@@ -474,6 +648,8 @@ export function useFacialPlan(options: UseFacialPlanOptions = {}) {
     setBrand,
     dilution,
     setDilution,
+    plannerView,
+    setPlannerView,
     sideMode,
     setSideMode,
     mirrorSync,
@@ -486,9 +662,18 @@ export function useFacialPlan(options: UseFacialPlanOptions = {}) {
     setSelectedPointId,
     showDangerZones,
     setShowDangerZones,
+    anatomyLayerFilter,
+    setAnatomyLayerFilter,
+    pointSize,
+    setPointSize,
+    addPointMode,
+    setAddPointMode,
     layerVisibility,
     setLayerVisibility,
     toggleMuscle,
+    addCustomPoint,
+    adjustMuscleDose,
+    equalizeMuscleSides,
     removeMuscleSide,
     clearLaterality,
     movePoint,
@@ -505,6 +690,7 @@ export function useFacialPlan(options: UseFacialPlanOptions = {}) {
     totalVolumeMl,
     activeRisks,
     overDoseMuscles,
+    asymmetricMuscles,
     exportPlan,
     musclesCatalog: FACIAL_MUSCLES,
   };

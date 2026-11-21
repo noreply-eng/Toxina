@@ -1,5 +1,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
+import type { InjectionPoint } from './useFacialPlan';
 
 export interface MuscleSelection {
   id: string;
@@ -26,6 +27,7 @@ interface CalculatorState {
   selectedPathology: string | null;
   selectedMuscles: MuscleSelection[];
   adjustmentFactor: number;
+  facialPlanPoints?: InjectionPoint[];
 }
 
 const DEFAULT_STATE: CalculatorState = {
@@ -37,7 +39,8 @@ const DEFAULT_STATE: CalculatorState = {
   patientWeight: '',
   selectedPathology: null,
   selectedMuscles: [],
-  adjustmentFactor: 1
+  adjustmentFactor: 1,
+  facialPlanPoints: []
 };
 
 export const useCalculatorState = () => {

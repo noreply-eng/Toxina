@@ -19,10 +19,12 @@ import {
 import { findMuscleForCalculatorName } from '../data/muscleData';
 import {
   ANATOMY_IMAGE_FRAME,
+  convertOnaToBrand,
   FACIAL_ANATOMY_IMAGE,
   FACIAL_MUSCLE_BY_ID,
   FACIAL_VIEWBOX,
   type FacialMuscleConfig,
+  type ToxinBrand as FacialToxinBrand,
 } from '../constants/facialAestheticMap';
 import { supabase } from '../supabaseClient';
 import { getAuthUser } from '../utils/auth';
@@ -77,7 +79,8 @@ const Calculator: React.FC = () => {
       patientAge,
       patientWeight,
       selectedPathology,
-      selectedMuscles
+      selectedMuscles,
+      facialPlanPoints = []
   } = state;
   
   const [doctorName, setDoctorName] = useState('');
@@ -474,17 +477,18 @@ const Calculator: React.FC = () => {
     if (!navState?.importPlan || importPlanHandled.current) return;
     importPlanHandled.current = true;
 
-    const { brand, dilution: planDilution, pathologyId, muscles } = navState.importPlan;
+    const { brand, dilution: planDilution, pathologyId, muscles, points: planPoints } = navState.importPlan;
     const importedTotal = muscles.reduce((s, m) => s + (m.customDose ?? 0), 0);
     updateState({
       selectedBrand: brand,
       dilution: planDilution,
       selectedPathology: pathologyId,
       selectedMuscles: muscles,
+      facialPlanPoints: planPoints ?? [],
     });
     setTotalUnits(importedTotal);
     setTemplateLoadMessage(
-      `Plan facial importado: ${muscles.length} músculo(s), ${importedTotal} U total.`
+      `Plan facial importado: ${muscles.length} músculo(s), ${planPoints?.length ?? 0} puntos de aplicación, ${importedTotal} U total.`
     );
     setIsCalculated(true);
     window.history.replaceState({}, document.title);
@@ -914,6 +918,73 @@ const Calculator: React.FC = () => {
               </tr>
             </tfoot>
           </table>
+
+          {/* Diagrama del Mapa Facial Personalizado en el Reporte Impreso */}
+          {facialPlanPoints.length > 0 && (
+            <div className="mb-8 p-4 border border-slate-300 rounded-xl break-inside-avoid">
+              <div className="flex items-center justify-between mb-3 border-b border-slate-200 pb-2">
+                <div>
+                  <h2 className="text-sm font-bold uppercase tracking-wide text-slate-900">
+                    Mapa Anatómico de Puntos de Aplicación
+                  </h2>
+                  <p className="text-xs text-slate-500">
+                    {facialPlanPoints.length} puntos personalizados · Naranja: Superficial · Azul: Profundo (IM)
+                  </p>
+                </div>
+                <span className="text-xs font-bold text-slate-700">
+                  Lateralidad del paciente (D = Der. / I = Izq.)
+                </span>
+              </div>
+              <div className="flex justify-center">
+                <svg
+                  viewBox={`0 0 ${FACIAL_VIEWBOX.width} ${FACIAL_VIEWBOX.height}`}
+                  className="max-h-72 w-auto border border-slate-200 rounded-lg bg-[#1a1520]"
+                  style={{ printColorAdjust: 'exact', WebkitPrintColorAdjust: 'exact' }}
+                >
+                  <image
+                    href={FACIAL_ANATOMY_IMAGE}
+                    x={ANATOMY_IMAGE_FRAME.x}
+                    y={ANATOMY_IMAGE_FRAME.y}
+                    width={ANATOMY_IMAGE_FRAME.width}
+                    height={ANATOMY_IMAGE_FRAME.height}
+                    preserveAspectRatio="xMidYMid slice"
+                  />
+                  <text x={36} y={42} fill="#f87171" fontSize={13} fontWeight={700}>
+                    D
+                  </text>
+                  <text x={FACIAL_VIEWBOX.width - 36} y={42} fill="#38bdf8" fontSize={13} fontWeight={700} textAnchor="end">
+                    I
+                  </text>
+                  {facialPlanPoints
+                    .filter((pt) => (FACIAL_MUSCLE_BY_ID[pt.muscleId]?.view ?? 'front') === 'front')
+                    .map((pt) => {
+                      const brandKey = (selectedBrand || 'Botox') as FacialToxinBrand;
+                      const doseU = convertOnaToBrand(pt.doseOna, brandKey);
+                      const isDeep = pt.depth === 'profundo';
+                      return (
+                        <g key={pt.id} transform={`translate(${pt.x}, ${pt.y})`}>
+                          <circle
+                            r={9.5}
+                            fill={isDeep ? '#0284c7' : '#f97316'}
+                            stroke="#ffffff"
+                            strokeWidth={1.8}
+                          />
+                          <text
+                            y={3.2}
+                            textAnchor="middle"
+                            fontSize={8.2}
+                            fontWeight="bold"
+                            fill="#ffffff"
+                          >
+                            {doseU}
+                          </text>
+                        </g>
+                      );
+                    })}
+                </svg>
+              </div>
+            </div>
+          )}
 
           <div className="mt-16 pt-8 border-t border-slate-200 flex justify-between items-end">
             <div className="max-w-md italic text-xs text-slate-400">
@@ -1455,6 +1526,94 @@ const Calculator: React.FC = () => {
             </div>
           </div>
         </section>
+
+        {/* Visual Preview Card of Imported Facial Plan Map */}
+        {facialPlanPoints.length > 0 && (
+          <section className="bg-white dark:bg-surface-dark p-5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="size-9 rounded-xl bg-primary/15 text-primary flex items-center justify-center">
+                  <span className="material-symbols-outlined text-xl">face</span>
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-800 dark:text-slate-100 text-sm sm:text-base">
+                    Mapa Facial de Aplicación Activo
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    {facialPlanPoints.length} puntos personalizados · Se incluirá automáticamente al imprimir el reporte PDF
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setFacialPlannerOpen(true)}
+                  className="px-3 py-1.5 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary text-xs font-bold border border-primary/30 transition-colors cursor-pointer flex items-center gap-1.5"
+                >
+                  <span className="material-symbols-outlined text-[16px]">edit_location_alt</span>
+                  Editar Mapa Facial
+                </button>
+                <button
+                  type="button"
+                  onClick={() => updateState({ facialPlanPoints: [] })}
+                  className="px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-red-500/15 text-slate-500 hover:text-red-500 text-xs font-semibold transition-colors cursor-pointer"
+                  title="Quitar mapa visual del reporte"
+                >
+                  Ocultar mapa
+                </button>
+              </div>
+            </div>
+
+            <div className="flex justify-center bg-slate-950 rounded-xl p-3 border border-slate-800">
+              <svg
+                viewBox={`0 0 ${FACIAL_VIEWBOX.width} ${FACIAL_VIEWBOX.height}`}
+                className="max-h-72 w-auto"
+                aria-label="Vista previa del mapa facial"
+              >
+                <image
+                  href={FACIAL_ANATOMY_IMAGE}
+                  x={ANATOMY_IMAGE_FRAME.x}
+                  y={ANATOMY_IMAGE_FRAME.y}
+                  width={ANATOMY_IMAGE_FRAME.width}
+                  height={ANATOMY_IMAGE_FRAME.height}
+                  preserveAspectRatio="xMidYMid slice"
+                />
+                <text x={36} y={42} fill="#f87171" fontSize={13} fontWeight={700}>
+                  D
+                </text>
+                <text x={FACIAL_VIEWBOX.width - 36} y={42} fill="#38bdf8" fontSize={13} fontWeight={700} textAnchor="end">
+                  I
+                </text>
+                {facialPlanPoints
+                  .filter((pt) => (FACIAL_MUSCLE_BY_ID[pt.muscleId]?.view ?? 'front') === 'front')
+                  .map((pt) => {
+                    const brandKey = (selectedBrand || 'Botox') as FacialToxinBrand;
+                    const doseU = convertOnaToBrand(pt.doseOna, brandKey);
+                    const isDeep = pt.depth === 'profundo';
+                    return (
+                      <g key={pt.id} transform={`translate(${pt.x}, ${pt.y})`}>
+                        <circle
+                          r={9.5}
+                          fill={isDeep ? '#0284c7' : '#f97316'}
+                          stroke="#ffffff"
+                          strokeWidth={1.8}
+                        />
+                        <text
+                          y={3.2}
+                          textAnchor="middle"
+                          fontSize={8.2}
+                          fontWeight="bold"
+                          fill="#ffffff"
+                        >
+                          {doseU}
+                        </text>
+                      </g>
+                    );
+                  })}
+              </svg>
+            </div>
+          </section>
+        )}
 
         {/* Post-calculate: summary + actions (in flow, avoids overlay clipping) */}
         {isCalculated && (
