@@ -1,7 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import ClinicalVideoPlayer from '../../../components/ClinicalVideoPlayer';
 import { musclesData } from '../../../data/muscleData';
 import { usePathologies } from '../../../hooks/usePathologies';
+import { parseVideoUrl } from '../../../utils/videoEmbed';
 import {
   deleteClinicalPearl,
   deleteProcedureVideo,
@@ -196,26 +198,72 @@ const PremiumCmsPanel: React.FC = () => {
       {subTab === 'videos' && (
         <div className="space-y-4">
           <form onSubmit={handleAddVideo} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 space-y-3">
-            <h4 className="font-black text-sm">Registrar Video de Procedimiento (Solo Premium)</h4>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h4 className="font-black text-sm flex items-center gap-2">
+                <span className="material-symbols-outlined text-red-500">smart_display</span>
+                Registrar Video de Procedimiento (YouTube o Google Drive)
+              </h4>
+              {videoUrl.trim() && (
+                <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-primary/10 text-primary uppercase">
+                  Detectado: {parseVideoUrl(videoUrl).providerLabel}
+                </span>
+              )}
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <input required value={videoTitle} onChange={(e) => setVideoTitle(e.target.value)} placeholder="Título del video" className="rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 text-xs" />
+              <input required value={videoTitle} onChange={(e) => setVideoTitle(e.target.value)} placeholder="Título del video (ej. Abordaje USG de Subescapular)" className="rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 text-xs font-bold" />
               <select value={videoMuscleId} onChange={(e) => setVideoMuscleId(e.target.value)} className="rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 text-xs font-bold">
-                {musclesData.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+                <option value="">— Video General (Sin músculo específico) —</option>
+                {musclesData.map((m) => <option key={m.id} value={m.id}>{m.name} ({m.latinName})</option>)}
               </select>
               <select value={videoCategory} onChange={(e) => setVideoCategory(e.target.value as any)} className="rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 text-xs font-bold">
                 <option value="usg_guided">Guía Ecográfica (USG)</option><option value="anatomical">Anatomía / Punto Motor</option><option value="reconstitution">Reconstitución / Dilución</option><option value="clinical_case">Caso Clínico</option>
               </select>
-              <input value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} placeholder="Ruta Storage o ID Cloudflare Stream / Mux" className="rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 text-xs font-mono" />
+              <input required value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} placeholder="Pega enlace de YouTube (watch / youtu.be) o Google Drive (file/d/.../view)" className="rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 text-xs font-mono" />
             </div>
-            <button type="submit" className="px-4 py-2 rounded-xl bg-primary text-white text-xs font-bold">Guardar Video</button>
-          </form>
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 divide-y divide-slate-100 dark:divide-slate-800 text-xs">
-            {videos.length === 0 ? <p className="p-6 text-center text-slate-400">Aún no hay videos registrados.</p> : videos.map((v) => (
-              <div key={v.id} className="p-4 flex items-center justify-between gap-3">
-                <div><p className="font-bold text-sm">{v.title}</p><p className="text-slate-400">{v.category} · {v.muscle_id || 'General'} · <code>{v.video_storage_path || 'Pendiente'}</code></p></div>
-                <button type="button" onClick={async () => { await deleteProcedureVideo(v.id); await load(); }} className="text-red-500 font-bold hover:underline">Eliminar</button>
+            {videoUrl.trim() && parseVideoUrl(videoUrl).isValid && (
+              <div className="max-w-lg pt-1">
+                <ClinicalVideoPlayer
+                  url={videoUrl}
+                  title={videoTitle || 'Vista previa del video'}
+                  category={videoCategory}
+                  muscleLabel={musclesData.find((m) => m.id === videoMuscleId)?.name}
+                  compact
+                />
               </div>
-            ))}
+            )}
+            <button type="submit" className="px-4 py-2 rounded-xl bg-primary text-white text-xs font-bold cursor-pointer">Guardar Video en Plataforma</button>
+          </form>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {videos.length === 0 ? (
+              <div className="md:col-span-2 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 text-center text-xs text-slate-400">
+                Aún no hay videos registrados en el catálogo de músculos. También puedes agregar videos directamente en cada Patología.
+              </div>
+            ) : (
+              videos.map((v) => (
+                <div key={v.id} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-3 space-y-2">
+                  <ClinicalVideoPlayer
+                    url={v.video_storage_path || ''}
+                    title={v.title}
+                    description={v.description}
+                    category={v.category}
+                    muscleLabel={musclesData.find((m) => m.id === v.muscle_id)?.name || v.muscle_id}
+                    compact
+                  />
+                  <div className="flex justify-end px-1">
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        await deleteProcedureVideo(v.id);
+                        await load();
+                      }}
+                      className="text-red-500 text-xs font-bold hover:underline cursor-pointer"
+                    >
+                      Eliminar video
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       )}

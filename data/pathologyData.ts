@@ -7,6 +7,22 @@ import { dosisData } from '../constants/toxinData';
 
 export type ProtocolVariant = 'A' | 'B' | 'C';
 export type ToxinBrand = 'Botox' | 'Dysport' | 'Xeomin';
+export type GuidanceMethod = 'USG' | 'EMG' | 'USG/EMG' | 'Anatómica' | 'Intradérmica' | 'Cistoscópica';
+export type PathologyVideoCategory =
+  | 'technique'
+  | 'usg_guided'
+  | 'anatomy'
+  | 'reconstitution'
+  | 'clinical_case';
+
+export interface PathologyVideo {
+  id: string;
+  title: string;
+  url: string;               // URL de YouTube, Google Drive, Vimeo o MP4
+  category?: PathologyVideoCategory;
+  description?: string;
+  muscleName?: string;       // Músculo opcional vinculado al video
+}
 
 /** Patrón clínico de deformidad (p. ej. espasticidad de miembro superior/inferior). */
 export interface SpasticityPattern {
@@ -28,6 +44,14 @@ export interface PathologyProtocol {
   pattern?: string;
   /** Dosis sugeridas personalizadas por marca (opcional; si se omite, se calcula desde `dose`). */
   brandDoses?: Partial<Record<ToxinBrand, number>>;
+  /** Método de guía sugerido (ej. USG, EMG, Anatómica). */
+  guidance?: GuidanceMethod;
+  /** Número de sitios o puntos de inyección sugeridos (ej. "3 sitios por lado"). */
+  injectionSites?: string;
+  /** Enlace opcional a video demostrativo (YouTube o Google Drive) para este músculo. */
+  videoUrl?: string;
+  /** Título opcional del video específico del músculo. */
+  videoTitle?: string;
 }
 
 /** Línea de tiempo de acción de la toxina para una indicación. */
@@ -48,6 +72,8 @@ export interface PathologyData {
   protocols: PathologyProtocol[];
   /** Patrones clínicos de deformidad (espasticidad). Si existen, el detalle agrupa por patrón. */
   patterns?: SpasticityPattern[];
+  /** Videos clínicos y de técnica de aplicación (YouTube / Google Drive). */
+  videos?: PathologyVideo[];
   frequency?: string;
   maxDose?: string;
   timeline?: PathologyTimeline;

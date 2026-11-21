@@ -12,8 +12,10 @@ import {
 import { findMuscleForCalculatorName } from '../data/muscleData';
 import { addRecentPathology } from '../utils/pathologyPrefs';
 import FacialPlannerModal from '../components/facial/FacialPlannerModal';
+import ClinicalVideoPlayer from '../components/ClinicalVideoPlayer';
 import { useIsAdmin } from '../hooks/useIsAdmin';
 import { usePathology } from '../hooks/usePathologies';
+import { parseVideoUrl } from '../utils/videoEmbed';
 
 const BRANDS: ToxinBrand[] = ['Botox', 'Dysport', 'Xeomin'];
 
@@ -31,6 +33,7 @@ const PathologyDetail: React.FC = () => {
   const [safetyExpanded, setSafetyExpanded] = useState(false);
   const [facialPlannerOpen, setFacialPlannerOpen] = useState(false);
   const [shareMsg, setShareMsg] = useState<string | null>(null);
+  const [openMuscleVideos, setOpenMuscleVideos] = useState<Record<number, boolean>>({});
   const { isAdmin } = useIsAdmin();
   const { pathology, isCustomized } = usePathology(id);
 
@@ -410,10 +413,21 @@ const PathologyDetail: React.FC = () => {
                         {protocol.muscle}
                       </p>
                     )}
-                    <div className="flex items-center gap-1 shrink-0">
+                    <div className="flex items-center gap-1 shrink-0 flex-wrap justify-end">
                       {patternName && (
                         <span className="inline-flex items-center text-[9px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
                           {patternName}
+                        </span>
+                      )}
+                      {protocol.guidance && (
+                        <span className="inline-flex items-center gap-0.5 text-[10px] font-bold px-2 py-0.5 rounded-full bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300">
+                          <span className="material-symbols-outlined text-[12px]">ultrasound</span>
+                          Guía {protocol.guidance}
+                        </span>
+                      )}
+                      {protocol.injectionSites && (
+                        <span className="inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
+                          {protocol.injectionSites}
                         </span>
                       )}
                       {protocol.bilateral && (
@@ -447,14 +461,50 @@ const PathologyDetail: React.FC = () => {
                     </p>
                   )}
 
-                  {linkId && (
-                    <button
-                      onClick={() => navigate(`/motor-points/${linkId}`)}
-                      className="inline-flex items-center gap-1 text-[11px] font-bold text-primary hover:underline print:hidden"
-                    >
-                      <span className="material-symbols-outlined text-[15px]">ultrasound</span>
-                      Ver punto motor / USG
-                    </button>
+                  <div className="flex flex-wrap items-center gap-3 mt-1 print:hidden">
+                    {linkId && (
+                      <button
+                        onClick={() => navigate(`/motor-points/${linkId}`)}
+                        className="inline-flex items-center gap-1 text-[11px] font-bold text-primary hover:underline cursor-pointer"
+                      >
+                        <span className="material-symbols-outlined text-[15px]">ultrasound</span>
+                        Ver punto motor / USG
+                      </button>
+                    )}
+
+                    {protocol.videoUrl && parseVideoUrl(protocol.videoUrl).isValid && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setOpenMuscleVideos((prev) => ({
+                            ...prev,
+                            [idx]: !prev[idx],
+                          }))
+                        }
+                        className="inline-flex items-center gap-1 text-[11px] font-bold text-red-600 dark:text-red-400 hover:underline cursor-pointer"
+                      >
+                        <span className="material-symbols-outlined text-[15px]">
+                          {openMuscleVideos[idx] ? 'expand_less' : 'smart_display'}
+                        </span>
+                        {openMuscleVideos[idx]
+                          ? 'Ocultar video demostrativo'
+                          : protocol.videoTitle || 'Ver video demostrativo'}
+                      </button>
+                    )}
+                  </div>
+
+                  {openMuscleVideos[idx] && protocol.videoUrl && (
+                    <div className="mt-3 print:hidden">
+                      <ClinicalVideoPlayer
+                        url={protocol.videoUrl}
+                        title={
+                          protocol.videoTitle ||
+                          `Aplicación en ${protocol.muscle || protocol.muscleName}`
+                        }
+                        muscleLabel={protocol.muscle || protocol.muscleName}
+                        compact
+                      />
+                    </div>
                   )}
                 </div>
               );
@@ -464,6 +514,52 @@ const PathologyDetail: React.FC = () => {
             Dosis por marca estimadas a partir del protocolo de referencia (unidades Ona/Xeomin ≈ 1:1; Dysport ≈ 2.5:1). Verifique siempre según la ficha técnica.
           </p>
         </div>
+
+        {/* Videos Clínicos y de Procedimiento (YouTube / Google Drive) */}
+        {((pathology.videos && pathology.videos.length > 0) || isAdmin) && (
+          <div className="bg-white dark:bg-surface-dark rounded-2xl p-5 shadow-sm border border-slate-100 dark:border-slate-800 mb-4 print:hidden">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+              <h2 className="text-base font-bold text-text-main dark:text-white flex items-center gap-2">
+                <span className="material-symbols-outlined text-red-500">smart_display</span>
+                Videos Clínicos y Técnica de Aplicación
+                {pathology.videos && pathology.videos.length > 0 && (
+                  <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-red-500/10 text-red-600 dark:text-red-400">
+                    {pathology.videos.length}
+                  </span>
+                )}
+              </h2>
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={() => navigate(`/admin/pathologies/${pathology.id}`)}
+                  className="px-3 py-1.5 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary text-xs font-bold flex items-center gap-1 cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[15px]">video_call</span>
+                  <span>Agregar / Editar Videos</span>
+                </button>
+              )}
+            </div>
+
+            {pathology.videos && pathology.videos.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {pathology.videos.map((vid, vIdx) => (
+                  <ClinicalVideoPlayer
+                    key={vid.id || vIdx}
+                    url={vid.url}
+                    title={vid.title}
+                    description={vid.description}
+                    category={vid.category}
+                    muscleLabel={vid.muscleName}
+                  />
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-text-muted italic">
+                Aún no se han agregado videos de YouTube o Google Drive a esta patología. Haz clic en "Agregar / Editar Videos" para vincularlos.
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Additional Info */}
         <div className="bg-white dark:bg-surface-dark rounded-2xl p-5 shadow-sm border border-slate-100 dark:border-slate-800 mb-4">

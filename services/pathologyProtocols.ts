@@ -7,6 +7,7 @@ import {
   type PathologyData,
   type PathologyProtocol,
   type PathologyTimeline,
+  type PathologyVideo,
   type SpasticityPattern,
 } from '../data/pathologyData';
 import type { ClinicalProtocolRecord } from './premiumContent';
@@ -19,6 +20,7 @@ interface StoredPathologyExtraMeta {
   maxDose?: string;
   timeline?: PathologyTimeline;
   patterns?: SpasticityPattern[];
+  videos?: PathologyVideo[];
   image?: string;
   additionalInfo?: string[];
   contraindications?: string[];
@@ -95,6 +97,7 @@ export function recordToPathologyData(record: ClinicalProtocolRecord): Pathology
     conversionNotes: meta.conversionNotes ?? base?.conversionNotes,
     protocols,
     patterns: Array.isArray(meta.patterns) ? meta.patterns : base?.patterns,
+    videos: Array.isArray(meta.videos) ? meta.videos : base?.videos || [],
     frequency: meta.frequency ?? base?.frequency,
     maxDose: meta.maxDose ?? base?.maxDose,
     timeline: meta.timeline ?? base?.timeline,
@@ -119,6 +122,7 @@ export function pathologyDataToRecordPayload(
     maxDose: pathology.maxDose,
     timeline: pathology.timeline,
     patterns: pathology.patterns,
+    videos: pathology.videos ?? [],
     image: pathology.image,
     additionalInfo: pathology.additionalInfo ?? [],
     contraindications: pathology.contraindications ?? [],

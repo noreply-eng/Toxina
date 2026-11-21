@@ -2,16 +2,21 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getMuscleById, getMuscleIcon, MuscleData, USGGuidance } from '../data/muscleData';
 import MuscleIcon from '../components/MuscleIcon';
+import ClinicalVideoPlayer from '../components/ClinicalVideoPlayer';
 import { fetchMuscleMedia } from '../services/muscleMedia';
+import { fetchProcedureVideos, type ProcedureVideo } from '../services/premiumContent';
 import type { MuscleMedia } from '../types/muscleMedia';
 import { useIsAdmin } from '../hooks/useIsAdmin';
+import { usePathologies } from '../hooks/usePathologies';
 
 const MotorPoints: React.FC = () => {
   const navigate = useNavigate();
   const { muscleId } = useParams<{ muscleId: string }>();
   const [view, setView] = useState<'Anatomía' | 'USG'>('USG');
   const { isAdmin } = useIsAdmin();
+  const { pathologies } = usePathologies();
   const [media, setMedia] = useState<MuscleMedia | null>(null);
+  const [cmsVideos, setCmsVideos] = useState<ProcedureVideo[]>([]);
 
   const baseMuscle = muscleId ? getMuscleById(muscleId) : null;
 
@@ -23,10 +28,74 @@ const MotorPoints: React.FC = () => {
         if (mounted) setMedia(row);
       })
       .catch((err) => console.warn('No se pudo cargar media del músculo:', err));
+    fetchProcedureVideos(muscleId)
+      .then((rows) => {
+        if (mounted) setCmsVideos(rows);
+      })
+      .catch(() => {});
     return () => {
       mounted = false;
     };
   }, [muscleId]);
+
+  const muscleVideos = useMemo(() => {
+    if (!baseMuscle) return [];
+    const list: { id: string; title: string; url: string; category?: string; description?: string }[] = [];
+    const seenUrls = new Set<string>();
+
+    cmsVideos.forEach((v) => {
+      if (v.video_storage_path && !seenUrls.has(v.video_storage_path)) {
+        seenUrls.add(v.video_storage_path);
+        list.push({
+          id: v.id,
+          title: v.title,
+          url: v.video_storage_path,
+          category: v.category,
+          description: v.description || undefined,
+        });
+      }
+    });
+
+    const matchNames = new Set(
+      [baseMuscle.id, baseMuscle.name.toLowerCase(), baseMuscle.latinName.toLowerCase()].filter(Boolean)
+    );
+
+    pathologies.forEach((pat) => {
+      (pat.videos || []).forEach((vid) => {
+        if (
+          vid.url &&
+          vid.muscleName &&
+          matchNames.has(vid.muscleName.toLowerCase()) &&
+          !seenUrls.has(vid.url)
+        ) {
+          seenUrls.add(vid.url);
+          list.push({
+            id: `${pat.id}-${vid.id}`,
+            title: vid.title || `${pat.title} — ${baseMuscle.name}`,
+            url: vid.url,
+            category: vid.category,
+            description: vid.description || `Protocolo: ${pat.title}`,
+          });
+        }
+      });
+
+      pat.protocols.forEach((pr, idx) => {
+        const key = (pr.muscleName || pr.muscle || '').toLowerCase();
+        if (pr.videoUrl && matchNames.has(key) && !seenUrls.has(pr.videoUrl)) {
+          seenUrls.add(pr.videoUrl);
+          list.push({
+            id: `${pat.id}-pr-${idx}`,
+            title: pr.videoTitle || `${pat.title} — ${baseMuscle.name}`,
+            url: pr.videoUrl,
+            category: 'technique',
+            description: pr.notes || `Protocolo: ${pat.title}`,
+          });
+        }
+      });
+    });
+
+    return list;
+  }, [baseMuscle, cmsVideos, pathologies]);
 
   // Overlay admin-managed DB media over the static muscle data
   const muscle = useMemo<MuscleData | null>(() => {
@@ -364,6 +433,33 @@ const MotorPoints: React.FC = () => {
                ))}
              </div>
           </div>
+
+          {/* Videos Clínicos (YouTube / Google Drive) */}
+          {muscleVideos.length > 0 && (
+            <div className="relative overflow-hidden bg-white dark:bg-surface-dark p-5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 space-y-4">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="size-10 shrink-0 overflow-hidden rounded-full bg-red-50 dark:bg-red-900/30 flex items-center justify-center text-red-600">
+                  <span className="material-symbols-outlined text-[22px] leading-none">smart_display</span>
+                </div>
+                <h3 className="font-bold text-text-main dark:text-white min-w-0 flex-1 break-words text-lg">
+                  Videos Demostrativos ({muscleVideos.length})
+                </h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {muscleVideos.map((vid) => (
+                  <ClinicalVideoPlayer
+                    key={vid.id}
+                    url={vid.url}
+                    title={vid.title}
+                    description={vid.description}
+                    category={vid.category}
+                    muscleLabel={muscle.name}
+                    compact
+                  />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </main>
       
