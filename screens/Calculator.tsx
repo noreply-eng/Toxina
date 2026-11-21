@@ -1,5 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { useEntitlements } from '../features/entitlements/EntitlementContext';
+import { UpgradePromptCard } from '../features/entitlements/FeatureGate';
 import { completeConsultation } from '../hooks/useConsultations';
 import ScheduleConsultationModal from '../components/ScheduleConsultationModal';
 import { getSuggestedFollowUpDate, toLocalDatetimeValue } from '../utils/followUpIntervals';
@@ -47,6 +49,10 @@ function roundDose(value: number): number {
 
 const Calculator: React.FC = () => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { can } = useEntitlements();
+  const canSaveTreatment = can('treatments.persist');
+  const canViewAnatomy = can('guides.anatomy');
   const pendingAutoLoad = useRef(false);
   const pendingAutoLoadVariant = useRef<ProtocolVariant>('A');
   const pendingAutoLoadPattern = useRef<string | undefined>(undefined);
@@ -267,6 +273,10 @@ const Calculator: React.FC = () => {
   };
 
   const handleSaveTreatment = async () => {
+    if (!canSaveTreatment) {
+      navigate('/subscription');
+      return;
+    }
     if (!isCalculated || !selectedBrand) return;
     
     // Validate we have at least a patient name
@@ -922,7 +932,7 @@ const Calculator: React.FC = () => {
         </section>
 
         {/* PAGE 2 — Student anatomical reference */}
-        {uniqueMusclesForPrint.length > 0 && (
+        {canViewAnatomy && uniqueMusclesForPrint.length > 0 && (
           <section className="p-8 break-before-page">
             <div className="border-b-2 border-slate-900 pb-4 mb-6">
               <h1 className="text-2xl font-bold uppercase tracking-tight">Referencia de Puntos Motores</h1>
@@ -1433,7 +1443,7 @@ const Calculator: React.FC = () => {
                             <span className="text-base font-bold text-slate-800 dark:text-white">U</span>
                         </div>
 
-                         {motorPoint && (
+                         {canViewAnatomy && motorPoint && (
                             <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700 min-w-0">
                                 <p className="text-xs text-slate-500 dark:text-slate-400 break-words leading-relaxed">
                                     <strong className="text-primary">Punto Motor:</strong> {motorPoint}
@@ -1482,7 +1492,9 @@ const Calculator: React.FC = () => {
                 className={`flex items-center justify-center gap-2 px-3 py-3 rounded-xl text-sm font-bold transition-all min-w-0 ${
                   saveSuccess
                     ? 'bg-green-500 text-white'
-                    : 'bg-primary text-white shadow-md shadow-primary/20'
+                    : canSaveTreatment
+                    ? 'bg-primary text-white shadow-md shadow-primary/20'
+                    : 'bg-slate-900 dark:bg-slate-700 text-white'
                 }`}
               >
                 {isSaving ? (
@@ -1492,7 +1504,15 @@ const Calculator: React.FC = () => {
                 ) : (
                   <Save size={16} className="shrink-0" />
                 )}
-                <span className="truncate">{saveSuccess ? 'Guardado' : isSaving ? 'Guardando…' : 'Guardar'}</span>
+                <span className="truncate">
+                  {saveSuccess
+                    ? 'Guardado'
+                    : isSaving
+                    ? 'Guardando…'
+                    : canSaveTreatment
+                    ? 'Guardar'
+                    : 'Guardar (Plus)'}
+                </span>
               </button>
               <button
                 type="button"
@@ -1511,6 +1531,14 @@ const Calculator: React.FC = () => {
                 <span className="truncate">Excel</span>
               </button>
             </div>
+            {!canSaveTreatment && (
+              <UpgradePromptCard
+                compact
+                requiredTier="plus"
+                title="Guardar tratamientos requiere Plan Plus"
+                description="Activa Plus para guardar expedientes, historial de dosis y agenda (sin costo en lanzamiento)."
+              />
+            )}
           </section>
         )}
         

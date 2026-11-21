@@ -14,10 +14,16 @@ export enum Screen {
 
 export interface UserProfile {
   id: string;
+  email?: string | null;
   full_name: string | null;
   specialty: string | null;
   avatar_url: string | null;
   subscription_tier: string;
+  role?: 'super_admin' | 'support_admin' | 'enterprise' | 'specialist' | 'assistant';
+  is_active?: boolean;
+  status?: 'active' | 'pending' | 'suspended';
+  active_clinic_id?: string | null;
+  feature_overrides?: Record<string, boolean>;
   general_license?: string | null;
   specialist_license?: string | null;
   default_brand?: string;

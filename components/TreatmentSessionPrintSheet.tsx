@@ -1,5 +1,6 @@
 import React from 'react';
 import type { PrintPreferences } from '../hooks/usePrintPreferences';
+import { useEntitlements } from '../features/entitlements/EntitlementContext';
 import {
   getMuscleGuideSections,
   getVolumeMl,
@@ -16,9 +17,13 @@ const TreatmentSessionPrintSheet: React.FC<TreatmentSessionPrintSheetProps> = ({
   report,
   preferences,
 }) => {
+  const { can } = useEntitlements();
   const sortedDetails = sortTreatmentDetails(report.details);
   const totalVolume = getVolumeMl(report.totalUnits, report.productName, report.dilution);
-  const guides = getMuscleGuideSections(report.details, preferences);
+  const guides = getMuscleGuideSections(report.details, {
+    includeMotorPoints: preferences.includeMotorPoints && can('guides.anatomy'),
+    includeUsgGuide: preferences.includeUsgGuide && can('guides.usg'),
+  });
 
   return (
     <div id="treatment-print-root" className="treatment-print-sheet" aria-hidden="true">

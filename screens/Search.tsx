@@ -6,9 +6,13 @@ import { fetchAllPatients } from '../hooks/usePatients';
 import { removePatientFromCache } from '../services/clinicalCache';
 import PageContainer from '../components/PageContainer';
 import StaleDataNotice from '../components/StaleDataNotice';
+import { useEntitlements } from '../features/entitlements/EntitlementContext';
+import { UpgradePromptCard } from '../features/entitlements/FeatureGate';
 
 const Search: React.FC = () => {
   const navigate = useNavigate();
+  const { can } = useEntitlements();
+  const canManagePatients = can('patients.manage');
   const [searchQuery, setSearchQuery] = useState('');
   const [patients, setPatients] = useState<any[]>([]);
   const [loadingPatients, setLoadingPatients] = useState(true);
@@ -113,13 +117,27 @@ const Search: React.FC = () => {
           </div>
           <button
             type="button"
-            onClick={() => navigate('/patient/new')}
+            onClick={() => navigate(canManagePatients ? '/patient/new' : '/subscription')}
             className="inline-flex items-center gap-1.5 shrink-0 px-3 py-2 rounded-xl bg-primary text-white text-xs font-bold shadow-sm hover:bg-primary/90 active:scale-95 transition-transform cursor-pointer min-h-[40px]"
           >
-            <span className="material-symbols-outlined text-[18px]">person_add</span>
-            <span className="hidden sm:inline">Nuevo paciente</span>
+            <span className="material-symbols-outlined text-[18px]">
+              {canManagePatients ? 'person_add' : 'lock'}
+            </span>
+            <span className="hidden sm:inline">
+              {canManagePatients ? 'Nuevo paciente' : 'Activar Plus'}
+            </span>
           </button>
         </div>
+        {!canManagePatients && (
+          <div className="mb-3">
+            <UpgradePromptCard
+              compact
+              requiredTier="plus"
+              title="Modo solo lectura (Plan Gratuito)"
+              description="Tus expedientes existentes siguen visibles y exportables. Activa Plus ($0 en lanzamiento) para crear o editar pacientes."
+            />
+          </div>
+        )}
 
         <div className="relative w-full">
           <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">

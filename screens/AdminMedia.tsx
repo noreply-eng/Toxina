@@ -65,19 +65,8 @@ const AdminMedia: React.FC = () => {
   }
 
   if (!isAdmin) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-background-light dark:bg-background-dark p-6 text-center">
-        <span className="material-symbols-outlined text-5xl text-red-500 mb-4">lock</span>
-        <h2 className="text-lg font-bold text-text-main dark:text-white mb-1">Acceso restringido</h2>
-        <p className="text-sm text-text-muted mb-6">Esta sección es solo para el administrador.</p>
-        <button
-          onClick={() => navigate('/settings')}
-          className="px-5 py-2 bg-primary text-white rounded-xl font-bold"
-        >
-          Volver a Ajustes
-        </button>
-      </div>
-    );
+    navigate('/dashboard', { replace: true });
+    return null;
   }
 
   return (

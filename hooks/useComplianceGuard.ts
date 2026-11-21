@@ -9,6 +9,14 @@ const EXEMPT_PATHS = new Set([
   '/complete-profile',
 ]);
 
+function isExemptPath(pathname: string): boolean {
+  return (
+    EXEMPT_PATHS.has(pathname) ||
+    pathname.startsWith('/super-admin') ||
+    pathname.startsWith('/enterprise')
+  );
+}
+
 export function useComplianceGuard(userId: string | undefined, pathname: string) {
   const [status, setStatus] = useState<ComplianceStatus | null>(null);
   const [loading, setLoading] = useState(!!userId);
@@ -29,7 +37,7 @@ export function useComplianceGuard(userId: string | undefined, pathname: string)
     refresh();
   }, [refresh]);
 
-  const isExempt = EXEMPT_PATHS.has(pathname);
+  const isExempt = isExemptPath(pathname);
 
   let redirectTo: string | null = null;
 

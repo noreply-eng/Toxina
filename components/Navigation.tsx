@@ -1,23 +1,26 @@
-
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import BrandLogo from './BrandLogo';
 import { APP_NAME, APP_TAGLINE } from '../constants/brand';
+import { useEntitlements } from '../features/entitlements/EntitlementContext';
+import type { FeatureKey } from '../features/entitlements/planCatalog';
 
 interface NavItem {
   path: string;
   icon: string;
   label: string;
   isPrimary?: boolean;
+  feature?: FeatureKey;
+  badge?: 'PLUS' | 'PRO';
 }
 
 const NAV_ITEMS: NavItem[] = [
   { path: '/dashboard', icon: 'home', label: 'Inicio' },
   { path: '/search', icon: 'search', label: 'Pacientes' },
-  { path: '/pathologies', icon: 'medical_information', label: 'Patologías' },
+  { path: '/pathologies', icon: 'medical_information', label: 'Patologías', feature: 'content.protocols', badge: 'PRO' },
   { path: '/calculator', icon: 'calculate', label: 'Calculadora', isPrimary: true },
-  { path: '/agenda', icon: 'event', label: 'Agenda' },
-  { path: '/motor-points', icon: 'accessibility_new', label: 'Músculos' },
+  { path: '/agenda', icon: 'event', label: 'Agenda', feature: 'agenda.manage', badge: 'PLUS' },
+  { path: '/motor-points', icon: 'accessibility_new', label: 'Músculos', feature: 'guides.anatomy', badge: 'PRO' },
   { path: '/settings', icon: 'settings', label: 'Ajustes' },
 ];
 
@@ -30,6 +33,7 @@ function isNavActive(pathname: string, path: string): boolean {
 const Navigation: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { can, isSuperAdmin, isEnterpriseManager } = useEntitlements();
 
   return (
     <>
@@ -46,6 +50,7 @@ const Navigation: React.FC = () => {
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
           {NAV_ITEMS.map((item) => {
             const isActive = isNavActive(location.pathname, item.path);
+            const isLocked = Boolean(item.feature && !can(item.feature));
 
             if (item.isPrimary) {
               return (
@@ -68,26 +73,60 @@ const Navigation: React.FC = () => {
               <button
                 key={item.path}
                 onClick={() => navigate(item.path)}
-                className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition-colors duration-200 cursor-pointer ${
+                className={`w-full flex items-center justify-between gap-2 px-4 py-2.5 rounded-xl transition-colors duration-200 cursor-pointer ${
                   isActive
                     ? 'bg-primary/10 text-primary'
                     : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-200'
                 }`}
               >
-                <span
-                  className={`material-symbols-outlined text-xl ${
-                    isActive ? 'material-symbols-filled' : ''
-                  }`}
-                >
-                  {item.icon}
-                </span>
-                <span className={`text-sm ${isActive ? 'font-bold' : 'font-medium'}`}>
-                  {item.label}
-                </span>
+                <div className="flex items-center gap-3 min-w-0">
+                  <span
+                    className={`material-symbols-outlined text-xl ${
+                      isActive ? 'material-symbols-filled' : ''
+                    }`}
+                  >
+                    {item.icon}
+                  </span>
+                  <span className={`text-sm truncate ${isActive ? 'font-bold' : 'font-medium'}`}>
+                    {item.label}
+                  </span>
+                </div>
+                {isLocked && item.badge && (
+                  <span className="shrink-0 text-[9px] font-black tracking-wider uppercase px-1.5 py-0.5 rounded-md bg-primary/10 text-primary">
+                    {item.badge}
+                  </span>
+                )}
               </button>
             );
           })}
         </nav>
+
+        {(isSuperAdmin || isEnterpriseManager) && (
+          <div className="p-3 border-t border-slate-100 dark:border-slate-800 space-y-1.5">
+            {isEnterpriseManager && (
+              <button
+                type="button"
+                onClick={() => navigate('/enterprise')}
+                className="w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-bold bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-lg">business_center</span>
+                <span className="truncate">Portal Enterprise</span>
+              </button>
+            )}
+            {isSuperAdmin && (
+              <button
+                type="button"
+                onClick={() => navigate('/super-admin')}
+                className="w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-bold bg-slate-900 dark:bg-slate-800 text-white hover:bg-slate-800 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-lg text-amber-400">
+                  admin_panel_settings
+                </span>
+                <span className="truncate">Panel SuperAdmin</span>
+              </button>
+            )}
+          </div>
+        )}
       </aside>
 
       {/* Mobile bottom navigation */}

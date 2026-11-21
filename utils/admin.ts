@@ -1,21 +1,15 @@
-import type { Session, User } from '@supabase/supabase-js';
-
 /**
- * Correo del único administrador de la aplicación.
- * El control real de permisos vive en la base de datos (función public.is_admin()
- * y políticas RLS). Esta constante solo se usa para mostrar/ocultar la UI de admin.
+ * Seguridad de SuperAdmin:
+ * Ya NO se almacena ningún correo de administrador en el código cliente.
+ * La identidad de administrador (`user_profiles.role = 'super_admin'`)
+ * se resuelve únicamente desde PostgreSQL (public.is_super_admin() +
+ * public.get_my_entitlements()) y se consume mediante useEntitlements() / useIsAdmin().
  */
-export const ADMIN_EMAIL = 'jmyocupicior@gmail.com';
 
-export function isAdminEmail(email?: string | null): boolean {
-  if (!email) return false;
-  return email.trim().toLowerCase() === ADMIN_EMAIL;
+export function isSuperAdminRole(role?: string | null): boolean {
+  return role === 'super_admin';
 }
 
-export function isAdminUser(user?: User | null): boolean {
-  return isAdminEmail(user?.email);
-}
-
-export function isAdminSession(session?: Session | null): boolean {
-  return isAdminEmail(session?.user?.email);
+export function isEnterpriseRole(role?: string | null): boolean {
+  return role === 'enterprise';
 }
