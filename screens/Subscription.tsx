@@ -33,6 +33,9 @@ const Subscription: React.FC = () => {
   const [plansLoading, setPlansLoading] = useState(true);
   const [scope, setScope] = useState<'individual' | 'clinic'>('individual');
   const [billingInterval, setBillingInterval] = useState<'monthly' | 'annual'>('monthly');
+  const [showPlanCatalog, setShowPlanCatalog] = useState<boolean>(
+    () => searchParams.get('catalog') === '1'
+  );
   const [activatingSlug, setActivatingSlug] = useState<string | null>(null);
   const [promoCode, setPromoCode] = useState(() => searchParams.get('code') || '');
   const [redeeming, setRedeeming] = useState(false);
@@ -98,6 +101,10 @@ const Subscription: React.FC = () => {
       }
 
       await refresh();
+      if (plan.tier !== 'free') {
+        navigate('/clinic-admin', { replace: true });
+        return;
+      }
       setFeedback({
         kind: res.mode === 'claimed_free' ? 'success' : 'info',
         text: res.message,
@@ -127,14 +134,7 @@ const Subscription: React.FC = () => {
         searchParams.delete('code');
         setSearchParams(searchParams, { replace: true });
       }
-      setFeedback({
-        kind: 'success',
-        text:
-          result.message ||
-          (result.sponsor
-            ? `¡Licencia Premium patrocinada por ${result.sponsor} activada en tu consultorio privado!`
-            : '¡Código aplicado correctamente!'),
-      });
+      navigate('/clinic-admin', { replace: true });
     } catch (err: any) {
       setFeedback({
         kind: 'error',
@@ -335,249 +335,275 @@ const Subscription: React.FC = () => {
                 </div>
               )}
 
-              {entitlements.clinics.some((c) =>
-                ['owner', 'director', 'clinic_admin'].includes(c.role_in_clinic)
-              ) && (
+              {effectiveTier !== 'free' && entitlements.role !== 'enterprise' && (
                 <div className="relative z-10 mt-5 rounded-2xl bg-white/15 backdrop-blur-md border border-white/25 p-4 flex flex-wrap items-center justify-between gap-3">
                   <div className="flex items-center gap-3 min-w-0">
-                    <span className="material-symbols-outlined text-2xl shrink-0">local_hospital</span>
+                    <span className="material-symbols-outlined text-2xl shrink-0">
+                      {(entitlements.plan_slug || '').includes('clinic')
+                        ? 'local_hospital'
+                        : 'medical_services'}
+                    </span>
                     <div className="min-w-0">
                       <p className="text-xs font-black uppercase tracking-wider text-white/85">
-                        Administración de Clínica Activa
+                        {(entitlements.plan_slug || '').includes('clinic')
+                          ? `Panel de Clínica Privada ${TIER_LABELS[effectiveTier]} Activo`
+                          : `Panel de Consultorio Privado ${TIER_LABELS[effectiveTier]} Activo`}
                       </p>
                       <p className="text-sm font-bold text-white truncate">
                         {entitlements.clinics.find((c) =>
                           ['owner', 'director', 'clinic_admin'].includes(c.role_in_clinic)
-                        )?.name}
+                        )?.name ||
+                          ((entitlements.plan_slug || '').includes('clinic')
+                            ? `Clínica de ${entitlements.full_name || 'Dr. Especialista'}`
+                            : `Consultorio de ${entitlements.full_name || 'Dr. Especialista'}`)}
                       </p>
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const managed = entitlements.clinics.find((c) =>
-                        ['owner', 'director', 'clinic_admin'].includes(c.role_in_clinic)
-                      );
-                      navigate(managed ? `/clinic-admin/${managed.clinic_id}` : '/clinic-admin');
-                    }}
-                    className="shrink-0 px-4 py-2 rounded-xl bg-white text-teal-800 font-black text-xs hover:bg-emerald-50 transition-colors cursor-pointer"
-                  >
-                    Configurar mi Clínica
-                  </button>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const managed = entitlements.clinics.find((c) =>
+                          ['owner', 'director', 'clinic_admin'].includes(c.role_in_clinic)
+                        );
+                        navigate(managed ? `/clinic-admin/${managed.clinic_id}` : '/clinic-admin');
+                      }}
+                      className="shrink-0 px-4 py-2.5 rounded-xl bg-white text-teal-800 font-black text-xs hover:bg-emerald-50 transition-colors cursor-pointer shadow-md"
+                    >
+                      {(entitlements.plan_slug || '').includes('clinic')
+                        ? 'Abrir Panel de mi Clínica Privada'
+                        : 'Abrir Panel de mi Consultorio Privado'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowPlanCatalog((prev) => !prev)}
+                      className="shrink-0 px-3.5 py-2.5 rounded-xl bg-black/20 hover:bg-black/30 border border-white/25 text-white font-bold text-xs transition-colors cursor-pointer"
+                    >
+                      {showPlanCatalog ? 'Ocultar catálogo de planes' : 'Cambiar modalidad (Consultorio / Clínica)'}
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
           </section>
 
-          {/* Free Launch Promo Banner */}
-          {isFreeLaunch && (
-            <section className="rounded-3xl bg-gradient-to-r from-emerald-500/15 via-teal-500/15 to-cyan-500/15 border border-emerald-500/30 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="flex items-start gap-3">
-                <div className="size-11 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-md">
-                  <span className="material-symbols-outlined text-2xl">celebration</span>
-                </div>
-                <div>
-                  <span className="inline-block text-[10px] font-black uppercase tracking-widest text-emerald-700 dark:text-emerald-300">
-                    Acceso de Lanzamiento por Tiempo Limitado
-                  </span>
-                  <h3 className="text-base font-extrabold text-text-main dark:text-white">
-                    Todos los planes individuales y de clínica están a $0 MXN hoy
-                  </h3>
-                  <p className="text-xs text-text-muted mt-0.5 leading-relaxed">
-                    La pasarela de pago aún no cobra. Activa Plus o Premium sin tarjeta ahora mismo y recibe insignia de Fundador con{' '}
-                    <strong>{entitlements.platform_settings.founder_discount_percent}% de descuento preferencial</strong> cuando inicien los cobros.
-                  </p>
-                </div>
-              </div>
-            </section>
-          )}
-
-          {/* Scope & Interval Toggles */}
-          <section className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            {hasClinicPlans ? (
-              <div className="inline-flex p-1 rounded-2xl bg-slate-100 dark:bg-slate-800/80 self-start">
-                <button
-                  type="button"
-                  onClick={() => setScope('individual')}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                    scope === 'individual'
-                      ? 'bg-white dark:bg-surface-dark text-text-main dark:text-white shadow-sm'
-                      : 'text-text-muted hover:text-text-main dark:hover:text-white'
-                  }`}
-                >
-                  Médico Independiente
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setScope('clinic')}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                    scope === 'clinic'
-                      ? 'bg-white dark:bg-surface-dark text-text-main dark:text-white shadow-sm'
-                      : 'text-text-muted hover:text-text-main dark:hover:text-white'
-                  }`}
-                >
-                  Clínicas y Equipos
-                </button>
-              </div>
-            ) : (
-              <div />
-            )}
-
-            <div className="inline-flex p-1 rounded-2xl bg-slate-100 dark:bg-slate-800/80 self-start">
-              <button
-                type="button"
-                onClick={() => setBillingInterval('monthly')}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                  billingInterval === 'monthly'
-                    ? 'bg-white dark:bg-surface-dark text-text-main dark:text-white shadow-sm'
-                    : 'text-text-muted'
-                }`}
-              >
-                Mensual
-              </button>
-              <button
-                type="button"
-                onClick={() => setBillingInterval('annual')}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
-                  billingInterval === 'annual'
-                    ? 'bg-white dark:bg-surface-dark text-text-main dark:text-white shadow-sm'
-                    : 'text-text-muted'
-                }`}
-              >
-                Anual
-                <span className="px-1.5 py-0.5 rounded-md bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 text-[10px] font-black">
-                  -17%
-                </span>
-              </button>
-            </div>
-          </section>
-
-          {/* Plans Grid */}
-          <section className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            {visiblePlans.map((plan) => {
-              const isCurrent =
-                entitlements.plan_slug === plan.slug ||
-                (scope === 'individual' && effectiveTier === plan.tier && plan.scope === 'individual');
-              const priceCents =
-                billingInterval === 'annual' ? plan.price_annual_cents : plan.price_monthly_cents;
-              const periodSuffix = billingInterval === 'annual' ? '/año' : '/mes';
-              const featureMap = {
-                ...TIER_DEFAULT_FEATURES[plan.tier],
-                ...(plan.features || {}),
-              };
-              const isBusy = activatingSlug === plan.slug;
-
-              return (
-                <div
-                  key={plan.id || plan.slug}
-                  className={`relative flex flex-col rounded-3xl p-6 bg-white dark:bg-surface-dark border transition-all ${
-                    plan.is_featured
-                      ? 'border-primary shadow-xl shadow-primary/10 ring-1 ring-primary/20'
-                      : 'border-slate-200/80 dark:border-slate-800 shadow-sm'
-                  }`}
-                >
-                  {plan.badge_text && (
-                    <span className="self-start mb-3 inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-primary/10 text-primary">
-                      {plan.badge_text}
-                    </span>
-                  )}
-
-                  <h3 className="text-xl font-black text-text-main dark:text-white">{plan.name}</h3>
-                  {plan.description && (
-                    <p className="text-xs text-text-muted mt-1.5 leading-relaxed min-h-[2.5rem]">
-                      {plan.description}
-                    </p>
-                  )}
-
-                  <div className="mt-5 pb-5 border-b border-slate-100 dark:border-slate-800">
-                    {isFreeLaunch && priceCents > 0 ? (
-                      <div>
-                        <div className="flex items-baseline gap-2">
-                          <span className="text-3xl font-black text-emerald-600 dark:text-emerald-400">
-                            $0
-                          </span>
-                          <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
-                            {plan.currency}
-                          </span>
-                          <span className="text-sm font-semibold text-slate-400 line-through">
-                            {formatMoney(priceCents, plan.currency)}
-                            {periodSuffix}
-                          </span>
-                        </div>
-                        <p className="text-[11px] font-bold text-emerald-700 dark:text-emerald-300 mt-1">
-                          Gratis durante el lanzamiento · Sin tarjeta
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="flex items-baseline gap-1">
-                        <span className="text-3xl font-black text-text-main dark:text-white">
-                          {priceCents === 0 ? '$0' : formatMoney(priceCents, plan.currency)}
-                        </span>
-                        {priceCents > 0 && (
-                          <span className="text-xs font-semibold text-text-muted">{periodSuffix}</span>
-                        )}
-                      </div>
-                    )}
-                    {plan.max_seats > 1 && (
-                      <p className="text-[11px] text-text-muted mt-1">
-                        Incluye hasta <strong>{plan.max_seats} asientos</strong> de clínica compartida
+          {/* Only show launch promo banner & pricing cards when user is on Free OR explicitly opened catalog to change modality */}
+          {(effectiveTier === 'free' || showPlanCatalog) && (
+            <>
+              {/* Free Launch Promo Banner */}
+              {isFreeLaunch && (
+                <section className="rounded-3xl bg-gradient-to-r from-emerald-500/15 via-teal-500/15 to-cyan-500/15 border border-emerald-500/30 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="flex items-start gap-3">
+                    <div className="size-11 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-md">
+                      <span className="material-symbols-outlined text-2xl">celebration</span>
+                    </div>
+                    <div>
+                      <span className="inline-block text-[10px] font-black uppercase tracking-widest text-emerald-700 dark:text-emerald-300">
+                        Acceso de Lanzamiento por Tiempo Limitado
+                      </span>
+                      <h3 className="text-base font-extrabold text-text-main dark:text-white">
+                        Todos los planes individuales y de clínica están a $0 MXN hoy
+                      </h3>
+                      <p className="text-xs text-text-muted mt-0.5 leading-relaxed">
+                        La pasarela de pago aún no cobra. Activa Plus o Premium sin tarjeta ahora mismo y recibe insignia de Fundador con{' '}
+                        <strong>{entitlements.platform_settings.founder_discount_percent}% de descuento preferencial</strong> cuando inicien los cobros.
                       </p>
-                    )}
+                    </div>
                   </div>
+                </section>
+              )}
 
-                  <ul className="mt-5 space-y-2.5 text-xs flex-1">
-                    {ALL_FEATURE_KEYS.filter((f) => f.key !== 'data.export').map((feat) => {
-                      const enabled = Boolean(featureMap[feat.key]);
-                      return (
-                        <li
-                          key={feat.key}
-                          className={`flex items-start gap-2 ${
-                            enabled
-                              ? 'text-text-main dark:text-slate-200 font-medium'
-                              : 'text-slate-400 dark:text-slate-600 line-through'
-                          }`}
-                        >
-                          <span
-                            className={`material-symbols-outlined text-[16px] shrink-0 mt-0.5 ${
-                              enabled ? 'text-primary' : 'text-slate-300 dark:text-slate-700'
-                            }`}
-                          >
-                            {enabled ? 'check_circle' : 'cancel'}
-                          </span>
-                          <span>{feat.label}</span>
-                        </li>
-                      );
-                    })}
-                  </ul>
+              {/* Scope & Interval Toggles */}
+              <section className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                {hasClinicPlans ? (
+                  <div className="inline-flex p-1 rounded-2xl bg-slate-100 dark:bg-slate-800/80 self-start">
+                    <button
+                      type="button"
+                      onClick={() => setScope('individual')}
+                      className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                        scope === 'individual'
+                          ? 'bg-white dark:bg-surface-dark text-text-main dark:text-white shadow-sm'
+                          : 'text-text-muted hover:text-text-main dark:hover:text-white'
+                      }`}
+                    >
+                      Consultorio Privado Individual
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setScope('clinic')}
+                      className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                        scope === 'clinic'
+                          ? 'bg-white dark:bg-surface-dark text-text-main dark:text-white shadow-sm'
+                          : 'text-text-muted hover:text-text-main dark:hover:text-white'
+                      }`}
+                    >
+                      Clínica Privada y Equipos
+                    </button>
+                  </div>
+                ) : (
+                  <div />
+                )}
 
+                <div className="inline-flex p-1 rounded-2xl bg-slate-100 dark:bg-slate-800/80 self-start">
                   <button
                     type="button"
-                    disabled={isCurrent || isBusy}
-                    onClick={() => handleActivatePlan(plan)}
-                    className={`mt-6 w-full py-3 rounded-2xl text-sm font-bold transition-all cursor-pointer disabled:cursor-default ${
-                      isCurrent
-                        ? 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
-                        : plan.is_featured
-                        ? 'bg-primary hover:bg-primary-dark text-white shadow-lg shadow-primary/25'
-                        : 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:opacity-90'
+                    onClick={() => setBillingInterval('monthly')}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                      billingInterval === 'monthly'
+                        ? 'bg-white dark:bg-surface-dark text-text-main dark:text-white shadow-sm'
+                        : 'text-text-muted'
                     }`}
                   >
-                    {isBusy
-                      ? 'Procesando…'
-                      : isCurrent
-                      ? 'Plan Actual'
-                      : plan.tier === 'free'
-                      ? 'Cambiar a Gratuito'
-                      : isFreeLaunch
-                      ? `Activar ${TIER_LABELS[plan.tier]} Gratis ($0)`
-                      : isStripeLive
-                      ? `Suscribirse a ${TIER_LABELS[plan.tier]}`
-                      : `Solicitar ${TIER_LABELS[plan.tier]}`}
+                    Mensual
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBillingInterval('annual')}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                      billingInterval === 'annual'
+                        ? 'bg-white dark:bg-surface-dark text-text-main dark:text-white shadow-sm'
+                        : 'text-text-muted'
+                    }`}
+                  >
+                    Anual
+                    <span className="px-1.5 py-0.5 rounded-md bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 text-[10px] font-black">
+                      -17%
+                    </span>
                   </button>
                 </div>
-              );
-            })}
-          </section>
+              </section>
+
+              {/* Plans Grid */}
+              <section className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                {visiblePlans.map((plan) => {
+                  const isCurrent =
+                    entitlements.plan_slug === plan.slug ||
+                    (scope === 'individual' &&
+                      effectiveTier === plan.tier &&
+                      plan.scope === 'individual' &&
+                      !(entitlements.plan_slug || '').includes('clinic'));
+                  const priceCents =
+                    billingInterval === 'annual' ? plan.price_annual_cents : plan.price_monthly_cents;
+                  const periodSuffix = billingInterval === 'annual' ? '/año' : '/mes';
+                  const featureMap = {
+                    ...TIER_DEFAULT_FEATURES[plan.tier],
+                    ...(plan.features || {}),
+                  };
+                  const isBusy = activatingSlug === plan.slug;
+
+                  return (
+                    <div
+                      key={plan.id || plan.slug}
+                      className={`relative flex flex-col rounded-3xl p-6 bg-white dark:bg-surface-dark border transition-all ${
+                        plan.is_featured
+                          ? 'border-primary shadow-xl shadow-primary/10 ring-1 ring-primary/20'
+                          : 'border-slate-200/80 dark:border-slate-800 shadow-sm'
+                      }`}
+                    >
+                      {plan.badge_text && (
+                        <span className="self-start mb-3 inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-primary/10 text-primary">
+                          {plan.badge_text}
+                        </span>
+                      )}
+
+                      <h3 className="text-xl font-black text-text-main dark:text-white">{plan.name}</h3>
+                      {plan.description && (
+                        <p className="text-xs text-text-muted mt-1.5 leading-relaxed min-h-[2.5rem]">
+                          {plan.description}
+                        </p>
+                      )}
+
+                      <div className="mt-5 pb-5 border-b border-slate-100 dark:border-slate-800">
+                        {isFreeLaunch && priceCents > 0 ? (
+                          <div>
+                            <div className="flex items-baseline gap-2">
+                              <span className="text-3xl font-black text-emerald-600 dark:text-emerald-400">
+                                $0
+                              </span>
+                              <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                                {plan.currency}
+                              </span>
+                              <span className="text-sm font-semibold text-slate-400 line-through">
+                                {formatMoney(priceCents, plan.currency)}
+                                {periodSuffix}
+                              </span>
+                            </div>
+                            <p className="text-[11px] font-bold text-emerald-700 dark:text-emerald-300 mt-1">
+                              Gratis durante el lanzamiento · Sin tarjeta
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="flex items-baseline gap-1">
+                            <span className="text-3xl font-black text-text-main dark:text-white">
+                              {priceCents === 0 ? '$0' : formatMoney(priceCents, plan.currency)}
+                            </span>
+                            {priceCents > 0 && (
+                              <span className="text-xs font-semibold text-text-muted">{periodSuffix}</span>
+                            )}
+                          </div>
+                        )}
+                        {plan.max_seats > 1 && (
+                          <p className="text-[11px] text-text-muted mt-1">
+                            Incluye hasta <strong>{plan.max_seats} asientos</strong> de clínica compartida
+                          </p>
+                        )}
+                      </div>
+
+                      <ul className="mt-5 space-y-2.5 text-xs flex-1">
+                        {ALL_FEATURE_KEYS.filter((f) => f.key !== 'data.export').map((feat) => {
+                          const enabled = Boolean(featureMap[feat.key]);
+                          return (
+                            <li
+                              key={feat.key}
+                              className={`flex items-start gap-2 ${
+                                enabled
+                                  ? 'text-text-main dark:text-slate-200 font-medium'
+                                  : 'text-slate-400 dark:text-slate-600 line-through'
+                              }`}
+                            >
+                              <span
+                                className={`material-symbols-outlined text-[16px] shrink-0 mt-0.5 ${
+                                  enabled ? 'text-primary' : 'text-slate-300 dark:text-slate-700'
+                                }`}
+                              >
+                                {enabled ? 'check_circle' : 'cancel'}
+                              </span>
+                              <span>{feat.label}</span>
+                            </li>
+                          );
+                        })}
+                      </ul>
+
+                      <button
+                        type="button"
+                        disabled={isCurrent || isBusy}
+                        onClick={() => handleActivatePlan(plan)}
+                        className={`mt-6 w-full py-3 rounded-2xl text-sm font-bold transition-all cursor-pointer disabled:cursor-default ${
+                          isCurrent
+                            ? 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+                            : plan.is_featured
+                            ? 'bg-primary hover:bg-primary-dark text-white shadow-lg shadow-primary/25'
+                            : 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:opacity-90'
+                        }`}
+                      >
+                        {isBusy
+                          ? 'Procesando…'
+                          : isCurrent
+                          ? 'Plan Actual'
+                          : plan.tier === 'free'
+                          ? 'Cambiar a Gratuito'
+                          : isFreeLaunch
+                          ? `Activar ${plan.scope === 'clinic' ? 'Clínica ' : 'Consultorio '}${TIER_LABELS[plan.tier]} Gratis ($0)`
+                          : isStripeLive
+                          ? `Suscribirse a ${TIER_LABELS[plan.tier]}`
+                          : `Solicitar ${TIER_LABELS[plan.tier]}`}
+                      </button>
+                    </div>
+                  );
+                })}
+              </section>
+            </>
+          )}
 
           {/* Unified Promo & Enterprise Voucher Redemption */}
           <section className="rounded-3xl bg-white dark:bg-surface-dark border border-slate-200/80 dark:border-slate-800 shadow-sm p-5 sm:p-6">

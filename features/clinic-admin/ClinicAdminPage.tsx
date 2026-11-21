@@ -6,7 +6,12 @@ import { ORIGIN_LABELS, TIER_LABELS } from '../entitlements/planCatalog';
 import WorkingHoursEditor, { DEFAULT_WORKING_HOURS } from '../super-admin/components/WorkingHoursEditor';
 import type { ClinicSummaryRow, WorkingHoursMap } from '../super-admin/types';
 import {
+  activatePlanSubscription,
+  redeemPromoOrEnterpriseCode,
+} from '../billing/billingProvider';
+import {
   addOrUpdateOwnClinicMember,
+  ensureOwnClinicWorkspace,
   fetchClinicAdminDetail,
   removeOwnClinicMember,
   updateOwnClinicInfo,
@@ -17,15 +22,15 @@ import {
 type ClinicTab = 'overview' | 'info' | 'schedule' | 'team' | 'plan';
 
 const CLINIC_TYPE_LABELS: Record<ClinicSummaryRow['type'], string> = {
-  solo_practice: 'Consultorio Individual',
-  clinic: 'Clínica Multi-especialista',
+  solo_practice: 'Consultorio Privado Individual',
+  clinic: 'Clínica Privada Multi-especialista',
   hospital: 'Hospital',
   aesthetic_center: 'Centro Estético',
   rehab_center: 'Centro de Rehabilitación',
 };
 
 const ROLE_LABELS: Record<string, string> = {
-  owner: 'Owner (Propietario)',
+  owner: 'Owner (Titular)',
   director: 'Director Médico',
   clinic_admin: 'Admin Clínica',
   specialist: 'Especialista',
@@ -35,13 +40,14 @@ const ROLE_LABELS: Record<string, string> = {
 const ClinicAdminPage: React.FC = () => {
   const { clinicId: routeClinicId } = useParams<{ clinicId: string }>();
   const navigate = useNavigate();
-  const { entitlements, refresh: refreshEntitlements } = useEntitlements();
+  const { entitlements, effectiveTier, refresh: refreshEntitlements } = useEntitlements();
 
   const managedClinics = entitlements.clinics.filter((c) =>
     ['owner', 'director', 'clinic_admin'].includes(c.role_in_clinic)
   );
-  const activeClinicId = routeClinicId || managedClinics[0]?.clinic_id || '';
+  const initialClinicId = routeClinicId || managedClinics[0]?.clinic_id || '';
 
+  const [resolvedClinicId, setResolvedClinicId] = useState<string>(initialClinicId);
   const [detail, setDetail] = useState<ClinicAdminDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -49,9 +55,9 @@ const ClinicAdminPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
 
-  // Clinic general fields
+  // Clinic / Consultorio general fields
   const [name, setName] = useState('');
-  const [type, setType] = useState<ClinicSummaryRow['type']>('clinic');
+  const [type, setType] = useState<ClinicSummaryRow['type']>('solo_practice');
   const [city, setCity] = useState('');
   const [address, setAddress] = useState('');
   const [phone, setPhone] = useState('');
@@ -67,7 +73,7 @@ const ClinicAdminPage: React.FC = () => {
   const [newHolidayLabel, setNewHolidayLabel] = useState('');
   const [duration, setDuration] = useState(30);
   const [buffer, setBuffer] = useState(10);
-  const [allowCrossView, setAllowCrossView] = useState(true);
+  const [allowCrossView, setAllowCrossView] = useState(false);
 
   // Team member form
   const [inviteEmail, setInviteEmail] = useState('');
@@ -75,41 +81,64 @@ const ClinicAdminPage: React.FC = () => {
     'owner' | 'director' | 'clinic_admin' | 'specialist' | 'assistant'
   >('specialist');
 
+  // Voucher redeem inside Plan tab
+  const [voucherCode, setVoucherCode] = useState('');
+  const [switchingModality, setSwitchingModality] = useState(false);
+
+  const hydrateFromDetail = useCallback((d: ClinicAdminDetail) => {
+    setDetail(d);
+    setResolvedClinicId(d.clinic.id);
+    setName(d.clinic.name || '');
+    setType(d.clinic.type || 'solo_practice');
+    setCity(d.clinic.city || '');
+    setAddress(d.clinic.address || '');
+    setPhone(d.clinic.phone || '');
+    setEmail(d.clinic.email || '');
+    setTaxId(d.clinic.tax_id || '');
+    setLicenseNumber(d.clinic.license_number || '');
+    setDirectorName(d.clinic.director_name || '');
+
+    if (d.configuration?.working_hours) setWorkingHours(d.configuration.working_hours);
+    setHolidays(Array.isArray(d.configuration?.holidays) ? d.configuration.holidays : []);
+    setDuration(d.configuration?.default_appointment_duration ?? 30);
+    setBuffer(d.configuration?.buffer_minutes ?? 10);
+    setAllowCrossView(
+      d.configuration?.allow_cross_doctor_patient_view ?? d.clinic.type !== 'solo_practice'
+    );
+  }, []);
+
   const load = useCallback(async () => {
-    if (!activeClinicId) {
-      setLoading(false);
-      return;
-    }
     setLoading(true);
     setError(null);
     try {
-      const d = await fetchClinicAdminDetail(activeClinicId);
-      setDetail(d);
-      setName(d.clinic.name || '');
-      setType(d.clinic.type || 'clinic');
-      setCity(d.clinic.city || '');
-      setAddress(d.clinic.address || '');
-      setPhone(d.clinic.phone || '');
-      setEmail(d.clinic.email || '');
-      setTaxId(d.clinic.tax_id || '');
-      setLicenseNumber(d.clinic.license_number || '');
-      setDirectorName(d.clinic.director_name || '');
-
-      if (d.configuration?.working_hours) setWorkingHours(d.configuration.working_hours);
-      setHolidays(Array.isArray(d.configuration?.holidays) ? d.configuration.holidays : []);
-      setDuration(d.configuration?.default_appointment_duration ?? 30);
-      setBuffer(d.configuration?.buffer_minutes ?? 10);
-      setAllowCrossView(d.configuration?.allow_cross_doctor_patient_view ?? true);
+      const targetId = routeClinicId || managedClinics[0]?.clinic_id;
+      if (targetId) {
+        const d = await fetchClinicAdminDetail(targetId, entitlements);
+        hydrateFromDetail(d);
+      } else {
+        // Auto-provision Consultorio Privado or Clínica Privada for this active user
+        const d = await ensureOwnClinicWorkspace(entitlements);
+        hydrateFromDetail(d);
+      }
     } catch (err: any) {
-      setError(err?.message || 'No se pudo cargar la configuración de tu clínica.');
+      setError(err?.message || 'No se pudo cargar la configuración de tu consultorio o clínica.');
     } finally {
       setLoading(false);
     }
-  }, [activeClinicId]);
+  }, [routeClinicId, managedClinics, entitlements, hydrateFromDetail]);
 
   useEffect(() => {
     load();
   }, [load]);
+
+  const activeClinicId = resolvedClinicId || detail?.clinic.id || '';
+  const isSoloPractice =
+    (detail?.clinic.type || type) === 'solo_practice' &&
+    (detail?.active_subscription?.seat_limit ?? 1) <= 1 &&
+    !(detail?.active_subscription?.plan_slug || entitlements.plan_slug || '').includes('clinic');
+
+  const workspaceLabel = isSoloPractice ? 'Consultorio Privado' : 'Clínica Privada';
+  const tierLabel = TIER_LABELS[detail?.active_subscription?.tier || effectiveTier || 'premium'];
 
   const handleSaveInfo = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -118,21 +147,25 @@ const ClinicAdminPage: React.FC = () => {
     setError(null);
     setFeedback(null);
     try {
-      await updateOwnClinicInfo(activeClinicId, {
-        name: name.trim(),
-        type,
-        city: city.trim() || null,
-        address: address.trim() || null,
-        phone: phone.trim() || null,
-        email: email.trim() || null,
-        tax_id: taxId.trim() || null,
-        license_number: licenseNumber.trim() || null,
-        director_name: directorName.trim() || null,
-      });
-      setFeedback('Datos generales de tu clínica guardados correctamente.');
+      await updateOwnClinicInfo(
+        activeClinicId,
+        {
+          name: name.trim(),
+          type,
+          city: city.trim() || null,
+          address: address.trim() || null,
+          phone: phone.trim() || null,
+          email: email.trim() || null,
+          tax_id: taxId.trim() || null,
+          license_number: licenseNumber.trim() || null,
+          director_name: directorName.trim() || null,
+        },
+        entitlements.user_id
+      );
+      setFeedback(`Datos generales de tu ${workspaceLabel.toLowerCase()} guardados correctamente.`);
       await Promise.all([load(), refreshEntitlements()]);
     } catch (err: any) {
-      setError(err?.message || 'No se pudo guardar la información de la clínica.');
+      setError(err?.message || 'No se pudo guardar la información.');
     } finally {
       setBusy(false);
     }
@@ -151,8 +184,9 @@ const ClinicAdminPage: React.FC = () => {
         duration,
         buffer,
         allowCrossView,
+        userId: entitlements.user_id,
       });
-      setFeedback('Horarios operativos, días festivos y privacidad entre médicos actualizados.');
+      setFeedback('Horarios de atención, días inhábiles y reglas de agenda actualizados.');
       await load();
     } catch (err: any) {
       setError(err?.message || 'No se pudieron guardar los horarios.');
@@ -236,6 +270,72 @@ const ClinicAdminPage: React.FC = () => {
     }
   };
 
+  const handleSwitchWorkspaceModality = async (targetScope: 'solo' | 'clinic') => {
+    setSwitchingModality(true);
+    setError(null);
+    setFeedback(null);
+    try {
+      const targetTier = effectiveTier === 'plus' ? 'plus' : 'premium';
+      const targetSlug =
+        targetScope === 'clinic'
+          ? `${targetTier}_clinic`
+          : `${targetTier}_solo`;
+
+      await activatePlanSubscription({
+        planSlug: targetSlug,
+        billingInterval: 'monthly',
+        billingMode: entitlements.platform_settings.billing_mode,
+        clinicId: activeClinicId.startsWith('virtual-') ? null : activeClinicId,
+      });
+
+      const nextType: ClinicSummaryRow['type'] =
+        targetScope === 'clinic' ? 'clinic' : 'solo_practice';
+      const nextName =
+        targetScope === 'clinic'
+          ? name.replace(/^Consultorio de /i, 'Clínica de ')
+          : name.replace(/^Clínica de /i, 'Consultorio de ');
+
+      await updateOwnClinicInfo(
+        activeClinicId,
+        {
+          name: nextName || name,
+          type: nextType,
+        },
+        entitlements.user_id
+      );
+
+      await refreshEntitlements();
+      await load();
+      setFeedback(
+        targetScope === 'clinic'
+          ? '¡Modalidad actualizada a Clínica Privada Premium (hasta 5 asientos para tu equipo médico)!'
+          : '¡Modalidad actualizada a Consultorio Privado Premium (1 asiento individual)!'
+      );
+    } catch (err: any) {
+      setError(err?.message || 'No se pudo cambiar la modalidad.');
+    } finally {
+      setSwitchingModality(false);
+    }
+  };
+
+  const handleRedeemVoucher = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!voucherCode.trim()) return;
+    setBusy(true);
+    setError(null);
+    setFeedback(null);
+    try {
+      const res = await redeemPromoOrEnterpriseCode(voucherCode.trim());
+      setVoucherCode('');
+      await Promise.all([refreshEntitlements(), load()]);
+      setFeedback(res.message || '¡Cupón aplicado correctamente en tu consultorio privado!');
+    } catch (err: any) {
+      setError(err?.message || 'No se pudo canjear el código.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh] bg-background-light dark:bg-background-dark">
@@ -244,31 +344,10 @@ const ClinicAdminPage: React.FC = () => {
     );
   }
 
-  if (!activeClinicId) {
-    return (
-      <PageContainer maxWidth="max-w-3xl" className="py-12">
-        <div className="rounded-3xl bg-white dark:bg-surface-dark border border-slate-200 dark:border-slate-800 p-8 text-center space-y-4">
-          <span className="material-symbols-outlined text-4xl text-slate-400">local_hospital</span>
-          <h2 className="text-xl font-black">No administras ninguna clínica todavía</h2>
-          <p className="text-sm text-text-muted">
-            Cuando seas designado Owner, Director o Administrador de una clínica podrás configurar aquí sus datos, horarios y equipo.
-          </p>
-          <button
-            type="button"
-            onClick={() => navigate('/settings')}
-            className="px-5 py-2.5 rounded-xl bg-primary text-white text-sm font-bold cursor-pointer"
-          >
-            Volver a Ajustes
-          </button>
-        </div>
-      </PageContainer>
-    );
-  }
-
   const activeSub = detail?.active_subscription;
-  const seatLimit = activeSub?.seat_limit ?? 0;
-  const membersCount = detail?.members.length ?? 0;
-  const seatPct = seatLimit > 0 ? Math.min(100, Math.round((membersCount / seatLimit) * 100)) : 0;
+  const seatLimit = activeSub?.seat_limit ?? (isSoloPractice ? 1 : 5);
+  const membersCount = Math.max(detail?.members.length ?? 1, 1);
+  const seatPct = seatLimit > 0 ? Math.min(100, Math.round((membersCount / seatLimit) * 100)) : 100;
   const currentMembership = managedClinics.find((c) => c.clinic_id === activeClinicId);
 
   return (
@@ -288,16 +367,16 @@ const ClinicAdminPage: React.FC = () => {
               <div className="min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight truncate">
-                    {detail?.clinic.name || currentMembership?.name || 'Mi Clínica'}
+                    {detail?.clinic.name || currentMembership?.name || `Mi ${workspaceLabel}`}
                   </h1>
-                  {currentMembership && (
-                    <span className="px-2 py-0.5 rounded-md text-[10px] font-black uppercase bg-teal-500/15 text-teal-700 dark:text-teal-300">
-                      {currentMembership.role_in_clinic}
-                    </span>
-                  )}
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                    {workspaceLabel} {tierLabel}
+                  </span>
                 </div>
                 <p className="text-xs text-text-muted">
-                  Configuración de Sede, Horarios, Equipo Médico y Asientos
+                  {isSoloPractice
+                    ? 'Panel de Configuración de tu Consultorio Privado, Horarios, Agenda y Suscripción'
+                    : 'Panel de Configuración de tu Clínica Privada, Horarios, Equipo Médico y Asientos'}
                 </p>
               </div>
             </div>
@@ -320,10 +399,24 @@ const ClinicAdminPage: React.FC = () => {
           <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
             {[
               { id: 'overview', label: 'Resumen', icon: 'dashboard' },
-              { id: 'info', label: 'Datos de Clínica', icon: 'domain' },
+              {
+                id: 'info',
+                label: isSoloPractice ? 'Datos del Consultorio' : 'Datos de la Clínica',
+                icon: 'domain',
+              },
               { id: 'schedule', label: 'Horarios y Agenda', icon: 'schedule' },
-              { id: 'team', label: `Equipo y Asientos (${membersCount}${seatLimit ? `/${seatLimit}` : ''})`, icon: 'group' },
-              { id: 'plan', label: 'Mi Plan Clínico', icon: 'verified' },
+              {
+                id: 'team',
+                label: isSoloPractice
+                  ? 'Equipo / Modalidad Clínica'
+                  : `Equipo y Asientos (${membersCount}/${seatLimit})`,
+                icon: 'group',
+              },
+              {
+                id: 'plan',
+                label: `Mi Paquete ${tierLabel}`,
+                icon: 'verified',
+              },
             ].map((t) => (
               <button
                 key={t.id}
@@ -369,29 +462,68 @@ const ClinicAdminPage: React.FC = () => {
           {/* TAB 1: RESUMEN */}
           {tab === 'overview' && detail && (
             <div className="space-y-4">
+              {/* Active Workspace Banner */}
+              <div className="rounded-3xl bg-gradient-to-br from-primary via-teal-600 to-cyan-700 text-white p-6 shadow-lg flex flex-wrap items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="px-2.5 py-0.5 rounded-full bg-white/20 text-[10px] font-black uppercase tracking-wider">
+                      {workspaceLabel} {tierLabel} Activo
+                    </span>
+                    {entitlements.is_founder && (
+                      <span className="px-2.5 py-0.5 rounded-full bg-amber-400/25 border border-amber-300/40 text-amber-100 text-[10px] font-black uppercase">
+                        Fundador Early Adopter
+                      </span>
+                    )}
+                  </div>
+                  <h2 className="text-2xl font-black">{detail.clinic.name}</h2>
+                  <p className="text-xs text-white/85">
+                    {CLINIC_TYPE_LABELS[detail.clinic.type] || 'Consultorio Privado'} · Origen:{' '}
+                    <strong>{ORIGIN_LABELS[activeSub?.origin || entitlements.origin]}</strong>
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setTab('info')}
+                    className="px-4 py-2 rounded-xl bg-white text-teal-900 font-black text-xs hover:bg-emerald-50 transition-colors cursor-pointer"
+                  >
+                    Personalizar {isSoloPractice ? 'Consultorio' : 'Clínica'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTab('schedule')}
+                    className="px-4 py-2 rounded-xl bg-white/15 hover:bg-white/25 border border-white/25 text-white font-bold text-xs transition-colors cursor-pointer"
+                  >
+                    Horarios de Agenda
+                  </button>
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="rounded-2xl bg-white dark:bg-surface-dark border border-slate-200/80 dark:border-slate-800 p-5">
                   <p className="text-[10px] font-black uppercase tracking-wider text-text-muted">
-                    Equipo / Asientos
+                    {isSoloPractice ? 'Titular / Asientos' : 'Equipo / Asientos'}
                   </p>
                   <p className="text-3xl font-black mt-1">
                     {membersCount}
-                    {seatLimit > 0 && <span className="text-sm font-bold text-text-muted"> / {seatLimit}</span>}
+                    <span className="text-sm font-bold text-text-muted"> / {seatLimit}</span>
                   </p>
-                  {seatLimit > 0 && (
-                    <div className="mt-2 h-1.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
-                      <div className="h-full bg-primary rounded-full" style={{ width: `${seatPct}%` }} />
-                    </div>
-                  )}
+                  <div className="mt-2 h-1.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                    <div className="h-full bg-primary rounded-full" style={{ width: `${seatPct}%` }} />
+                  </div>
                 </div>
 
                 <div className="rounded-2xl bg-white dark:bg-surface-dark border border-slate-200/80 dark:border-slate-800 p-5">
                   <p className="text-[10px] font-black uppercase tracking-wider text-text-muted">
-                    Pacientes de Sede
+                    Expedientes de Pacientes
                   </p>
                   <p className="text-3xl font-black mt-1">{detail.patients_count}</p>
                   <p className="text-[11px] text-text-muted mt-1">
-                    {allowCrossView ? 'Compartidos entre tu equipo' : 'Privados por médico'}
+                    {isSoloPractice
+                      ? '100% privados en tu consultorio'
+                      : allowCrossView
+                      ? 'Compartidos entre tu equipo'
+                      : 'Privados por médico'}
                   </p>
                 </div>
 
@@ -400,22 +532,20 @@ const ClinicAdminPage: React.FC = () => {
                     Aplicaciones Toxina
                   </p>
                   <p className="text-3xl font-black mt-1">{detail.treatments_count}</p>
-                  <p className="text-[11px] text-text-muted mt-1">Sesiones en sede</p>
+                  <p className="text-[11px] text-text-muted mt-1">Sesiones registradas</p>
                 </div>
 
                 <div className="rounded-2xl bg-white dark:bg-surface-dark border border-slate-200/80 dark:border-slate-800 p-5">
                   <p className="text-[10px] font-black uppercase tracking-wider text-text-muted">
-                    Plan Activo
+                    Paquete Activo
                   </p>
                   <p className="text-base font-black text-primary mt-1.5">
-                    {activeSub ? activeSub.plan_name : 'Sin plan de clínica'}
+                    {activeSub ? activeSub.plan_name : entitlements.plan_name}
                   </p>
                   <p className="text-[11px] text-text-muted mt-1">
                     {activeSub?.current_period_end
                       ? `Vigente hasta ${new Date(activeSub.current_period_end).toLocaleDateString('es-MX')}`
-                      : activeSub
-                      ? 'Sin vencimiento automático'
-                      : 'Contacta administración'}
+                      : 'Activo · Sin vencimiento automático'}
                   </p>
                 </div>
               </div>
@@ -424,21 +554,25 @@ const ClinicAdminPage: React.FC = () => {
                 {[
                   {
                     tab: 'info' as ClinicTab,
-                    title: 'Editar Datos de Clínica',
-                    desc: 'Nombre, dirección, RFC, COFEPRIS y contacto',
+                    title: isSoloPractice ? 'Datos de mi Consultorio' : 'Datos de mi Clínica',
+                    desc: 'Nombre, dirección, RFC, aviso COFEPRIS y teléfono de contacto',
                     icon: 'domain',
                   },
                   {
                     tab: 'schedule' as ClinicTab,
-                    title: 'Configurar Horarios',
-                    desc: `${duration} min/cita · ${holidays.length} festivo(s) · Expedientes compartidos`,
+                    title: 'Configurar Horarios y Agenda',
+                    desc: `${duration} min/cita · ${holidays.length} día(s) inhábil(es)`,
                     icon: 'schedule',
                   },
                   {
                     tab: 'team' as ClinicTab,
-                    title: 'Agregar Médicos / Asistentes',
-                    desc: `${Math.max(seatLimit - membersCount, 0)} asiento(s) disponible(s)`,
-                    icon: 'person_add',
+                    title: isSoloPractice
+                      ? 'Ampliar a Clínica Multi-especialista'
+                      : 'Agregar Médicos / Asistentes',
+                    desc: isSoloPractice
+                      ? 'Cambia a modalidad Clínica si trabajas con más médicos o asistentes'
+                      : `${Math.max(seatLimit - membersCount, 0)} asiento(s) disponible(s)`,
+                    icon: 'group',
                   },
                 ].map((card) => (
                   <button
@@ -456,25 +590,32 @@ const ClinicAdminPage: React.FC = () => {
             </div>
           )}
 
-          {/* TAB 2: DATOS DE LA CLÍNICA */}
+          {/* TAB 2: DATOS DEL CONSULTORIO / CLÍNICA */}
           {tab === 'info' && (
             <form
               onSubmit={handleSaveInfo}
               className="rounded-3xl bg-white dark:bg-surface-dark border border-slate-200/80 dark:border-slate-800 p-6 space-y-4 text-xs"
             >
-              <h2 className="text-base font-black">Información General y Fiscal de la Clínica</h2>
+              <h2 className="text-base font-black">
+                {isSoloPractice
+                  ? 'Información General y Fiscal de tu Consultorio Privado'
+                  : 'Información General y Fiscal de la Clínica'}
+              </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block font-bold text-text-muted mb-1">Nombre de la Clínica *</label>
+                  <label className="block font-bold text-text-muted mb-1">
+                    {isSoloPractice ? 'Nombre del Consultorio *' : 'Nombre de la Clínica *'}
+                  </label>
                   <input
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
+                    placeholder={isSoloPractice ? 'Ej. Consultorio Dr. Juan Pérez' : 'Ej. Clínica NeuroRehab'}
                     className="w-full rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-3 py-2.5 text-sm font-bold"
                   />
                 </div>
                 <div>
-                  <label className="block font-bold text-text-muted mb-1">Tipo de Sede</label>
+                  <label className="block font-bold text-text-muted mb-1">Tipo de Establecimiento</label>
                   <select
                     value={type}
                     onChange={(e) => setType(e.target.value as any)}
@@ -492,7 +633,7 @@ const ClinicAdminPage: React.FC = () => {
                   <input
                     value={city}
                     onChange={(e) => setCity(e.target.value)}
-                    placeholder="Ej. Mérida / CDMX / Monterrey"
+                    placeholder="Ej. Mérida / CDMX / Monterrey / Guadalajara"
                     className="w-full rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-3 py-2.5 text-sm"
                   />
                 </div>
@@ -501,12 +642,12 @@ const ClinicAdminPage: React.FC = () => {
                   <input
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
-                    placeholder="Calle, número, colonia, C.P."
+                    placeholder="Calle, número, consultorio/torre, colonia, C.P."
                     className="w-full rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-3 py-2.5 text-sm"
                   />
                 </div>
                 <div>
-                  <label className="block font-bold text-text-muted mb-1">Teléfono de recepción</label>
+                  <label className="block font-bold text-text-muted mb-1">Teléfono de citas / recepción</label>
                   <input
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
@@ -523,7 +664,9 @@ const ClinicAdminPage: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block font-bold text-text-muted mb-1">Director Médico / Responsable</label>
+                  <label className="block font-bold text-text-muted mb-1">
+                    {isSoloPractice ? 'Médico Titular / Responsable Sanitario' : 'Director Médico / Responsable'}
+                  </label>
                   <input
                     value={directorName}
                     onChange={(e) => setDirectorName(e.target.value)}
@@ -540,7 +683,7 @@ const ClinicAdminPage: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="block font-bold text-text-muted mb-1">Aviso COFEPRIS</label>
+                    <label className="block font-bold text-text-muted mb-1">Aviso COFEPRIS / Cédula</label>
                     <input
                       value={licenseNumber}
                       onChange={(e) => setLicenseNumber(e.target.value)}
@@ -554,7 +697,11 @@ const ClinicAdminPage: React.FC = () => {
                 disabled={busy}
                 className="px-6 py-2.5 rounded-xl bg-primary hover:bg-primary-dark text-white font-black text-sm shadow-md disabled:opacity-50 cursor-pointer"
               >
-                {busy ? 'Guardando...' : 'Guardar Datos de la Clínica'}
+                {busy
+                  ? 'Guardando...'
+                  : isSoloPractice
+                  ? 'Guardar Datos del Consultorio'
+                  : 'Guardar Datos de la Clínica'}
               </button>
             </form>
           )}
@@ -563,9 +710,9 @@ const ClinicAdminPage: React.FC = () => {
           {tab === 'schedule' && (
             <div className="rounded-3xl bg-white dark:bg-surface-dark border border-slate-200/80 dark:border-slate-800 p-6 space-y-5 text-xs">
               <div>
-                <h2 className="text-base font-black">Horarios de Operación y Reglas de Agenda</h2>
+                <h2 className="text-base font-black">Horarios de Atención y Reglas de Agenda</h2>
                 <p className="text-text-muted mt-0.5">
-                  Define los horarios de apertura, descanso, duración de consulta y visibilidad de expedientes entre médicos de la clínica.
+                  Define tus días y horarios de consulta, horario de comida/descanso y duración predeterminada por cita.
                 </p>
               </div>
 
@@ -592,19 +739,21 @@ const ClinicAdminPage: React.FC = () => {
                     className="w-20 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-2 py-1"
                   />
                 </label>
-                <label className="flex items-center gap-2 font-bold cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={allowCrossView}
-                    onChange={(e) => setAllowCrossView(e.target.checked)}
-                    className="size-4 accent-primary"
-                  />
-                  Compartir expedientes entre médicos de esta clínica
-                </label>
+                {!isSoloPractice && (
+                  <label className="flex items-center gap-2 font-bold cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={allowCrossView}
+                      onChange={(e) => setAllowCrossView(e.target.checked)}
+                      className="size-4 accent-primary"
+                    />
+                    Compartir expedientes entre médicos de esta clínica
+                  </label>
+                )}
               </div>
 
               <div className="pt-4 border-t border-slate-100 dark:border-slate-800 space-y-3">
-                <h3 className="font-black text-sm">Días Inhábiles / Festivos ({holidays.length})</h3>
+                <h3 className="font-black text-sm">Días Inhábiles / Vacaciones / Congresos ({holidays.length})</h3>
                 <div className="flex flex-wrap gap-2">
                   <input
                     type="date"
@@ -663,91 +812,110 @@ const ClinicAdminPage: React.FC = () => {
           {/* TAB 4: EQUIPO Y ASIENTOS */}
           {tab === 'team' && detail && (
             <div className="space-y-4 text-xs">
+              {isSoloPractice && (
+                <div className="rounded-3xl bg-gradient-to-r from-indigo-950 to-slate-900 text-white p-6 flex flex-wrap items-center justify-between gap-4">
+                  <div className="space-y-1 max-w-xl">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-indigo-300">
+                      Modalidad Actual: Consultorio Privado Individual (1 Asiento)
+                    </span>
+                    <h3 className="text-lg font-black">
+                      ¿Trabajas con otros especialistas o asistentes en una clínica?
+                    </h3>
+                    <p className="text-xs text-slate-300 leading-relaxed">
+                      Puedes cambiar sin costo durante el lanzamiento a <strong>Clínica Privada {tierLabel} (5 asientos)</strong> para agregar médicos y asistentes a tu sede.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={switchingModality}
+                    onClick={() => handleSwitchWorkspaceModality('clinic')}
+                    className="px-5 py-3 rounded-2xl bg-primary hover:bg-primary-dark text-white font-black text-xs shadow-lg cursor-pointer disabled:opacity-50"
+                  >
+                    {switchingModality ? 'Activando Clínica...' : 'Cambiar a Clínica Privada (5 Asientos)'}
+                  </button>
+                </div>
+              )}
+
               <div className="rounded-3xl bg-white dark:bg-surface-dark border border-slate-200/80 dark:border-slate-800 p-6 space-y-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <h2 className="text-base font-black">Equipo Médico y Asientos de Suscripción</h2>
+                    <h2 className="text-base font-black">
+                      {isSoloPractice
+                        ? 'Titular del Consultorio Privado'
+                        : 'Equipo Médico y Asientos de la Clínica'}
+                    </h2>
                     <p className="text-text-muted mt-0.5">
-                      Cada miembro activo ocupa 1 asiento de tu clínica y hereda las funciones de{' '}
-                      <strong>{activeSub?.plan_name || 'tu plan clínico'}</strong>.
+                      {isSoloPractice
+                        ? 'Tu consultorio privado cuenta con 1 asiento titular 100% aislado (Zero-PHI).'
+                        : `Cada miembro activo ocupa 1 asiento de tu clínica y hereda las funciones de ${activeSub?.plan_name || 'tu paquete activo'}.`}
                     </p>
                   </div>
-                  {seatLimit > 0 && (
-                    <div className="px-3.5 py-2 rounded-xl bg-primary/10 text-primary font-black text-sm">
-                      {membersCount} / {seatLimit} asientos ocupados
-                    </div>
-                  )}
+                  <div className="px-3.5 py-2 rounded-xl bg-primary/10 text-primary font-black text-sm">
+                    {membersCount} / {seatLimit} asiento{seatLimit === 1 ? '' : 's'} ocupado{membersCount === 1 ? '' : 's'}
+                  </div>
                 </div>
 
-                {seatLimit > 0 && (
-                  <div className="h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
-                    <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${seatPct}%` }} />
-                  </div>
-                )}
+                <div className="h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                  <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${seatPct}%` }} />
+                </div>
 
-                <form onSubmit={handleInviteMember} className="flex flex-wrap gap-2 pt-2">
-                  <input
-                    type="email"
-                    required
-                    value={inviteEmail}
-                    onChange={(e) => setInviteEmail(e.target.value)}
-                    placeholder="Correo del médico o asistente registrado en SonoTox..."
-                    className="flex-1 min-w-[220px] rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-3.5 py-2.5 text-sm"
-                  />
-                  <select
-                    value={inviteRole}
-                    onChange={(e) => setInviteRole(e.target.value as any)}
-                    className="rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-3 py-2.5 font-bold"
-                  >
-                    <option value="specialist">Especialista</option>
-                    <option value="assistant">Asistente</option>
-                    <option value="clinic_admin">Admin Clínica</option>
-                    <option value="director">Director Médico</option>
-                    <option value="owner">Co-Owner</option>
-                  </select>
-                  <button
-                    type="submit"
-                    disabled={busy || (seatLimit > 0 && membersCount >= seatLimit)}
-                    className="px-5 py-2.5 rounded-xl bg-primary hover:bg-primary-dark text-white font-black disabled:opacity-50 cursor-pointer"
-                  >
-                    {busy ? 'Agregando...' : '+ Agregar Miembro'}
-                  </button>
-                </form>
-
-                {seatLimit > 0 && membersCount >= seatLimit && (
-                  <p className="text-amber-600 dark:text-amber-400 font-bold">
-                    Alcanzaste el límite de {seatLimit} asientos. Libera un asiento o solicita ampliación de cupo a administración.
-                  </p>
+                {!isSoloPractice && (
+                  <form onSubmit={handleInviteMember} className="flex flex-wrap gap-2 pt-2">
+                    <input
+                      type="email"
+                      required
+                      value={inviteEmail}
+                      onChange={(e) => setInviteEmail(e.target.value)}
+                      placeholder="Correo del médico o asistente registrado en SonoTox..."
+                      className="flex-1 min-w-[220px] rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-3.5 py-2.5 text-sm"
+                    />
+                    <select
+                      value={inviteRole}
+                      onChange={(e) => setInviteRole(e.target.value as any)}
+                      className="rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-3 py-2.5 font-bold"
+                    >
+                      <option value="specialist">Especialista</option>
+                      <option value="assistant">Asistente</option>
+                      <option value="clinic_admin">Admin Clínica</option>
+                      <option value="director">Director Médico</option>
+                      <option value="owner">Co-Owner</option>
+                    </select>
+                    <button
+                      type="submit"
+                      disabled={busy || (seatLimit > 0 && membersCount >= seatLimit)}
+                      className="px-5 py-2.5 rounded-xl bg-primary hover:bg-primary-dark text-white font-black disabled:opacity-50 cursor-pointer"
+                    >
+                      {busy ? 'Agregando...' : '+ Agregar Miembro'}
+                    </button>
+                  </form>
                 )}
 
                 <div className="divide-y divide-slate-100 dark:divide-slate-800 pt-2">
-                  {detail.members.length === 0 ? (
-                    <p className="py-6 text-center text-text-muted">Aún no hay otros miembros registrados.</p>
-                  ) : (
-                    detail.members.map((m) => {
-                      const isSelf = m.user_id === entitlements.user_id;
-                      return (
-                        <div key={m.id} className="py-3.5 flex flex-wrap items-center justify-between gap-3">
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <p className="font-bold text-sm">{m.full_name || m.email || 'Usuario'}</p>
-                              {isSelf && (
-                                <span className="px-2 py-0.5 rounded bg-primary/10 text-primary text-[10px] font-black uppercase">
-                                  Tú
-                                </span>
-                              )}
-                              {m.role_in_clinic === 'owner' && (
-                                <span className="px-2 py-0.5 rounded bg-teal-500/15 text-teal-700 dark:text-teal-300 text-[10px] font-black uppercase">
-                                  OWNER
-                                </span>
-                              )}
-                            </div>
-                            <p className="text-text-muted">
-                              {m.email || m.user_id.slice(0, 8)}
-                              {m.specialty ? ` · ${m.specialty}` : ''}
+                  {detail.members.map((m) => {
+                    const isSelf = m.user_id === entitlements.user_id || detail.members.length === 1;
+                    return (
+                      <div key={m.id} className="py-3.5 flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <p className="font-bold text-sm">
+                              {m.full_name || entitlements.full_name || m.email || 'Médico Titular'}
                             </p>
+                            {isSelf && (
+                              <span className="px-2 py-0.5 rounded bg-primary/10 text-primary text-[10px] font-black uppercase">
+                                Tú
+                              </span>
+                            )}
+                            <span className="px-2 py-0.5 rounded bg-teal-500/15 text-teal-700 dark:text-teal-300 text-[10px] font-black uppercase">
+                              {ROLE_LABELS[m.role_in_clinic] || m.role_in_clinic}
+                            </span>
                           </div>
+                          <p className="text-text-muted">
+                            {m.email || entitlements.email || ''}
+                            {m.specialty ? ` · ${m.specialty}` : ''}
+                          </p>
+                        </div>
 
+                        {!isSoloPractice && (
                           <div className="flex items-center gap-2">
                             <select
                               value={m.role_in_clinic}
@@ -765,96 +933,125 @@ const ClinicAdminPage: React.FC = () => {
                               <button
                                 type="button"
                                 disabled={busy}
-                                onClick={() => handleRemoveMember(m.user_id, m.full_name || m.email || 'este miembro')}
+                                onClick={() =>
+                                  handleRemoveMember(m.user_id, m.full_name || m.email || 'este miembro')
+                                }
                                 className="px-2.5 py-1.5 rounded-lg bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-500 hover:text-white font-bold cursor-pointer"
                               >
                                 Quitar
                               </button>
                             )}
                           </div>
-                        </div>
-                      );
-                    })
-                  )}
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>
           )}
 
-          {/* TAB 5: MI PLAN CLÍNICO (STATUS ONLY — NO FORCED SALES GRID) */}
+          {/* TAB 5: MI PAQUETE ACTIVO (SIN REDIRIGIR A PANTALLA DE VENTAS) */}
           {tab === 'plan' && (
-            <div className="rounded-3xl bg-white dark:bg-surface-dark border border-slate-200/80 dark:border-slate-800 p-6 space-y-5">
-              {activeSub ? (
+            <div className="space-y-4">
+              <div className="rounded-3xl bg-white dark:bg-surface-dark border border-slate-200/80 dark:border-slate-800 p-6 space-y-5">
                 <div className="rounded-2xl bg-gradient-to-br from-primary via-teal-600 to-cyan-700 text-white p-6 space-y-3">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
                       <p className="text-[10px] font-black uppercase tracking-widest text-white/75">
-                        Suscripción de Clínica Activa
+                        Paquete Activo en tu {workspaceLabel}
                       </p>
-                      <h2 className="text-2xl font-black mt-1">{activeSub.plan_name}</h2>
+                      <h2 className="text-2xl font-black mt-1">
+                        {activeSub?.plan_name || entitlements.plan_name || `Plan ${tierLabel}`}
+                      </h2>
                       <p className="text-xs text-white/85 mt-1">
-                        Nivel: <strong>{TIER_LABELS[activeSub.tier]}</strong> · Origen:{' '}
-                        <strong>{ORIGIN_LABELS[activeSub.origin] || activeSub.origin}</strong>
+                        Nivel: <strong>{tierLabel}</strong> · Origen:{' '}
+                        <strong>
+                          {ORIGIN_LABELS[activeSub?.origin || entitlements.origin] || 'Acceso de Lanzamiento'}
+                        </strong>
                       </p>
                     </div>
                     <span className="px-3 py-1 rounded-full bg-white/20 text-xs font-black uppercase">
-                      {activeSub.status}
+                      ACTIVO
                     </span>
                   </div>
+
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2 text-xs">
                     <div className="rounded-xl bg-white/15 p-3">
-                      <span className="block text-white/75 text-[10px] uppercase font-bold">Asientos Incluidos</span>
-                      <strong className="text-lg font-black">
-                        {membersCount} / {activeSub.seat_limit}
-                      </strong>
+                      <span className="block text-white/75 text-[10px] uppercase font-bold">
+                        Modalidad Operativa
+                      </span>
+                      <strong className="text-sm font-black">{workspaceLabel}</strong>
                     </div>
                     <div className="rounded-xl bg-white/15 p-3">
-                      <span className="block text-white/75 text-[10px] uppercase font-bold">Vigencia</span>
-                      <strong className="text-sm font-black">
-                        {activeSub.current_period_end
-                          ? new Date(activeSub.current_period_end).toLocaleDateString('es-MX')
-                          : 'Sin vencimiento'}
+                      <span className="block text-white/75 text-[10px] uppercase font-bold">
+                        Asientos Incluidos
+                      </span>
+                      <strong className="text-lg font-black">
+                        {membersCount} / {seatLimit}
                       </strong>
                     </div>
                     <div className="rounded-xl bg-white/15 p-3 col-span-2 sm:col-span-1">
-                      <span className="block text-white/75 text-[10px] uppercase font-bold">Modalidad</span>
-                      <strong className="text-sm font-black capitalize">{activeSub.billing_interval}</strong>
+                      <span className="block text-white/75 text-[10px] uppercase font-bold">Vigencia</span>
+                      <strong className="text-sm font-black">
+                        {activeSub?.current_period_end
+                          ? new Date(activeSub.current_period_end).toLocaleDateString('es-MX')
+                          : 'Sin vencimiento automático'}
+                      </strong>
                     </div>
                   </div>
-                  {activeSub.grant_reason && (
-                    <p className="text-xs bg-black/20 rounded-xl px-3 py-2 inline-block">
-                      Nota: {activeSub.grant_reason}
-                    </p>
-                  )}
                 </div>
-              ) : (
-                <div className="rounded-2xl bg-slate-100 dark:bg-slate-800/60 p-6 text-center space-y-2">
-                  <p className="font-black text-base">Esta clínica no tiene un plan grupal activo</p>
-                  <p className="text-xs text-text-muted">
-                    Puedes activar un plan de clínica o solicitar la asignación de asientos al administrador.
-                  </p>
-                </div>
-              )}
 
-              <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-100 dark:border-slate-800 text-xs">
-                <p className="text-text-muted">
-                  ¿Necesitas ampliar el número de asientos o canjear un cupón?
-                </p>
-                <div className="flex gap-2">
-                  <a
-                    href="mailto:contacto@deepluxmed.mx?subject=Ampliar%20asientos%20cl%C3%ADnica%20SonoTox"
-                    className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 font-bold hover:bg-slate-200 dark:hover:bg-slate-700"
-                  >
-                    Solicitar Más Asientos
-                  </a>
+                {/* Switch between Consultorio Individual and Clínica Multi-especialista */}
+                <div className="rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800 p-4 flex flex-wrap items-center justify-between gap-3 text-xs">
+                  <div>
+                    <p className="font-black text-sm">
+                      Modalidad solicitada: {workspaceLabel} {tierLabel}
+                    </p>
+                    <p className="text-text-muted mt-0.5">
+                      {isSoloPractice
+                        ? 'Actualmente operas como Consultorio Privado Individual (1 asiento). Si diriges una clínica con varios médicos, puedes cambiar a Clínica Privada.'
+                        : 'Actualmente operas como Clínica Privada Multi-especialista (hasta 5 asientos). Puedes volver a Consultorio Privado Individual si trabajas solo.'}
+                    </p>
+                  </div>
                   <button
                     type="button"
-                    onClick={() => navigate('/subscription')}
-                    className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 font-bold hover:border-primary cursor-pointer"
+                    disabled={switchingModality}
+                    onClick={() => handleSwitchWorkspaceModality(isSoloPractice ? 'clinic' : 'solo')}
+                    className="px-4 py-2.5 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black text-xs cursor-pointer disabled:opacity-50"
                   >
-                    Ver Catálogo y Cupones
+                    {switchingModality
+                      ? 'Actualizando...'
+                      : isSoloPractice
+                      ? 'Cambiar a Clínica Privada (5 asientos)'
+                      : 'Cambiar a Consultorio Individual (1 asiento)'}
                   </button>
                 </div>
+
+                {/* Inline Coupon / Enterprise License Redemption */}
+                <form
+                  onSubmit={handleRedeemVoucher}
+                  className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2 text-xs"
+                >
+                  <label className="block font-black text-sm">
+                    ¿Tienes un cupón promocional o licencia patrocinada Enterprise?
+                  </label>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <input
+                      value={voucherCode}
+                      onChange={(e) => setVoucherCode(e.target.value.toUpperCase())}
+                      placeholder="INGRESA TU CÓDIGO AQUÍ"
+                      className="flex-1 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-3.5 py-2.5 font-mono font-bold uppercase"
+                    />
+                    <button
+                      type="submit"
+                      disabled={busy || !voucherCode.trim()}
+                      className="px-5 py-2.5 rounded-xl bg-primary text-white font-black disabled:opacity-50 cursor-pointer"
+                    >
+                      Canjear Código
+                    </button>
+                  </div>
+                </form>
               </div>
             </div>
           )}

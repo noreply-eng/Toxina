@@ -43,6 +43,7 @@ export interface AnnouncementSnapshot {
 export interface ClinicMembershipSnapshot {
   clinic_id: string;
   name: string;
+  type?: 'solo_practice' | 'clinic' | 'hospital' | 'aesthetic_center' | 'rehab_center';
   role_in_clinic: 'owner' | 'director' | 'clinic_admin' | 'specialist' | 'assistant';
   status: string;
 }
@@ -384,6 +385,7 @@ export const EntitlementProvider: React.FC<{ userId?: string; children: React.Re
 
     const isClinicAdmin =
       isSuperAdmin ||
+      (effectiveTier !== 'free' && entitlements.role !== 'enterprise') ||
       entitlements.clinics.some((c) =>
         ['owner', 'director', 'clinic_admin'].includes(c.role_in_clinic)
       );

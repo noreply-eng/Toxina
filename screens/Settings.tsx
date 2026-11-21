@@ -27,6 +27,7 @@ const SETTINGS_ROUTES: Record<string, string> = {
   profile: '/profile',
   privacy: '/privacidad',
   sub: '/subscription',
+  'clinic-workspace': '/clinic-admin',
   'motor-points': '/motor-points',
   units: '/unit-preferences',
   doses: '/toxin-dose-settings',
@@ -201,6 +202,15 @@ const Settings: React.FC<SettingsProps> = ({ toggleDarkMode, isDarkMode }) => {
     ? `Patrocinado por ${entitlements.sponsor.brand_display_name}`
     : ORIGIN_LABELS[entitlements.origin];
 
+  const hasActivePackage =
+    effectiveTier !== 'free' && entitlements.role !== 'enterprise';
+  const isClinicPackage =
+    (entitlements.plan_slug || '').includes('clinic') ||
+    entitlements.clinics.some((c) => c.type && c.type !== 'solo_practice');
+  const workspaceTitle = isClinicPackage
+    ? `Panel de Clínica Privada ${TIER_LABELS[effectiveTier]}`
+    : `Panel de Consultorio Privado ${TIER_LABELS[effectiveTier]}`;
+
   const sections = [
     {
       title: 'Cuenta',
@@ -213,15 +223,25 @@ const Settings: React.FC<SettingsProps> = ({ toggleDarkMode, isDarkMode }) => {
           type: 'link',
           img: profile?.avatar_url,
         },
-        {
-          id: 'sub',
-          name: 'Suscripción y Cupones',
-          sub: subSubtitle,
-          badge: tierBadge,
-          icon: 'verified',
-          type: 'link',
-          badgeColor: tierBadgeColor,
-        },
+        hasActivePackage
+          ? {
+              id: 'clinic-workspace',
+              name: workspaceTitle,
+              sub: `Configurar datos, horarios, agenda y equipo · ${subSubtitle}`,
+              badge: `${tierBadge} · Abrir Panel`,
+              icon: isClinicPackage ? 'local_hospital' : 'medical_services',
+              type: 'link',
+              badgeColor: tierBadgeColor,
+            }
+          : {
+              id: 'sub',
+              name: 'Activar Plan Premium / Cupones',
+              sub: subSubtitle,
+              badge: tierBadge,
+              icon: 'verified',
+              type: 'link',
+              badgeColor: tierBadgeColor,
+            },
       ],
     },
     ...(isEnterpriseManager
