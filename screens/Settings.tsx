@@ -40,6 +40,7 @@ const SETTINGS_ROUTES: Record<string, string> = {
   agenda: '/appointment-settings',
   'admin-media': '/admin/media',
   'admin-pathologies': '/admin/pathologies',
+  'admin-facial-3d': '/admin/facial-3d',
   'super-admin': '/super-admin',
   enterprise: '/enterprise',
 };
@@ -284,6 +285,13 @@ const Settings: React.FC<SettingsProps> = ({ toggleDarkMode, isDarkMode }) => {
                 name: 'Gestión de Medios',
                 sub: 'Imágenes de puntos motores y USG',
                 icon: 'photo_library',
+                type: 'link',
+              },
+              {
+                id: 'admin-facial-3d',
+                name: 'Studio Anatómico Facial 3D',
+                sub: 'Modelos Z-Anatomy (.glb), mapeo de mallas y pins 3D',
+                icon: 'view_in_ar',
                 type: 'link',
               },
             ],

@@ -10,6 +10,10 @@ import {
   type ToxinBrand,
 } from '../data/pathologyData';
 import { findMuscleForCalculatorName } from '../data/muscleData';
+import {
+  FACIAL_PLANNER_PATHOLOGY_IDS,
+  getFacialPresetForPathology,
+} from '../constants/facialAestheticMap';
 import { addRecentPathology } from '../utils/pathologyPrefs';
 import FacialPlannerModal from '../components/facial/FacialPlannerModal';
 import ClinicalVideoPlayer from '../components/ClinicalVideoPlayer';
@@ -697,16 +701,16 @@ const PathologyDetail: React.FC = () => {
         </div>
       </div>
 
-      {/* FAB - Calculadora / Planificador facial */}
+      {/* FAB - Calculadora / Planificador facial 3D */}
       <div className="fixed bottom-24 right-6 flex flex-col gap-3 items-end z-30 print:hidden">
-        {(pathology.id === 'estetica-facial' || pathology.id === 'sincinesias-faciales') && (
+        {FACIAL_PLANNER_PATHOLOGY_IDS.has(pathology.id) && (
           <button
             onClick={() => setFacialPlannerOpen(true)}
-            className="bg-pink-600 hover:bg-pink-500 text-white rounded-full px-4 h-12 flex items-center gap-2 shadow-lg active:scale-95 transition-transform"
-            title="Planificador facial estético"
+            className="bg-pink-600 hover:bg-pink-500 text-white rounded-full px-4 h-12 flex items-center gap-2 shadow-lg active:scale-95 transition-transform cursor-pointer"
+            title="Abrir Planificador Craneofacial 3D / 2D"
           >
-            <span className="material-symbols-outlined text-xl">face</span>
-            <span className="text-xs font-bold hidden sm:inline">Plan facial</span>
+            <span className="material-symbols-outlined text-xl">view_in_ar</span>
+            <span className="text-xs font-bold hidden sm:inline">Plan facial 3D</span>
           </button>
         )}
         <button
@@ -731,7 +735,12 @@ const PathologyDetail: React.FC = () => {
       <FacialPlannerModal
         isOpen={facialPlannerOpen}
         onClose={() => setFacialPlannerOpen(false)}
-        mode={pathology.id === 'sincinesias-faciales' ? 'asymmetric' : 'aesthetic'}
+        mode={
+          getFacialPresetForPathology(pathology.id)?.defaultSideMode &&
+          getFacialPresetForPathology(pathology.id)?.defaultSideMode !== 'ambos'
+            ? 'asymmetric'
+            : 'aesthetic'
+        }
         pathologyId={pathology.id}
         loadPresetOnOpen
       />

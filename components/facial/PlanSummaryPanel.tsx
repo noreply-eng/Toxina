@@ -4,6 +4,7 @@ import {
   CLINICAL_FACIAL_PRESETS,
   FACIAL_MUSCLE_BY_ID,
   type AnatomyLayerFilter,
+  type ClinicalFacialPreset,
   type PointSide,
   type SideMode,
   type ToxinBrand,
@@ -33,6 +34,7 @@ const PlanSummaryPanel: React.FC<PlanSummaryPanelProps> = ({
   onHighlightMuscle,
 }) => {
   const [tab, setTab] = useState<PanelTab>('plan');
+  const [pendingSidePreset, setPendingSidePreset] = useState<ClinicalFacialPreset | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
 
   const {
@@ -374,26 +376,98 @@ const PlanSummaryPanel: React.FC<PlanSummaryPanelProps> = ({
                   Protocolos rápidos (1 clic)
                 </h3>
                 <div className="flex flex-wrap gap-1.5">
-                  {CLINICAL_FACIAL_PRESETS.map((preset) => (
-                    <button
-                      key={preset.id}
-                      type="button"
-                      onClick={() => {
-                        loadPreset(preset.muscleIds);
-                        if (preset.id === 'migrana-preempt') {
-                          setAnatomyLayerFilter('todos');
-                        }
-                      }}
-                      title={preset.description}
-                      className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-800/90 hover:bg-slate-700 text-slate-200 border border-slate-700 text-[10px] font-semibold cursor-pointer transition-colors"
-                    >
-                      <span className="material-symbols-outlined text-[13px] text-sky-400">
-                        {preset.icon}
-                      </span>
-                      {preset.name}
-                    </button>
-                  ))}
+                  {CLINICAL_FACIAL_PRESETS.map((preset) => {
+                    const asksSide = !!preset.defaultSideMode && preset.defaultSideMode !== 'ambos';
+                    const isPending = pendingSidePreset?.id === preset.id;
+                    return (
+                      <button
+                        key={preset.id}
+                        type="button"
+                        onClick={() => {
+                          if (asksSide) {
+                            setPendingSidePreset(isPending ? null : preset);
+                            return;
+                          }
+                          setPendingSidePreset(null);
+                          loadPreset(preset.muscleIds, preset.defaultSideMode ?? 'ambos');
+                          if (preset.id === 'migrana-preempt' || preset.id === 'distonia-cervical') {
+                            setAnatomyLayerFilter('todos');
+                          }
+                        }}
+                        title={preset.description}
+                        className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold cursor-pointer transition-colors border ${
+                          isPending
+                            ? 'bg-amber-500/20 text-amber-200 border-amber-400/60 ring-1 ring-amber-400/40'
+                            : 'bg-slate-800/90 hover:bg-slate-700 text-slate-200 border-slate-700'
+                        }`}
+                      >
+                        <span
+                          className={`material-symbols-outlined text-[13px] ${
+                            preset.category === 'neurological' ? 'text-purple-400' : 'text-sky-400'
+                          }`}
+                        >
+                          {preset.icon}
+                        </span>
+                        <span>{preset.name}</span>
+                        {asksSide && (
+                          <span className="text-[8px] px-1 rounded bg-amber-500/20 text-amber-300 font-black uppercase">
+                            1 lado
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
+
+                {pendingSidePreset && (
+                  <div className="mt-2 rounded-xl border border-amber-500/40 bg-amber-500/10 p-2.5 space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <p className="text-[11px] font-black text-amber-200 flex items-center gap-1">
+                          <span className="material-symbols-outlined text-[14px] text-amber-400">
+                            swap_horiz
+                          </span>
+                          ¿En qué lado aplicar {pendingSidePreset.name}?
+                        </p>
+                        <p className="text-[10px] text-amber-100/75 mt-0.5 leading-snug">
+                          {pendingSidePreset.id === 'asimetria-facial'
+                            ? 'Elige el lado sano hiperactivo del paciente (o ambos si requieres balance).'
+                            : 'Elige la hemicara afectada del paciente (o ambos lados si aplica).'}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setPendingSidePreset(null)}
+                        className="size-5 rounded-md bg-slate-900/70 hover:bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center cursor-pointer shrink-0"
+                        aria-label="Cancelar"
+                      >
+                        <span className="material-symbols-outlined text-xs">close</span>
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {(
+                        [
+                          { side: 'izq', label: 'Izquierdo', sub: 'Der. pantalla', cls: 'bg-sky-500/20 hover:bg-sky-500/35 text-sky-200 border-sky-400/40' },
+                          { side: 'der', label: 'Derecho', sub: 'Izq. pantalla', cls: 'bg-rose-500/20 hover:bg-rose-500/35 text-rose-200 border-rose-400/40' },
+                          { side: 'ambos', label: 'Ambos', sub: 'Bilateral', cls: 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-600' },
+                        ] as { side: SideMode; label: string; sub: string; cls: string }[]
+                      ).map((opt) => (
+                        <button
+                          key={opt.side}
+                          type="button"
+                          onClick={() => {
+                            loadPreset(pendingSidePreset.muscleIds, opt.side);
+                            setPendingSidePreset(null);
+                          }}
+                          className={`py-1.5 px-2 rounded-lg border text-center cursor-pointer transition-colors ${opt.cls}`}
+                        >
+                          <p className="text-[11px] font-black leading-tight">{opt.label}</p>
+                          <p className="text-[9px] opacity-75">{opt.sub}</p>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div>

@@ -1,0 +1,25 @@
+SONOTOX — Facial 3D Anatomy Model Attribution Notice
+====================================================
+
+File: public/models/z-anatomy-facial.glb
+License: Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0)
+https://creativecommons.org/licenses/by-sa/4.0/
+
+This 3D anatomical head, skull, mandible, teeth, cartilage, and facial/masticatory
+muscle dataset is an adapted subset extracted and renamed for bilateral clinical
+mapping from:
+
+1. Z-Anatomy — The libre 3D atlas of anatomy (CC BY-SA 4.0)
+   Authors: Gauthier Kervyn, Lluis Vinent, Marcin Zielinski, and contributors
+   Source: https://github.com/Z-Anatomy/Models-of-human-anatomy
+   Web-optimized Draco build reference: https://github.com/hpfrei/body-anatomy-3d-viewer
+
+2. BodyParts3D — The Database Center for Life Science (DBCLS) (CC BY-SA 2.1 Japan)
+   Original author: Kousaku Okubo
+   Source: https://dbarchive.biosciencedbc.jp/en/bodyparts3d/download.html
+
+Modifications performed by SONOTOX:
+- Isolated craniofacial bones, teeth, nasal cartilages, epicranial aponeurosis,
+  facial expression muscles, masticatory muscles, and upper cervical reference muscles.
+- Centered scene origin at the craniofacial centroid.
+- Normalized bilateral mesh names with patient-side anatomical suffixes (_L / _R).

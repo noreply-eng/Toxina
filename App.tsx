@@ -64,6 +64,7 @@ const AdminMedia = lazy(() => import('./screens/AdminMedia'));
 const AdminMuscleMediaEditor = lazy(() => import('./screens/AdminMuscleMediaEditor'));
 const AdminPathologies = lazy(() => import('./screens/AdminPathologies'));
 const AdminPathologyEditor = lazy(() => import('./screens/AdminPathologyEditor'));
+const AdminFacial3D = lazy(() => import('./screens/AdminFacial3D'));
 const SuperAdminDashboard = lazy(
   () => import('./features/super-admin/pages/SuperAdminDashboard')
 );
@@ -292,6 +293,7 @@ const AppShell: React.FC<AppShellProps> = ({
                   <Route path="/admin/media/:muscleId" element={<AdminMuscleMediaEditor />} />
                   <Route path="/admin/pathologies" element={<AdminPathologies />} />
                   <Route path="/admin/pathologies/:pathologyId" element={<AdminPathologyEditor />} />
+                  <Route path="/admin/facial-3d" element={<AdminFacial3D />} />
                 </Route>
                 <Route
                   path="/settings"

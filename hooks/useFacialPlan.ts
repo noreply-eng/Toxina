@@ -478,22 +478,26 @@ export function useFacialPlan(options: UseFacialPlanOptions = {}) {
     setSelectedPointId(null);
   }, []);
 
-  const loadPreset = useCallback((muscleIds: string[]) => {
+  const loadPreset = useCallback((muscleIds: string[], targetSideMode: SideMode = 'ambos') => {
     const newActive = new Set<string>();
     const newPoints: InjectionPoint[] = [];
     for (const id of muscleIds) {
       const muscle = FACIAL_MUSCLE_BY_ID[id];
       if (!muscle) continue;
       newActive.add(id);
-      for (const tpl of muscle.defaultPoints) {
+      const templates =
+        targetSideMode === 'ambos'
+          ? muscle.defaultPoints
+          : muscle.defaultPoints.filter((t) => t.side === targetSideMode || t.side === 'centro');
+      for (const tpl of templates) {
         newPoints.push(buildPoint(id, tpl));
       }
     }
     setActiveMuscleIds(newActive);
     setPoints(newPoints);
     setSelectedPointId(null);
-    setSideMode('ambos');
-    setMirrorSync(true);
+    setSideMode(targetSideMode);
+    setMirrorSync(targetSideMode === 'ambos');
   }, []);
 
   const muscleSummaries = useMemo((): MuscleSummary[] => {

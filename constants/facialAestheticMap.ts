@@ -78,15 +78,22 @@ export interface ClinicalFacialPreset {
   name: string;
   description: string;
   icon: string;
+  category: 'aesthetic' | 'neurological';
+  pathologyId: string;
+  defaultSideMode?: SideMode;
   muscleIds: string[];
 }
 
 export const CLINICAL_FACIAL_PRESETS: ClinicalFacialPreset[] = [
+  // ---- ESTÉTICA FACIAL ----
   {
     id: 'tercio-superior',
     name: 'Tercio Superior',
     description: 'Frente, entrecejo (glabela) y patas de gallo',
     icon: 'visibility',
+    category: 'aesthetic',
+    pathologyId: 'estetica-facial',
+    defaultSideMode: 'ambos',
     muscleIds: ['frontalis', 'corrugator', 'procerus', 'orbicularis-oculi'],
   },
   {
@@ -94,27 +101,101 @@ export const CLINICAL_FACIAL_PRESETS: ClinicalFacialPreset[] = [
     name: 'Sonrisa Gingival / Nariz',
     description: 'LLSAN, elevador del labio superior y bunny lines / punta nasal',
     icon: 'sentiment_satisfied',
+    category: 'aesthetic',
+    pathologyId: 'sonrisa-gingival',
+    defaultSideMode: 'ambos',
     muscleIds: ['llsan', 'levator-labii-superioris', 'nasalis'],
   },
   {
     id: 'tercio-inferior',
     name: 'Nefertiti / Tercio Inf.',
-    description: 'Comisuras (DAO), mentón adoquinado y bandas platismales',
+    description: 'Comisuras (DAO), mentón adoquinado, DLI y bandas platismales',
     icon: 'face_retouching_natural',
-    muscleIds: ['depressor-anguli-oris', 'mentalis', 'platysma'],
+    category: 'aesthetic',
+    pathologyId: 'lifting-nefertiti',
+    defaultSideMode: 'ambos',
+    muscleIds: ['depressor-anguli-oris', 'mentalis', 'platysma', 'depressor-labii-inferioris'],
+  },
+  {
+    id: 'estetica-perioral',
+    name: 'Perioral / Código Barras',
+    description: 'Líneas verticales periorales, comisuras caídas y mentón',
+    icon: 'mood',
+    category: 'aesthetic',
+    pathologyId: 'estetica-facial',
+    defaultSideMode: 'ambos',
+    muscleIds: ['orbicularis-oris', 'depressor-anguli-oris', 'mentalis'],
+  },
+
+  // ---- NEUROLÓGICAS Y FUNCIONALES CRANEOFACIALES ----
+  {
+    id: 'blefaroespasmo',
+    name: 'Blefaroespasmo',
+    description: 'Espasmo bilateral del orbicular de los ojos, corrugador y prócer',
+    icon: 'remove_red_eye',
+    category: 'neurological',
+    pathologyId: 'blefaroespasmo',
+    defaultSideMode: 'ambos',
+    muscleIds: ['orbicularis-oculi', 'corrugator', 'procerus'],
+  },
+  {
+    id: 'espasmo-hemifacial',
+    name: 'Espasmo Hemifacial',
+    description: 'Contracciones clónicas/tónicas unilaterales (orbicular, cigomático, risorio, mentón y platisma)',
+    icon: 'face_2',
+    category: 'neurological',
+    pathologyId: 'espasmo-hemifacial',
+    defaultSideMode: 'izq',
+    muscleIds: ['orbicularis-oculi', 'zygomaticus-major', 'risorius', 'mentalis', 'platysma'],
+  },
+  {
+    id: 'sincinesias',
+    name: 'Sincinesias Faciales',
+    description: 'Control unilateral post-parálisis: periocular, cigomático, buccinador, mentón y platisma',
+    icon: 'neurology',
+    category: 'neurological',
+    pathologyId: 'sincinesias-faciales',
+    defaultSideMode: 'izq',
+    muscleIds: ['orbicularis-oculi', 'zygomaticus-major', 'buccinator', 'orbicularis-oris', 'mentalis', 'platysma'],
+  },
+  {
+    id: 'asimetria-facial',
+    name: 'Asimetría Post-Parálisis',
+    description: 'Rebalanceo del lado sano hiperactivo (frontal, cigomático, elevador ángulo, DLI y DAO)',
+    icon: 'balance',
+    category: 'neurological',
+    pathologyId: 'asimetria-facial',
+    defaultSideMode: 'izq',
+    muscleIds: ['frontalis', 'zygomaticus-major', 'levator-anguli-oris', 'depressor-labii-inferioris', 'depressor-anguli-oris'],
   },
   {
     id: 'bruxismo-atm',
     name: 'Bruxismo y ATM',
-    description: 'Masetero, temporal y complejo pterigoideo profundo',
+    description: 'Hipertrofia maseterina, bruxismo nocturno y disfunción temporomandibular',
     icon: 'dentistry',
+    category: 'neurological',
+    pathologyId: 'bruxismo-atm',
+    defaultSideMode: 'ambos',
     muscleIds: ['masseter', 'temporalis', 'medial-pterygoid', 'lateral-pterygoid'],
+  },
+  {
+    id: 'distonia-oromandibular',
+    name: 'Distonía Oromandibular',
+    description: 'Cierre o apertura mandibular involuntaria (masetero, temporal, pterigoideos y platisma)',
+    icon: 'medical_services',
+    category: 'neurological',
+    pathologyId: 'distonia-oromandibular',
+    defaultSideMode: 'ambos',
+    muscleIds: ['masseter', 'temporalis', 'medial-pterygoid', 'lateral-pterygoid', 'platysma'],
   },
   {
     id: 'migrana-preempt',
     name: 'Migraña PREEMPT (155U)',
     description: 'Protocolo PREEMPT completo: Frontal, Corrugador, Prócer, Temporal, Occipital, Paravertebrales y Trapecio',
     icon: 'psychology',
+    category: 'neurological',
+    pathologyId: 'migrana-cronica',
+    defaultSideMode: 'ambos',
     muscleIds: [
       'frontalis',
       'corrugator',
@@ -126,13 +207,27 @@ export const CLINICAL_FACIAL_PRESETS: ClinicalFacialPreset[] = [
     ],
   },
   {
-    id: 'sincinesias',
-    name: 'Sincinesias Faciales',
-    description: 'Control periocular, cigomático, perioral, mentón y platisma',
-    icon: 'neurology',
-    muscleIds: ['orbicularis-oculi', 'zygomaticus-major', 'orbicularis-oris', 'mentalis', 'platysma'],
+    id: 'distonia-cervical',
+    name: 'Distonía Cervical',
+    description: 'ECOM, esplenio de la cabeza, trapecio superior y paravertebrales cervicales',
+    icon: 'accessibility_new',
+    category: 'neurological',
+    pathologyId: 'distonia-cervical',
+    defaultSideMode: 'ambos',
+    muscleIds: ['sternocleidomastoid-posterior', 'splenius-capitis', 'trapezius-facial', 'cervical-paraspinals'],
   },
 ];
+
+export const FACIAL_PLANNER_PATHOLOGY_IDS = new Set<string>(
+  CLINICAL_FACIAL_PRESETS.map((p) => p.pathologyId)
+);
+
+export function getFacialPresetForPathology(
+  pathologyId?: string | null
+): ClinicalFacialPreset | undefined {
+  if (!pathologyId) return undefined;
+  return CLINICAL_FACIAL_PRESETS.find((p) => p.pathologyId === pathologyId);
+}
 
 export interface DangerRegion {
   id: string;

@@ -51,15 +51,43 @@ export default defineConfig(({ mode }) => {
           workbox: {
             cleanupOutdatedCaches: true,
             globPatterns: ['**/*.{js,css,html,ico,png,svg,jpeg,jpg,webp,woff,woff2}'],
-            // Atlas facial (~2.5 MB): fuera del precache para no romper el build ni alargar la instalación del SW
-            globIgnores: ['**/facial/**'],
+            // Atlas facial (~2.5 MB), modelos 3D (.glb) y runtime 3D (Three.js/Draco):
+            // fuera del precache inicial para mantener liviana la instalación PWA
+            globIgnores: ['**/facial/**', '**/models/**', '**/draco/**', '**/three-vendor-*.js', '**/draco_*'],
             runtimeCaching: [
+              {
+                urlPattern: /\/(assets\/(three-vendor-|draco_)|draco\/).*/i,
+                handler: 'CacheFirst',
+                options: {
+                  cacheName: 'anatomy-3d-engine',
+                  expiration: { maxEntries: 16, maxAgeSeconds: 60 * 60 * 24 * 90 },
+                  cacheableResponse: { statuses: [0, 200] },
+                },
+              },
               {
                 urlPattern: /\/facial\/.*/i,
                 handler: 'CacheFirst',
                 options: {
                   cacheName: 'facial-atlas',
                   expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 30 },
+                  cacheableResponse: { statuses: [0, 200] },
+                },
+              },
+              {
+                urlPattern: /(\/models\/|\/storage\/v1\/object\/public\/anatomy-3d\/).*\.(glb|gltf)/i,
+                handler: 'CacheFirst',
+                options: {
+                  cacheName: 'anatomy-3d-models',
+                  expiration: { maxEntries: 6, maxAgeSeconds: 60 * 60 * 24 * 30 },
+                  cacheableResponse: { statuses: [0, 200] },
+                },
+              },
+              {
+                urlPattern: /^https:\/\/www\.gstatic\.com\/draco\/.*/i,
+                handler: 'CacheFirst',
+                options: {
+                  cacheName: 'draco-decoders',
+                  expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 90 },
                   cacheableResponse: { statuses: [0, 200] },
                 },
               },
@@ -92,6 +120,21 @@ export default defineConfig(({ mode }) => {
           },
         }),
       ],
+      build: {
+        rollupOptions: {
+          output: {
+            manualChunks(id) {
+              if (
+                id.includes('node_modules/three/') ||
+                id.includes('node_modules/@react-three/') ||
+                id.includes('node_modules/three-stdlib/')
+              ) {
+                return 'three-vendor';
+              }
+            },
+          },
+        },
+      },
       define: {
         'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
         'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)

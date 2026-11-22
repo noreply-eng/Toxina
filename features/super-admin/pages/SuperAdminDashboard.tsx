@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useEntitlements } from '../../entitlements/EntitlementContext';
 import { formatMoney, type BillingMode, type SubscriptionTier } from '../../entitlements/planCatalog';
@@ -17,7 +17,18 @@ import {
 } from '../services/superAdminService';
 import type { GlobalKpis } from '../types';
 
-type AdminTab = 'overview' | 'users' | 'enterprise' | 'billing' | 'clinics' | 'patients' | 'cms' | 'audit';
+const Facial3DAdminStudio = lazy(() => import('../components/Facial3DAdminStudio'));
+
+type AdminTab =
+  | 'overview'
+  | 'users'
+  | 'enterprise'
+  | 'billing'
+  | 'clinics'
+  | 'patients'
+  | 'cms'
+  | 'anatomy3d'
+  | 'audit';
 
 const NAV_TABS: { id: AdminTab; label: string; icon: string }[] = [
   { id: 'overview', label: 'Control Maestro', icon: 'dashboard' },
@@ -27,6 +38,7 @@ const NAV_TABS: { id: AdminTab; label: string; icon: string }[] = [
   { id: 'clinics', label: 'Clínicas y Horarios', icon: 'local_hospital' },
   { id: 'patients', label: 'Pacientes Globales', icon: 'personal_injury' },
   { id: 'cms', label: 'CMS Contenido Premium', icon: 'photo_library' },
+  { id: 'anatomy3d', label: 'Anatomía Facial 3D', icon: 'view_in_ar' },
   { id: 'audit', label: 'ARCO y Auditoría', icon: 'policy' },
 ];
 
@@ -333,6 +345,18 @@ const SuperAdminDashboard: React.FC = () => {
           {activeTab === 'clinics' && <ClinicManagementTable onDataChanged={loadOverview} />}
           {activeTab === 'patients' && <GlobalPatientsPanel />}
           {activeTab === 'cms' && <PremiumCmsPanel />}
+          {activeTab === 'anatomy3d' && (
+            <Suspense
+              fallback={
+                <div className="flex flex-col items-center justify-center py-20 gap-3 text-slate-400">
+                  <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary" />
+                  <span className="text-xs font-bold">Cargando motor 3D (Three.js / R3F)...</span>
+                </div>
+              }
+            >
+              <Facial3DAdminStudio />
+            </Suspense>
+          )}
           {activeTab === 'audit' && <AuditLogPanel onDataChanged={loadOverview} />}
         </main>
       </div>

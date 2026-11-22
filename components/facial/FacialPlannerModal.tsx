@@ -1,12 +1,19 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { useFacialPlan } from '../../hooks/useFacialPlan';
-import type { ToxinBrand } from '../../constants/facialAestheticMap';
+import { useFacialPlan, type FacialPlanExport } from '../../hooks/useFacialPlan';
+import {
+  getFacialPresetForPathology,
+  type SideMode,
+  type ToxinBrand,
+} from '../../constants/facialAestheticMap';
 import FaceCanvas from './FaceCanvas';
 import PlanSummaryPanel from './PlanSummaryPanel';
 
+const Facial3DPlannerWorkspace = lazy(() => import('./Facial3DPlannerWorkspace'));
+
 export type FacialPlannerMode = 'aesthetic' | 'asymmetric';
+export type FacialPlannerViewMode = '2d' | '3d';
 
 const AESTHETIC_PRESET = [
   'frontalis',
@@ -38,6 +45,8 @@ const FacialPlannerModal: React.FC<FacialPlannerModalProps> = ({
 }) => {
   const navigate = useNavigate();
   const closeBtnRef = useRef<HTMLButtonElement>(null);
+  const [viewMode, setViewMode] = useState<FacialPlannerViewMode>('3d');
+  const [points3DCount, setPoints3DCount] = useState(0);
   const [summaryCollapsed, setSummaryCollapsed] = useState(false);
   const [highlightedMuscleId, setHighlightedMuscleId] = useState<string | null>(null);
   const [confirmClose, setConfirmClose] = useState(false);
@@ -48,7 +57,7 @@ const FacialPlannerModal: React.FC<FacialPlannerModalProps> = ({
     pathologyId,
   });
 
-  const hasPoints = plan.points.length > 0;
+  const hasPoints = viewMode === '3d' ? points3DCount > 0 : plan.points.length > 0;
   const clearPlan = plan.clearPlan;
 
   const requestClose = useCallback(() => {
@@ -62,14 +71,22 @@ const FacialPlannerModal: React.FC<FacialPlannerModalProps> = ({
     onClose();
   }, [clearPlan, confirmClose, hasPoints, onClose]);
 
+  const matchedPreset = getFacialPresetForPathology(pathologyId);
+  const resolvedPresetMuscles = matchedPreset
+    ? matchedPreset.muscleIds
+    : mode === 'asymmetric'
+    ? SINCINESIAS_PRESET
+    : AESTHETIC_PRESET;
+  const resolvedPresetSide: SideMode =
+    matchedPreset?.defaultSideMode ?? (mode === 'asymmetric' ? 'izq' : 'ambos');
+
   useEffect(() => {
     if (!isOpen) return;
     document.body.style.overflow = 'hidden';
     setConfirmClose(false);
     setHighlightedMuscleId(null);
     if (loadPresetOnOpen) {
-      const preset = mode === 'asymmetric' ? SINCINESIAS_PRESET : AESTHETIC_PRESET;
-      plan.loadPreset(preset);
+      plan.loadPreset(resolvedPresetMuscles, resolvedPresetSide);
     }
     const t = window.setTimeout(() => closeBtnRef.current?.focus(), 50);
     return () => {
@@ -78,7 +95,7 @@ const FacialPlannerModal: React.FC<FacialPlannerModalProps> = ({
     };
     // Only re-run when modal opens / mode preset changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, loadPresetOnOpen, mode]);
+  }, [isOpen, loadPresetOnOpen, mode, pathologyId]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -113,6 +130,17 @@ const FacialPlannerModal: React.FC<FacialPlannerModalProps> = ({
     });
   };
 
+  const handleExport3D = (exported: FacialPlanExport) => {
+    setConfirmClose(false);
+    setHighlightedMuscleId(null);
+    onClose();
+    navigate('/calculator', {
+      state: {
+        importPlan: exported,
+      },
+    });
+  };
+
   return createPortal(
     <div
       className="fixed inset-0 z-[60] flex flex-col bg-background-dark/95 backdrop-blur-sm"
@@ -120,16 +148,46 @@ const FacialPlannerModal: React.FC<FacialPlannerModalProps> = ({
       aria-modal="true"
       aria-labelledby="facial-planner-title"
     >
-      <header className="flex items-center justify-between gap-3 px-4 py-3 border-b border-slate-800 bg-surface-dark/95 shrink-0">
-        <div className="min-w-0">
-          <h2 id="facial-planner-title" className="text-base font-bold text-white">
-            Planificador Facial
-          </h2>
-          <p className="text-xs text-slate-400 mt-0.5">
-            {mode === 'asymmetric' ? 'Modo asimétrico' : 'Estética facial'}
-            <span className="mx-1.5 text-slate-600">·</span>
-            Atlas · Lateralidad del paciente (I/D)
-          </p>
+      <header className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-b border-slate-800 bg-surface-dark/95 shrink-0">
+        <div className="min-w-0 flex items-center gap-3 flex-wrap">
+          <div>
+            <h2 id="facial-planner-title" className="text-base font-bold text-white">
+              Planificador Facial {viewMode === '3d' ? '3D (Cráneo)' : '2D'}
+            </h2>
+            <p className="text-xs text-slate-400 mt-0.5">
+              {mode === 'asymmetric' ? 'Modo asimétrico' : 'Estética facial'}
+              <span className="mx-1.5 text-slate-600">·</span>
+              Lateralidad del paciente (I/D)
+            </p>
+          </div>
+
+          {/* 3D Cráneo / 2D Atlas Mode Switcher */}
+          <div className="flex items-center rounded-xl bg-slate-900 border border-slate-700 p-0.5">
+            <button
+              type="button"
+              onClick={() => setViewMode('3d')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors ${
+                viewMode === '3d'
+                  ? 'bg-primary text-white shadow-sm'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[15px]">view_in_ar</span>
+              Cráneo 3D
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('2d')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors ${
+                viewMode === '2d'
+                  ? 'bg-primary text-white shadow-sm'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[15px]">image</span>
+              Atlas 2D
+            </button>
+          </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           {confirmClose && (
@@ -153,27 +211,49 @@ const FacialPlannerModal: React.FC<FacialPlannerModalProps> = ({
         </div>
       </header>
 
-      {/* Móvil: scroll vertical de mapa + panel. Desktop: panel lateral con scroll interno. */}
-      <div className="flex-1 flex flex-col lg:flex-row min-h-0 overflow-y-auto overscroll-y-contain lg:overflow-hidden">
-        <div className="h-[min(52vh,440px)] lg:h-auto lg:flex-1 lg:min-h-0 shrink-0 p-1 sm:p-2 lg:p-3 flex flex-col overflow-hidden">
-          <FaceCanvas
-            plan={plan}
-            highlightedMuscleId={highlightedMuscleId}
-            onHighlightMuscle={setHighlightedMuscleId}
+      {viewMode === '3d' ? (
+        <Suspense
+          fallback={
+            <div className="flex-1 flex flex-col items-center justify-center gap-3 text-slate-400">
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary" />
+              <span className="text-xs font-bold">Cargando modelo craneofacial 3D...</span>
+            </div>
+          }
+        >
+          <Facial3DPlannerWorkspace
+            initialBrand={initialBrand}
+            initialDilution={initialDilution}
+            mirrorModeDefault={resolvedPresetSide === 'ambos'}
+            pathologyId={pathologyId}
+            presetToLoad={loadPresetOnOpen ? resolvedPresetMuscles : undefined}
+            presetSideMode={resolvedPresetSide}
+            onExportPlan={handleExport3D}
+            onPointsCountChange={setPoints3DCount}
+            onBeforeNavigate={onClose}
           />
-        </div>
+        </Suspense>
+      ) : (
+        <div className="flex-1 flex flex-col lg:flex-row min-h-0 overflow-y-auto overscroll-y-contain lg:overflow-hidden">
+          <div className="h-[min(52vh,440px)] lg:h-auto lg:flex-1 lg:min-h-0 shrink-0 p-1 sm:p-2 lg:p-3 flex flex-col overflow-hidden">
+            <FaceCanvas
+              plan={plan}
+              highlightedMuscleId={highlightedMuscleId}
+              onHighlightMuscle={setHighlightedMuscleId}
+            />
+          </div>
 
-        <div className="lg:w-[340px] xl:w-[380px] shrink-0 flex flex-col min-h-0 lg:h-full lg:overflow-hidden">
-          <PlanSummaryPanel
-            plan={plan}
-            onExport={handleExport}
-            collapsed={summaryCollapsed}
-            onToggleCollapse={() => setSummaryCollapsed(!summaryCollapsed)}
-            highlightedMuscleId={highlightedMuscleId}
-            onHighlightMuscle={setHighlightedMuscleId}
-          />
+          <div className="lg:w-[340px] xl:w-[380px] shrink-0 flex flex-col min-h-0 lg:h-full lg:overflow-hidden">
+            <PlanSummaryPanel
+              plan={plan}
+              onExport={handleExport}
+              collapsed={summaryCollapsed}
+              onToggleCollapse={() => setSummaryCollapsed(!summaryCollapsed)}
+              highlightedMuscleId={highlightedMuscleId}
+              onHighlightMuscle={setHighlightedMuscleId}
+            />
+          </div>
         </div>
-      </div>
+      )}
     </div>,
     document.body
   );
