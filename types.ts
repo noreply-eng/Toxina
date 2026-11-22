@@ -26,6 +26,10 @@ export interface UserProfile {
   feature_overrides?: Record<string, boolean>;
   general_license?: string | null;
   specialist_license?: string | null;
+  practice_type?: 'individual' | 'clinic';
+  clinic_team_size?: number;
+  clinic_name?: string | null;
+  onboarding_completed_at?: string | null;
   default_brand?: string;
   unit_system?: string;
   default_dose_option?: string;

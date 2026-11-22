@@ -31,7 +31,9 @@ const Subscription: React.FC = () => {
 
   const [plans, setPlans] = useState<SubscriptionPlanRecord[]>([]);
   const [plansLoading, setPlansLoading] = useState(true);
-  const [scope, setScope] = useState<'individual' | 'clinic'>('individual');
+  const [scope, setScope] = useState<'individual' | 'clinic'>(() =>
+    entitlements.practice_type === 'clinic' ? 'clinic' : 'individual'
+  );
   const [billingInterval, setBillingInterval] = useState<'monthly' | 'annual'>('monthly');
   const [showPlanCatalog, setShowPlanCatalog] = useState<boolean>(
     () => searchParams.get('catalog') === '1'
@@ -76,7 +78,19 @@ const Subscription: React.FC = () => {
   const isFreeLaunch = billingMode === 'free_launch';
   const isStripeLive = billingMode === 'stripe_live';
 
+  useEffect(() => {
+    if (entitlements.practice_type === 'clinic') {
+      setScope('clinic');
+    }
+  }, [entitlements.practice_type]);
+
   const visiblePlans = useMemo(() => {
+    if (scope === 'clinic') {
+      const freePlan = plans.find((p) => p.tier === 'free');
+      const clinicPlans = plans.filter((p) => p.scope === 'clinic');
+      const combined = freePlan ? [freePlan, ...clinicPlans] : clinicPlans;
+      if (combined.length > 0) return combined;
+    }
     const filtered = plans.filter((p) => p.scope === scope);
     if (filtered.length > 0) return filtered;
     return plans.filter((p) => p.scope === 'individual');

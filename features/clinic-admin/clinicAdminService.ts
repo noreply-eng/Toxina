@@ -93,6 +93,24 @@ function writeLocalWorkspace(userId: string, patch: Partial<ClinicAdminDetail>):
   }
 }
 
+let ensureWorkspaceRpcUnavailable = false;
+let clinicDetailRpcUnavailable = false;
+const pendingEnsureWorkspace = new Map<string, Promise<ClinicAdminDetail>>();
+
+function isMissingRpcError(error: any, rpcName: string): boolean {
+  if (!error) return false;
+  const code = String(error.code || '');
+  const status = Number(error.status || 0);
+  const message = String(error.message || '');
+  return (
+    code === 'PGRST202' ||
+    code === '42883' ||
+    status === 404 ||
+    message.includes(rpcName) ||
+    message.includes('Could not find the function')
+  );
+}
+
 /**
  * Ensures the user has a provisioned Consultorio Privado or Clínica Privada,
  * falling back to a persistent local/profile-backed workspace if the SQL migration
@@ -106,26 +124,45 @@ export async function ensureOwnClinicWorkspace(
     preferredType === 'clinic' ||
     (entitlements.plan_slug || '').includes('clinic');
   const desiredType: ClinicSummaryRow['type'] = isClinicPlan ? 'clinic' : 'solo_practice';
+  const requestKey = `${entitlements.user_id || 'anon'}:${desiredType}`;
 
-  // 1. Try server-side auto-provisioning RPC first
-  const { data: rpcData, error: rpcError } = await supabase.rpc('ensure_my_clinic_workspace', {
-    p_preferred_type: desiredType,
+  const existingInFlight = pendingEnsureWorkspace.get(requestKey);
+  if (existingInFlight) {
+    return existingInFlight;
+  }
+
+  const promise = (async () => {
+    // 1. Try server-side auto-provisioning RPC first (skip if already known to be missing in this session)
+    if (!ensureWorkspaceRpcUnavailable) {
+      const { data: rpcData, error: rpcError } = await supabase.rpc('ensure_my_clinic_workspace', {
+        p_preferred_type: desiredType,
+      });
+
+      if (!rpcError && rpcData) {
+        return rpcData as ClinicAdminDetail;
+      }
+
+      if (isMissingRpcError(rpcError, 'ensure_my_clinic_workspace')) {
+        ensureWorkspaceRpcUnavailable = true;
+      }
+    }
+
+    // 2. If user already has a managed clinic in entitlements, fetch its detail
+    const existingManaged = entitlements.clinics.find((c) =>
+      ['owner', 'director', 'clinic_admin'].includes(c.role_in_clinic)
+    );
+    if (existingManaged) {
+      return fetchClinicAdminDetail(existingManaged.clinic_id, entitlements);
+    }
+
+    // 3. Resilient fallback when SQL migration hasn't been executed in Supabase yet
+    return buildVirtualWorkspaceDetail(entitlements, desiredType);
+  })().finally(() => {
+    pendingEnsureWorkspace.delete(requestKey);
   });
 
-  if (!rpcError && rpcData) {
-    return rpcData as ClinicAdminDetail;
-  }
-
-  // 2. If user already has a managed clinic in entitlements, fetch its detail
-  const existingManaged = entitlements.clinics.find((c) =>
-    ['owner', 'director', 'clinic_admin'].includes(c.role_in_clinic)
-  );
-  if (existingManaged) {
-    return fetchClinicAdminDetail(existingManaged.clinic_id, entitlements);
-  }
-
-  // 3. Resilient fallback when SQL migration hasn't been executed in Supabase yet
-  return buildVirtualWorkspaceDetail(entitlements, desiredType);
+  pendingEnsureWorkspace.set(requestKey, promise);
+  return promise;
 }
 
 async function buildVirtualWorkspaceDetail(
@@ -267,38 +304,38 @@ export async function fetchClinicAdminDetail(
     );
   }
 
-  const { data, error } = await supabase.rpc('clinic_admin_get_detail', {
-    p_clinic_id: clinicId,
-  });
+  if (!clinicDetailRpcUnavailable) {
+    const { data, error } = await supabase.rpc('clinic_admin_get_detail', {
+      p_clinic_id: clinicId,
+    });
 
-  if (!error && data) {
-    const detail = data as ClinicAdminDetail;
-    // If active_subscription was null (legacy RPC before Migration 6), enrich with user's individual subscription
-    if (!detail.active_subscription && entitlements && entitlements.effective_tier !== 'free') {
-      detail.active_subscription = {
-        id: `sub-${entitlements.user_id || clinicId}`,
-        plan_slug: entitlements.plan_slug,
-        plan_name: entitlements.plan_name,
-        tier: entitlements.effective_tier,
-        status: entitlements.status,
-        origin: entitlements.origin,
-        billing_interval: 'monthly',
-        seat_limit: (entitlements.plan_slug || '').includes('clinic') ? 5 : 1,
-        current_period_start: new Date().toISOString(),
-        current_period_end: entitlements.period_end,
-        grant_reason: entitlements.grant_reason,
-      };
+    if (!error && data) {
+      const detail = data as ClinicAdminDetail;
+      // If active_subscription was null (legacy RPC before Migration 6), enrich with user's individual subscription
+      if (!detail.active_subscription && entitlements && entitlements.effective_tier !== 'free') {
+        detail.active_subscription = {
+          id: `sub-${entitlements.user_id || clinicId}`,
+          plan_slug: entitlements.plan_slug,
+          plan_name: entitlements.plan_name,
+          tier: entitlements.effective_tier,
+          status: entitlements.status,
+          origin: entitlements.origin,
+          billing_interval: 'monthly',
+          seat_limit: (entitlements.plan_slug || '').includes('clinic') ? 5 : 1,
+          current_period_start: new Date().toISOString(),
+          current_period_end: entitlements.period_end,
+          grant_reason: entitlements.grant_reason,
+        };
+      }
+      return detail;
     }
-    return detail;
-  }
 
-  const isMissingRpc =
-    error?.code === 'PGRST202' ||
-    error?.code === '42883' ||
-    (error?.message || '').includes('clinic_admin_get_detail');
-
-  if (!isMissingRpc && error) {
-    throw error;
+    const isMissingRpc = isMissingRpcError(error, 'clinic_admin_get_detail');
+    if (isMissingRpc) {
+      clinicDetailRpcUnavailable = true;
+    } else if (error) {
+      throw error;
+    }
   }
 
   // Fallback query using clinic-scoped RLS policies

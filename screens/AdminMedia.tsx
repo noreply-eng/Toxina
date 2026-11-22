@@ -90,6 +90,14 @@ const AdminMedia: React.FC = () => {
               {configuredCount} de {musclesData.length} músculos con medios personalizados
             </p>
           </div>
+          <button
+            type="button"
+            onClick={() => navigate('/super-admin?tab=pdf-export')}
+            className="px-3 py-2 rounded-xl bg-primary hover:bg-primary-dark text-white text-xs font-bold flex items-center gap-1.5 shadow-sm shrink-0 cursor-pointer transition-colors"
+          >
+            <span className="material-symbols-outlined text-base">menu_book</span>
+            <span className="hidden sm:inline">Exportación PDF</span>
+          </button>
         </div>
 
         <div className="relative w-full">

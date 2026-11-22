@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import PageContainer from '../../components/PageContainer';
 import { useEntitlements } from '../entitlements/EntitlementContext';
@@ -40,12 +40,26 @@ const ROLE_LABELS: Record<string, string> = {
 const ClinicAdminPage: React.FC = () => {
   const { clinicId: routeClinicId } = useParams<{ clinicId: string }>();
   const navigate = useNavigate();
-  const { entitlements, effectiveTier, refresh: refreshEntitlements } = useEntitlements();
+  const {
+    entitlements,
+    effectiveTier,
+    loading: entitlementsLoading,
+    refresh: refreshEntitlements,
+  } = useEntitlements();
 
-  const managedClinics = entitlements.clinics.filter((c) =>
-    ['owner', 'director', 'clinic_admin'].includes(c.role_in_clinic)
+  const managedClinics = useMemo(
+    () =>
+      entitlements.clinics.filter((c) =>
+        ['owner', 'director', 'clinic_admin'].includes(c.role_in_clinic)
+      ),
+    [entitlements.clinics]
   );
-  const initialClinicId = routeClinicId || managedClinics[0]?.clinic_id || '';
+  const primaryManagedClinicId = managedClinics[0]?.clinic_id || '';
+  const initialClinicId = routeClinicId || primaryManagedClinicId;
+
+  const entitlementsRef = useRef(entitlements);
+  entitlementsRef.current = entitlements;
+  const loadRequestIdRef = useRef(0);
 
   const [resolvedClinicId, setResolvedClinicId] = useState<string>(initialClinicId);
   const [detail, setDetail] = useState<ClinicAdminDetail | null>(null);
@@ -107,29 +121,49 @@ const ClinicAdminPage: React.FC = () => {
     );
   }, []);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const targetId = routeClinicId || managedClinics[0]?.clinic_id;
-      if (targetId) {
-        const d = await fetchClinicAdminDetail(targetId, entitlements);
-        hydrateFromDetail(d);
-      } else {
-        // Auto-provision Consultorio Privado or Clínica Privada for this active user
-        const d = await ensureOwnClinicWorkspace(entitlements);
-        hydrateFromDetail(d);
+  const load = useCallback(
+    async (options?: { silent?: boolean; forceClinicId?: string }) => {
+      const reqId = ++loadRequestIdRef.current;
+      if (!options?.silent) {
+        setLoading(true);
       }
-    } catch (err: any) {
-      setError(err?.message || 'No se pudo cargar la configuración de tu consultorio o clínica.');
-    } finally {
-      setLoading(false);
-    }
-  }, [routeClinicId, managedClinics, entitlements, hydrateFromDetail]);
+      setError(null);
+      try {
+        const currentEntitlements = entitlementsRef.current;
+        const targetId =
+          options?.forceClinicId || routeClinicId || primaryManagedClinicId;
+        if (targetId) {
+          const d = await fetchClinicAdminDetail(targetId, currentEntitlements);
+          if (reqId !== loadRequestIdRef.current) return;
+          hydrateFromDetail(d);
+        } else {
+          // Auto-provision Consultorio Privado or Clínica Privada for this active user
+          const d = await ensureOwnClinicWorkspace(currentEntitlements);
+          if (reqId !== loadRequestIdRef.current) return;
+          hydrateFromDetail(d);
+        }
+      } catch (err: any) {
+        if (reqId !== loadRequestIdRef.current) return;
+        setError(
+          err?.message ||
+            'No se pudo cargar la configuración de tu consultorio o clínica.'
+        );
+      } finally {
+        if (reqId === loadRequestIdRef.current) {
+          setLoading(false);
+        }
+      }
+    },
+    [routeClinicId, primaryManagedClinicId, hydrateFromDetail]
+  );
 
   useEffect(() => {
+    if (entitlementsLoading) return;
     load();
-  }, [load]);
+    return () => {
+      loadRequestIdRef.current += 1;
+    };
+  }, [entitlementsLoading, entitlements.user_id, load]);
 
   const activeClinicId = resolvedClinicId || detail?.clinic.id || '';
   const isSoloPractice =
@@ -163,7 +197,10 @@ const ClinicAdminPage: React.FC = () => {
         entitlements.user_id
       );
       setFeedback(`Datos generales de tu ${workspaceLabel.toLowerCase()} guardados correctamente.`);
-      await Promise.all([load(), refreshEntitlements()]);
+      await Promise.all([
+        load({ silent: true, forceClinicId: activeClinicId }),
+        refreshEntitlements(),
+      ]);
     } catch (err: any) {
       setError(err?.message || 'No se pudo guardar la información.');
     } finally {
@@ -187,7 +224,7 @@ const ClinicAdminPage: React.FC = () => {
         userId: entitlements.user_id,
       });
       setFeedback('Horarios de atención, días inhábiles y reglas de agenda actualizados.');
-      await load();
+      await load({ silent: true, forceClinicId: activeClinicId });
     } catch (err: any) {
       setError(err?.message || 'No se pudieron guardar los horarios.');
     } finally {
@@ -221,7 +258,7 @@ const ClinicAdminPage: React.FC = () => {
       });
       setInviteEmail('');
       setFeedback('Integrante agregado y asiento asignado en tu clínica.');
-      await load();
+      await load({ silent: true, forceClinicId: activeClinicId });
     } catch (err: any) {
       setError(err?.message || 'No se pudo agregar al integrante.');
     } finally {
@@ -245,7 +282,7 @@ const ClinicAdminPage: React.FC = () => {
         isActive: true,
       });
       setFeedback(`Puesto actualizado a ${ROLE_LABELS[nextRole]}.`);
-      await load();
+      await load({ silent: true, forceClinicId: activeClinicId });
     } catch (err: any) {
       setError(err?.message || 'No se pudo cambiar el puesto.');
     } finally {
@@ -262,7 +299,7 @@ const ClinicAdminPage: React.FC = () => {
     try {
       await removeOwnClinicMember(activeClinicId, userId);
       setFeedback(`${label} fue desvinculado y su asiento quedó disponible.`);
-      await load();
+      await load({ silent: true, forceClinicId: activeClinicId });
     } catch (err: any) {
       setError(err?.message || 'No se pudo desvincular al integrante.');
     } finally {
@@ -305,7 +342,7 @@ const ClinicAdminPage: React.FC = () => {
       );
 
       await refreshEntitlements();
-      await load();
+      await load({ silent: true });
       setFeedback(
         targetScope === 'clinic'
           ? '¡Modalidad actualizada a Clínica Privada Premium (hasta 5 asientos para tu equipo médico)!'
@@ -327,7 +364,7 @@ const ClinicAdminPage: React.FC = () => {
     try {
       const res = await redeemPromoOrEnterpriseCode(voucherCode.trim());
       setVoucherCode('');
-      await Promise.all([refreshEntitlements(), load()]);
+      await Promise.all([refreshEntitlements(), load({ silent: true })]);
       setFeedback(res.message || '¡Cupón aplicado correctamente en tu consultorio privado!');
     } catch (err: any) {
       setError(err?.message || 'No se pudo canjear el código.');

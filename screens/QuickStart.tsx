@@ -15,7 +15,7 @@ const ACTIONS = [
   {
     to: '/signup',
     title: 'Crear cuenta',
-    description: 'Registro gratuito para residentes e investigadores.',
+    description: 'Elige tu modalidad y plan: Gratuito, Plus o Premium.',
     icon: 'person_add',
     primary: false,
   },

@@ -18,6 +18,7 @@ import {
 import type { GlobalKpis } from '../types';
 
 const Facial3DAdminStudio = lazy(() => import('../components/Facial3DAdminStudio'));
+const PdfExportPanel = lazy(() => import('../components/PdfExportPanel'));
 
 type AdminTab =
   | 'overview'
@@ -28,6 +29,7 @@ type AdminTab =
   | 'patients'
   | 'cms'
   | 'anatomy3d'
+  | 'pdf-export'
   | 'audit';
 
 const NAV_TABS: { id: AdminTab; label: string; icon: string }[] = [
@@ -39,6 +41,7 @@ const NAV_TABS: { id: AdminTab; label: string; icon: string }[] = [
   { id: 'patients', label: 'Pacientes Globales', icon: 'personal_injury' },
   { id: 'cms', label: 'CMS Contenido Premium', icon: 'photo_library' },
   { id: 'anatomy3d', label: 'Anatomía Facial 3D', icon: 'view_in_ar' },
+  { id: 'pdf-export', label: 'Exportación PDF', icon: 'menu_book' },
   { id: 'audit', label: 'ARCO y Auditoría', icon: 'policy' },
 ];
 
@@ -252,12 +255,13 @@ const SuperAdminDashboard: React.FC = () => {
                 </button>
               </div>
 
-              <section className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+              <section className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
                 {[
                   { label: 'Crear / Gestionar Usuarios', icon: 'person_add', tab: 'users' as AdminTab, color: 'text-primary' },
                   { label: 'Crear Clínica + Owner', icon: 'add_business', tab: 'clinics' as AdminTab, color: 'text-teal-500' },
                   { label: 'Gestionar Suscripciones', icon: 'card_membership', tab: 'billing' as AdminTab, color: 'text-amber-500' },
                   { label: 'Empresas Enterprise x20', icon: 'corporate_fare', tab: 'enterprise' as AdminTab, color: 'text-indigo-500' },
+                  { label: 'Exportación PDF (Libro)', icon: 'menu_book', tab: 'pdf-export' as AdminTab, color: 'text-emerald-500' },
                 ].map((qa) => (
                   <button
                     key={qa.label}
@@ -355,6 +359,18 @@ const SuperAdminDashboard: React.FC = () => {
               }
             >
               <Facial3DAdminStudio />
+            </Suspense>
+          )}
+          {activeTab === 'pdf-export' && (
+            <Suspense
+              fallback={
+                <div className="flex flex-col items-center justify-center py-20 gap-3 text-slate-400">
+                  <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary" />
+                  <span className="text-xs font-bold">Cargando Estudio Editorial PDF...</span>
+                </div>
+              }
+            >
+              <PdfExportPanel />
             </Suspense>
           )}
           {activeTab === 'audit' && <AuditLogPanel onDataChanged={loadOverview} />}

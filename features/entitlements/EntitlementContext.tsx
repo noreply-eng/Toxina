@@ -62,6 +62,9 @@ export interface EntitlementSnapshot {
   user_id?: string;
   email?: string | null;
   full_name?: string | null;
+  practice_type?: 'individual' | 'clinic';
+  clinic_team_size?: number;
+  clinic_name?: string | null;
   role: UserRole;
   is_active: boolean;
   account_status: string;
@@ -162,6 +165,14 @@ function parseEntitlementPayload(raw: any): EntitlementSnapshot {
     user_id: raw?.user_id,
     email: raw?.email ?? null,
     full_name: raw?.full_name ?? null,
+    practice_type: raw?.practice_type === 'clinic' ? 'clinic' : 'individual',
+    clinic_team_size:
+      typeof raw?.clinic_team_size === 'number' && raw.clinic_team_size >= 1
+        ? raw.clinic_team_size
+        : raw?.practice_type === 'clinic'
+        ? 2
+        : 1,
+    clinic_name: raw?.clinic_name ?? null,
     role: (raw?.role as UserRole) || 'specialist',
     is_active: raw?.is_active ?? true,
     account_status: raw?.account_status || 'active',

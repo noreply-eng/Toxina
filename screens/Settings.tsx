@@ -17,6 +17,7 @@ import {
 import { useEntitlements } from '../features/entitlements/EntitlementContext';
 import { ORIGIN_LABELS, TIER_LABELS } from '../features/entitlements/planCatalog';
 import ClinicManagementSection from '../features/clinic-admin/ClinicManagementSection';
+import { resolvePracticeMeta } from '../services/onboardingService';
 
 interface SettingsProps {
   toggleDarkMode: () => void;
@@ -41,9 +42,86 @@ const SETTINGS_ROUTES: Record<string, string> = {
   'admin-media': '/admin/media',
   'admin-pathologies': '/admin/pathologies',
   'admin-facial-3d': '/admin/facial-3d',
+  'admin-pdf-export': '/admin/pdf-export',
   'super-admin': '/super-admin',
   enterprise: '/enterprise',
 };
+
+let bucketListTableUnavailable = false;
+const pendingBucketListFetch = new Map<string, Promise<BucketListItem[]>>();
+
+function getLocalBucketListKey(userId: string): string {
+  return `sonotox_bucket_list_v1_${userId}`;
+}
+
+function readLocalBucketList(userId: string): BucketListItem[] {
+  try {
+    const raw = localStorage.getItem(getLocalBucketListKey(userId));
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeLocalBucketList(userId: string, items: BucketListItem[]): void {
+  try {
+    localStorage.setItem(getLocalBucketListKey(userId), JSON.stringify(items));
+  } catch {
+    // ignore storage quota errors
+  }
+}
+
+function isMissingBucketListError(error: any): boolean {
+  if (!error) return false;
+  const code = String(error.code || '');
+  const status = Number(error.status || 0);
+  const message = String(error.message || '');
+  return (
+    code === 'PGRST205' ||
+    code === '42P01' ||
+    status === 404 ||
+    message.includes('bucket_list') ||
+    message.includes('Could not find the table')
+  );
+}
+
+async function fetchUserBucketList(userId: string): Promise<BucketListItem[]> {
+  if (bucketListTableUnavailable) {
+    return readLocalBucketList(userId);
+  }
+
+  const existing = pendingBucketListFetch.get(userId);
+  if (existing) return existing;
+
+  const promise = (async () => {
+    try {
+      const { data, error } = await supabase
+        .from('bucket_list')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+
+      if (!error && data) {
+        return data as BucketListItem[];
+      }
+
+      if (isMissingBucketListError(error)) {
+        bucketListTableUnavailable = true;
+      }
+      return readLocalBucketList(userId);
+    } catch {
+      bucketListTableUnavailable = true;
+      return readLocalBucketList(userId);
+    }
+  })().finally(() => {
+    pendingBucketListFetch.delete(userId);
+  });
+
+  pendingBucketListFetch.set(userId, promise);
+  return promise;
+}
 
 const Settings: React.FC<SettingsProps> = ({ toggleDarkMode, isDarkMode }) => {
   const navigate = useNavigate();
@@ -108,17 +186,8 @@ const Settings: React.FC<SettingsProps> = ({ toggleDarkMode, isDarkMode }) => {
 
       setProfile(profileData || defaultProfile);
 
-      try {
-        const { data: bucketData, error: bucketError } = await supabase
-          .from('bucket_list')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false });
-
-        if (!bucketError && bucketData) setBucketList(bucketData);
-      } catch (err) {
-        console.warn('Bucket list fetch failed', err);
-      }
+      const bucketData = await fetchUserBucketList(user.id);
+      setBucketList(bucketData);
     } catch (error) {
       console.error('Error fetching data:', error);
       setProfile({
@@ -148,31 +217,72 @@ const Settings: React.FC<SettingsProps> = ({ toggleDarkMode, isDarkMode }) => {
   };
 
   const handleAddBucketItem = async () => {
-    if (!newBucketItem.trim()) return;
+    const title = newBucketItem.trim();
+    if (!title) return;
     try {
       const user = await getAuthUser();
       if (!user) return;
 
-      const { data, error } = await supabase
-        .from('bucket_list')
-        .insert([{ user_id: user.id, title: newBucketItem, status: 'pending' }])
-        .select()
-        .single();
+      if (!bucketListTableUnavailable) {
+        const { data, error } = await supabase
+          .from('bucket_list')
+          .insert([{ user_id: user.id, title, status: 'pending' }])
+          .select()
+          .single();
 
-      if (data && !error) {
-        setBucketList([data, ...bucketList]);
-        setNewBucketItem('');
-        setShowAddBucket(false);
+        if (data && !error) {
+          setBucketList([data, ...bucketList]);
+          setNewBucketItem('');
+          setShowAddBucket(false);
+          return;
+        }
+
+        if (isMissingBucketListError(error)) {
+          bucketListTableUnavailable = true;
+        } else if (error) {
+          return;
+        }
       }
+
+      const localItem: BucketListItem = {
+        id: `local-${Date.now()}`,
+        title,
+        description: null,
+        status: 'pending',
+      };
+      const updated = [localItem, ...bucketList];
+      setBucketList(updated);
+      writeLocalBucketList(user.id, updated);
+      setNewBucketItem('');
+      setShowAddBucket(false);
     } catch (err) {
       console.error(err);
     }
   };
 
   const toggleBucketItem = async (id: string, currentStatus: string) => {
-    const newStatus = currentStatus === 'pending' ? 'done' : 'pending';
-    setBucketList(bucketList.map((item) => (item.id === id ? { ...item, status: newStatus } : item)));
-    await supabase.from('bucket_list').update({ status: newStatus }).eq('id', id);
+    const newStatus: 'pending' | 'done' = currentStatus === 'pending' ? 'done' : 'pending';
+    const updated = bucketList.map((item) =>
+      item.id === id ? { ...item, status: newStatus } : item
+    );
+    setBucketList(updated);
+
+    if (bucketListTableUnavailable || id.startsWith('local-')) {
+      const user = await getAuthUser();
+      if (user) writeLocalBucketList(user.id, updated);
+      return;
+    }
+
+    const { error } = await supabase
+      .from('bucket_list')
+      .update({ status: newStatus })
+      .eq('id', id);
+
+    if (isMissingBucketListError(error)) {
+      bucketListTableUnavailable = true;
+      const user = await getAuthUser();
+      if (user) writeLocalBucketList(user.id, updated);
+    }
   };
 
   const unitLabel = profile?.unit_system
@@ -212,6 +322,18 @@ const Settings: React.FC<SettingsProps> = ({ toggleDarkMode, isDarkMode }) => {
     ? `Panel de Clínica Privada ${TIER_LABELS[effectiveTier]}`
     : `Panel de Consultorio Privado ${TIER_LABELS[effectiveTier]}`;
 
+  const practiceMeta = profile?.id
+    ? resolvePracticeMeta(profile.id, profile, null)
+    : {
+        practice_type: entitlements.practice_type || 'individual',
+        clinic_team_size: entitlements.clinic_team_size || 1,
+        clinic_name: entitlements.clinic_name || null,
+      };
+  const practiceSummary =
+    practiceMeta.practice_type === 'clinic'
+      ? `Clínica (${practiceMeta.clinic_team_size} personas)`
+      : 'Médico particular';
+
   const sections = [
     {
       title: 'Cuenta',
@@ -219,7 +341,7 @@ const Settings: React.FC<SettingsProps> = ({ toggleDarkMode, isDarkMode }) => {
         {
           id: 'profile',
           name: profile?.full_name || 'Cargando...',
-          sub: profile?.specialty || 'Especialidad',
+          sub: `${profile?.specialty || 'Especialidad'} · ${practiceSummary}`,
           icon: 'person',
           type: 'link',
           img: profile?.avatar_url,
@@ -292,6 +414,13 @@ const Settings: React.FC<SettingsProps> = ({ toggleDarkMode, isDarkMode }) => {
                 name: 'Studio Anatómico Facial 3D',
                 sub: 'Modelos Z-Anatomy (.glb), mapeo de mallas y pins 3D',
                 icon: 'view_in_ar',
+                type: 'link',
+              },
+              {
+                id: 'admin-pdf-export',
+                name: 'Exportación PDF (Libro Flashcards)',
+                sub: 'Libro imprimible de músculos con referencia anatómica y USG',
+                icon: 'menu_book',
                 type: 'link',
               },
             ],

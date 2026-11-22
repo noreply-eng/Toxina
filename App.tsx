@@ -1,5 +1,5 @@
-import React, { useState, useEffect, Suspense, lazy } from 'react';
-import { Routes, Route, useLocation, Navigate, Outlet } from 'react-router-dom';
+import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
+import { Routes, Route, useLocation, useNavigate, Navigate, Outlet } from 'react-router-dom';
 import { supabase } from './supabaseClient';
 import { Session } from '@supabase/supabase-js';
 import ComplianceLayout from './components/ComplianceLayout';
@@ -13,8 +13,11 @@ import PatientProfile from './screens/PatientProfile';
 import Subscription from './screens/Subscription';
 import Login from './screens/Login';
 import Signup from './screens/Signup';
+import SignupPlanGateway from './screens/SignupPlanGateway';
 import EmailConfirmation from './screens/EmailConfirmation';
 import CompleteProfile from './screens/CompleteProfile';
+import { SignupFlowProvider, useSignupFlow } from './contexts/SignupFlowContext';
+import { syncPendingOnboardingForSessionUser } from './services/onboardingService';
 import LegalAcceptance from './screens/LegalAcceptance';
 import LegalDocumentPage from './screens/LegalDocumentPage';
 import PrivacySettings from './screens/PrivacySettings';
@@ -65,6 +68,7 @@ const AdminMuscleMediaEditor = lazy(() => import('./screens/AdminMuscleMediaEdit
 const AdminPathologies = lazy(() => import('./screens/AdminPathologies'));
 const AdminPathologyEditor = lazy(() => import('./screens/AdminPathologyEditor'));
 const AdminFacial3D = lazy(() => import('./screens/AdminFacial3D'));
+const AdminPdfExport = lazy(() => import('./screens/AdminPdfExport'));
 const SuperAdminDashboard = lazy(
   () => import('./features/super-admin/pages/SuperAdminDashboard')
 );
@@ -85,7 +89,17 @@ const PageLoader: React.FC = () => (
 );
 
 const PUBLIC_ALWAYS_PATHS = ['/aviso-privacidad', '/terminos', '/landing'];
-const PUBLIC_SHELL_PATHS = ['/', '/login', '/signup', '/landing', '/aviso-privacidad', '/terminos'];
+const PUBLIC_SHELL_PATHS = [
+  '/',
+  '/login',
+  '/signup',
+  '/signup/plan',
+  '/onboarding/plan',
+  '/email-confirmation',
+  '/landing',
+  '/aviso-privacidad',
+  '/terminos',
+];
 
 function isStandaloneShellPath(pathname: string): boolean {
   return (
@@ -105,6 +119,12 @@ const ProtectedLayout = ({ session }: { session: Session | null }) => {
 const PublicLayout = ({ session }: { session: Session | null }) => {
   const location = useLocation();
   const { entitlements, loading } = useEntitlements();
+  const { isFinalizingSignup } = useSignupFlow();
+
+  // Do not interrupt active signup/payment-gateway finalization while signUp() creates a session
+  if (isFinalizingSignup && location.pathname.startsWith('/signup')) {
+    return <Outlet />;
+  }
 
   if (session && !PUBLIC_ALWAYS_PATHS.includes(location.pathname)) {
     if (loading) return <PageLoader />;
@@ -156,8 +176,29 @@ const AppShell: React.FC<AppShellProps> = ({
   toggleDarkMode,
 }) => {
   const location = useLocation();
-  const { can, entitlements, loading: entitlementsLoading } = useEntitlements();
+  const navigate = useNavigate();
+  const { isFinalizingSignup } = useSignupFlow();
+  const { can, entitlements, loading: entitlementsLoading, refresh: refreshEntitlements } = useEntitlements();
+  const syncedOnboardingUserRef = useRef<string | null>(null);
   const canOfflineSync = can('offline.sync') && entitlements.role !== 'enterprise';
+
+  useEffect(() => {
+    const user = effectiveSession?.user;
+    if (!user || isFinalizingSignup) return;
+    if (syncedOnboardingUserRef.current === user.id) return;
+
+    syncedOnboardingUserRef.current = user.id;
+    syncPendingOnboardingForSessionUser(user)
+      .then(async (applied) => {
+        if (applied) {
+          await refreshEntitlements();
+          navigate('/profile?welcome=1', { replace: true });
+        }
+      })
+      .catch((err) => {
+        console.warn('Pending onboarding sync failed:', err);
+      });
+  }, [effectiveSession?.user, isFinalizingSignup, refreshEntitlements, navigate]);
 
   const {
     pendingCount,
@@ -210,6 +251,7 @@ const AppShell: React.FC<AppShellProps> = ({
             <Route element={<PublicLayout session={effectiveSession} />}>
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
+              <Route path="/signup/plan" element={<SignupPlanGateway />} />
               <Route path="/email-confirmation" element={<EmailConfirmation />} />
               <Route path="/aviso-privacidad" element={<LegalDocumentPage type="privacy" />} />
               <Route path="/terminos" element={<LegalDocumentPage type="terms" />} />
@@ -218,6 +260,7 @@ const AppShell: React.FC<AppShellProps> = ({
             </Route>
 
             <Route element={<ProtectedLayout session={effectiveSession} />}>
+              <Route path="/onboarding/plan" element={<SignupPlanGateway />} />
               <Route path="/legal-acceptance" element={<LegalAcceptance />} />
               <Route path="/complete-profile" element={<CompleteProfile />} />
               <Route path="/aviso-privacidad" element={<LegalDocumentPage type="privacy" />} />
@@ -294,6 +337,7 @@ const AppShell: React.FC<AppShellProps> = ({
                   <Route path="/admin/pathologies" element={<AdminPathologies />} />
                   <Route path="/admin/pathologies/:pathologyId" element={<AdminPathologyEditor />} />
                   <Route path="/admin/facial-3d" element={<AdminFacial3D />} />
+                  <Route path="/admin/pdf-export" element={<AdminPdfExport />} />
                 </Route>
                 <Route
                   path="/settings"
@@ -526,13 +570,15 @@ const App: React.FC = () => {
   }
 
   return (
-    <EntitlementProvider userId={effectiveSession?.user?.id}>
-      <AppShell
-        effectiveSession={effectiveSession}
-        isDarkMode={isDarkMode}
-        toggleDarkMode={toggleDarkMode}
-      />
-    </EntitlementProvider>
+    <SignupFlowProvider>
+      <EntitlementProvider userId={effectiveSession?.user?.id}>
+        <AppShell
+          effectiveSession={effectiveSession}
+          isDarkMode={isDarkMode}
+          toggleDarkMode={toggleDarkMode}
+        />
+      </EntitlementProvider>
+    </SignupFlowProvider>
   );
 };
 

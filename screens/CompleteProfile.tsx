@@ -2,13 +2,18 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import { getAuthUser } from '../utils/auth';
+import { useEntitlements } from '../features/entitlements/EntitlementContext';
+import { TIER_LABELS } from '../features/entitlements/planCatalog';
+import { resolvePracticeMeta, type PracticeProfileMeta } from '../services/onboardingService';
 
 const CompleteProfile: React.FC = () => {
   const navigate = useNavigate();
+  const { entitlements, effectiveTier } = useEntitlements();
   const [fullName, setFullName] = useState('');
   const [specialty, setSpecialty] = useState('');
   const [generalLicense, setGeneralLicense] = useState('');
   const [specialistLicense, setSpecialistLicense] = useState('');
+  const [practiceMeta, setPracticeMeta] = useState<PracticeProfileMeta | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -27,11 +32,15 @@ const CompleteProfile: React.FC = () => {
         .single();
         
       if (data) {
-          setFullName(data.full_name || '');
+          setFullName(data.full_name || user.user_metadata?.full_name || '');
           setSpecialty(data.specialty || '');
           setGeneralLicense(data.general_license || '');
           setSpecialistLicense(data.specialist_license || '');
+      } else {
+          setFullName(user.user_metadata?.full_name || '');
       }
+
+      setPracticeMeta(resolvePracticeMeta(user.id, data, user.user_metadata));
     };
     fetchProfile();
   }, [navigate]);
@@ -89,6 +98,22 @@ const CompleteProfile: React.FC = () => {
             <p className="text-slate-500 dark:text-slate-400">
                 Necesitamos esta información para tus recetas y reportes médicos.
             </p>
+            {practiceMeta && (
+              <div className="mt-4 inline-flex flex-wrap items-center justify-center gap-2">
+                <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">
+                  <span className="material-symbols-outlined text-[15px]">
+                    {practiceMeta.practice_type === 'clinic' ? 'local_hospital' : 'person'}
+                  </span>
+                  {practiceMeta.practice_type === 'clinic'
+                    ? `Clínica (${practiceMeta.clinic_team_size} personas)`
+                    : 'Médico particular'}
+                </span>
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-700 dark:text-emerald-300">
+                  <span className="material-symbols-outlined text-[15px]">verified</span>
+                  {entitlements.plan_name || `Plan ${TIER_LABELS[effectiveTier]}`}
+                </span>
+              </div>
+            )}
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">

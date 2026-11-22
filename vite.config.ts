@@ -51,9 +51,9 @@ export default defineConfig(({ mode }) => {
           workbox: {
             cleanupOutdatedCaches: true,
             globPatterns: ['**/*.{js,css,html,ico,png,svg,jpeg,jpg,webp,woff,woff2}'],
-            // Atlas facial (~2.5 MB), modelos 3D (.glb) y runtime 3D (Three.js/Draco):
+            // Atlas facial (~2.5 MB), modelos 3D (.glb), runtime 3D (Three.js/Draco) y motor PDF Admin:
             // fuera del precache inicial para mantener liviana la instalación PWA
-            globIgnores: ['**/facial/**', '**/models/**', '**/draco/**', '**/three-vendor-*.js', '**/draco_*'],
+            globIgnores: ['**/facial/**', '**/models/**', '**/draco/**', '**/three-vendor-*.js', '**/pdf-vendor-*.js', '**/draco_*'],
             runtimeCaching: [
               {
                 urlPattern: /\/(assets\/(three-vendor-|draco_)|draco\/).*/i,
@@ -130,6 +130,9 @@ export default defineConfig(({ mode }) => {
                 id.includes('node_modules/three-stdlib/')
               ) {
                 return 'three-vendor';
+              }
+              if (id.includes('node_modules/jspdf')) {
+                return 'pdf-vendor';
               }
             },
           },

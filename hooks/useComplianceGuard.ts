@@ -7,7 +7,10 @@ const EXEMPT_PATHS = new Set([
   '/aviso-privacidad',
   '/terminos',
   '/complete-profile',
+  '/onboarding/plan',
 ]);
+
+const PROFILE_COMPLETION_EXEMPT_PATHS = new Set(['/profile']);
 
 function isExemptPath(pathname: string): boolean {
   return (
@@ -49,7 +52,7 @@ export function useComplianceGuard(userId: string | undefined, pathname: string)
       status.needsReConsent
     ) {
       redirectTo = '/legal-acceptance';
-    } else if (!status.hasCompletedProfile) {
+    } else if (!status.hasCompletedProfile && !PROFILE_COMPLETION_EXEMPT_PATHS.has(pathname)) {
       redirectTo = '/complete-profile';
     }
   }
