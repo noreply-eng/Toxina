@@ -6,6 +6,7 @@ import ScheduleConsultationModal from '../components/ScheduleConsultationModal';
 import ConsultationCard from '../components/ConsultationCard';
 import ConsultationActionSheet from '../components/ConsultationActionSheet';
 import WeekTimelineView from '../components/WeekTimelineView';
+import DailyNotesExportModal from '../components/DailyNotesExportModal';
 import {
   fetchUpcoming,
   fetchPatientsNeedingFollowUp,
@@ -26,6 +27,7 @@ import {
   filterConsultationsByVisitType,
   getNextActiveConsultation,
   getMinutesUntilConsultation,
+  isSameDay,
 } from '../utils/consultationHelpers';
 import { toLocalDatetimeValue } from '../utils/followUpIntervals';
 import {
@@ -69,6 +71,7 @@ const Agenda: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
+  const [showDailyNotesModal, setShowDailyNotesModal] = useState(false);
   const [editingConsultation, setEditingConsultation] = useState<Consultation | null>(null);
   const [actionConsultation, setActionConsultation] = useState<Consultation | null>(null);
   const [modalDefaultDate, setModalDefaultDate] = useState<string | undefined>();
@@ -204,6 +207,16 @@ const Agenda: React.FC = () => {
     ? getMinutesUntilConsultation(nextConsultation.consultation_date)
     : null;
 
+  const dayExportableCount = useMemo(
+    () =>
+      viewMode === 'day'
+        ? consultations.filter((c) => c.status !== 'cancelled' && c.status !== 'no_show').length
+        : 0,
+    [viewMode, consultations]
+  );
+
+  const isViewingToday = useMemo(() => isSameDay(selectedDate, new Date()), [selectedDate]);
+
   const handleSaved = (savedDate?: string) => {
     if (savedDate) {
       setSelectedDate(startOfDay(new Date(savedDate)));
@@ -301,13 +314,32 @@ const Agenda: React.FC = () => {
             <h1 className="text-2xl font-bold text-text-main dark:text-white">Agenda</h1>
             <div className="flex items-center gap-2">
               <button
+                type="button"
                 onClick={loadConsultations}
                 className="p-2 text-slate-400 hover:text-primary rounded-lg"
                 title="Actualizar"
               >
                 <span className="material-symbols-outlined text-xl">refresh</span>
               </button>
+              {viewMode === 'day' && (
+                <button
+                  type="button"
+                  onClick={() => setShowDailyNotesModal(true)}
+                  className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-100 border border-slate-200 dark:border-slate-700 text-xs font-bold rounded-xl transition-colors"
+                  title="Descargar lista del día y última nota clínica en Word (.docx)"
+                >
+                  <span className="material-symbols-outlined text-base text-primary">description</span>
+                  <span className="hidden sm:inline">Notas Word</span>
+                  <span className="sm:hidden">Word</span>
+                  {dayExportableCount > 0 && (
+                    <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-md bg-primary/15 text-primary leading-none">
+                      {dayExportableCount}
+                    </span>
+                  )}
+                </button>
+              )}
               <button
+                type="button"
                 onClick={() => openNewModal()}
                 className="flex items-center gap-1 px-3 py-2 bg-primary text-white text-xs font-bold rounded-xl"
               >
@@ -357,12 +389,24 @@ const Agenda: React.FC = () => {
               <button onClick={() => navigateDate(-1)} className="p-2 text-slate-400 hover:text-primary">
                 <span className="material-symbols-outlined">chevron_left</span>
               </button>
-              <button
-                onClick={() => setSelectedDate(startOfDay(new Date()))}
-                className="text-sm font-bold text-text-main dark:text-white capitalize"
-              >
-                {headerLabel}
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedDate(startOfDay(new Date()))}
+                  className="text-sm font-bold text-text-main dark:text-white capitalize"
+                >
+                  {headerLabel}
+                </button>
+                {viewMode === 'day' && !isViewingToday && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedDate(startOfDay(new Date()))}
+                    className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                  >
+                    Hoy
+                  </button>
+                )}
+              </div>
               <button onClick={() => navigateDate(1)} className="p-2 text-slate-400 hover:text-primary">
                 <span className="material-symbols-outlined">chevron_right</span>
               </button>
@@ -558,6 +602,14 @@ const Agenda: React.FC = () => {
         onSaved={handleSaved}
         editingConsultation={editingConsultation}
         defaultDate={modalDefaultDate}
+      />
+
+      <DailyNotesExportModal
+        isOpen={showDailyNotesModal}
+        onClose={() => setShowDailyNotesModal(false)}
+        selectedDate={selectedDate}
+        consultationsForDay={consultations}
+        onScheduleNew={() => openNewModal(selectedDate)}
       />
 
       {actionConsultation && (

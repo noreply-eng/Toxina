@@ -23,6 +23,44 @@ export async function fetchPatientClinicalNotes(
   return (data ?? []) as PatientClinicalNote[];
 }
 
+export interface PatientLatestNoteSummary {
+  latestNote: PatientClinicalNote | null;
+  totalNotesCount: number;
+}
+
+export async function fetchLatestNotesByPatientIds(
+  userId: string,
+  patientIds: string[]
+): Promise<Map<string, PatientLatestNoteSummary>> {
+  const result = new Map<string, PatientLatestNoteSummary>();
+  const uniqueIds = Array.from(new Set(patientIds.filter(Boolean)));
+  if (uniqueIds.length === 0) return result;
+
+  const { data, error } = await supabase
+    .from('patient_clinical_notes')
+    .select(NOTE_SELECT)
+    .eq('user_id', userId)
+    .in('patient_id', uniqueIds)
+    .order('note_date', { ascending: false })
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+
+  for (const row of (data ?? []) as PatientClinicalNote[]) {
+    const existing = result.get(row.patient_id);
+    if (!existing) {
+      result.set(row.patient_id, {
+        latestNote: row,
+        totalNotesCount: 1,
+      });
+    } else {
+      existing.totalNotesCount += 1;
+    }
+  }
+
+  return result;
+}
+
 export async function createPatientClinicalNote(
   userId: string,
   patientId: string,
