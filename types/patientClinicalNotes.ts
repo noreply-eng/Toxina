@@ -1,9 +1,10 @@
-export type ClinicalNoteType = 'evolution' | 'follow_up' | 'general';
+export type ClinicalNoteType = 'evolution' | 'follow_up' | 'application' | 'general';
 
 export const CLINICAL_NOTE_TYPE_LABELS: Record<ClinicalNoteType, string> = {
   evolution: 'Evolución',
   follow_up: 'Seguimiento',
-  general: 'General',
+  application: 'Aplicación',
+  general: 'Primera vez',
 };
 
 export interface PatientClinicalNote {
